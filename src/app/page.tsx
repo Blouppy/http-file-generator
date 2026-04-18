@@ -98,7 +98,7 @@ export default function Home() {
 
     const byTag: Record<string, ParsedEndpoint[]> = {};
     for (const endpoint of selectedEndpoints) {
-      const tag = endpoint.tags?.[0] || "untagged";
+      const tag = endpoint.tags?.[0] || "Other";
       if (!byTag[tag]) byTag[tag] = [];
       byTag[tag].push(endpoint);
     }

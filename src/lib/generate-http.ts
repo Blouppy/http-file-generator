@@ -22,7 +22,10 @@ function getExampleValue(schema: Record<string, unknown> | undefined, example: u
 
 export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): string {
   const lines: string[] = [];
-  const baseUrl = spec.baseUrl.startsWith("http") ? spec.baseUrl : `https://${spec.baseUrl}`;
+  const baseUrl =
+    spec.baseUrl.startsWith("http") || spec.baseUrl.startsWith("{{")
+      ? spec.baseUrl
+      : `https://${spec.baseUrl}`;
 
   const label = endpoint.summary || endpoint.operationId || `${endpoint.method} ${endpoint.path}`;
   lines.push(`### ${label}`);
