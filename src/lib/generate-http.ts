@@ -47,7 +47,11 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
 
   lines.push(`${endpoint.method} ${baseUrl}${urlPath}${queryString}`);
   lines.push("Authorization: Bearer {{token}}");
-  lines.push("Content-Type: application/json");
+  // Only add Content-Type for methods that typically have a request body
+  const methodsWithBody = ["POST", "PUT", "PATCH"];
+  if (methodsWithBody.includes(endpoint.method) || endpoint.requestBody) {
+    lines.push("Content-Type: application/json");
+  }
 
   for (const param of (endpoint.parameters || []).filter((p) => p.in === "header")) {
     lines.push(`${param.name}: {{${param.name}}}`);
