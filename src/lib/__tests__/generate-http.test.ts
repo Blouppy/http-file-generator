@@ -256,6 +256,46 @@ describe("generateHttpFile", () => {
     const result = generateHttpFile(baseSpec, endpoint);
     expect(result).toContain("### List all items");
   });
+
+  it("generates body vars when content-type key includes a charset suffix", () => {
+    const endpoint: ParsedEndpoint = {
+      method: "POST",
+      path: "/users",
+      requestBody: {
+        content: {
+          "application/json; charset=utf-8": {
+            schema: {
+              type: "object",
+              properties: { username: { type: "string" } },
+            },
+          },
+        },
+      },
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+    expect(result).toContain('@username = ""');
+    expect(result).toContain('"username": {{username}}');
+  });
+
+  it("generates body vars when content-type key uses a json suffix (+json)", () => {
+    const endpoint: ParsedEndpoint = {
+      method: "POST",
+      path: "/resources",
+      requestBody: {
+        content: {
+          "application/vnd.api+json": {
+            schema: {
+              type: "object",
+              properties: { title: { type: "string" } },
+            },
+          },
+        },
+      },
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+    expect(result).toContain('@title = ""');
+    expect(result).toContain('"title": {{title}}');
+  });
 });
 
 describe("generateHttpFileContent", () => {

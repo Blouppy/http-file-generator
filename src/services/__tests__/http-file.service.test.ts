@@ -60,7 +60,17 @@ describe("deriveZipPath", () => {
     expect(deriveZipPath("empty", [])).toBe("empty.http");
   });
 
-  it("uses the common prefix when endpoints have differing depths", () => {
+  it("uses tag as folder when endpoints span differing root segments", () => {
+    // e.g. a tag that covers both /issues and /workspaces/{id}/issues
+    const endpoints: ParsedEndpoint[] = [
+      { method: "GET", path: "/api/v1/issues" },
+      { method: "GET", path: "/api/v1/workspaces/{id}/issues" },
+    ];
+    // No shared prefix → use tag name as folder
+    expect(deriveZipPath("issues", endpoints)).toBe("issues/issues.http");
+  });
+
+  it("uses the common prefix when endpoints have differing depths but share a root", () => {
     const endpoints: ParsedEndpoint[] = [
       { method: "GET", path: "/workspaces" },
       { method: "GET", path: "/workspaces/{id}" },

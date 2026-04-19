@@ -45,7 +45,9 @@ export function deriveZipPath(tag: string, endpoints: ParsedEndpoint[]): string 
   }
 
   if (commonSegs.length === 0) {
-    return `${slugify(tag)}.http`;
+    // No common path prefix across endpoints (e.g. tag spans both /issues and
+    // /workspaces/{id}/issues). Always give the tag its own folder.
+    return `${slugify(tag)}/${slugify(tag)}.http`;
   }
 
   return `${commonSegs.join("/")}/${slugify(tag)}.http`;

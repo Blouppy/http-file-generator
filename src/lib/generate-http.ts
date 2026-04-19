@@ -107,31 +107,36 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
     }
   }
 
+  // Resolve the JSON content entry using a fuzzy match on the content-type key so that
+  // variants like "application/json; charset=utf-8" or "application/vnd.api+json" are handled.
+  const bodyRaw = endpoint.requestBody?.content ?? {};
+  const jsonKey = Object.keys(bodyRaw).find((k) => {
+    const lower = k.toLowerCase();
+    return lower.startsWith("application/json") || (lower.startsWith("application/") && lower.includes("+json"));
+  });
+  const jsonContent = jsonKey ? (bodyRaw[jsonKey] as Record<string, unknown>) : undefined;
+
   // Determine body property variables when no explicit example is available
   const bodyVarNames: string[] = [];
   let useBodyVars = false;
-  if (endpoint.requestBody) {
-    const content = endpoint.requestBody.content || {};
-    const jsonContent = content["application/json"];
-    if (jsonContent) {
-      const example = jsonContent.example;
-      const schemaExample = (jsonContent.schema as Record<string, unknown> | undefined)?.example;
-      if (example === undefined && schemaExample === undefined) {
-        const schema = jsonContent.schema as Record<string, unknown> | undefined;
-        const properties = extractProperties(schema);
-        if (properties) {
-          for (const [key, propSchema] of Object.entries(properties)) {
-            bodyVarNames.push(key);
-            if (!declaredNames.has(key)) {
-              declaredNames.add(key);
-              vars.push({
-                name: key,
-                value: getVariableDefault(propSchema, "body"),
-              });
-            }
+  if (jsonContent) {
+    const example = jsonContent.example;
+    const schemaExample = (jsonContent.schema as Record<string, unknown> | undefined)?.example;
+    if (example === undefined && schemaExample === undefined) {
+      const schema = jsonContent.schema as Record<string, unknown> | undefined;
+      const properties = extractProperties(schema);
+      if (properties) {
+        for (const [key, propSchema] of Object.entries(properties)) {
+          bodyVarNames.push(key);
+          if (!declaredNames.has(key)) {
+            declaredNames.add(key);
+            vars.push({
+              name: key,
+              value: getVariableDefault(propSchema as Record<string, unknown>, "body"),
+            });
           }
-          useBodyVars = bodyVarNames.length > 0;
         }
+        useBodyVars = bodyVarNames.length > 0;
       }
     }
   }
@@ -167,8 +172,6 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
 
   if (endpoint.requestBody) {
     lines.push("");
-    const content = endpoint.requestBody.content || {};
-    const jsonContent = content["application/json"];
     if (jsonContent) {
       const example = jsonContent.example;
       const schemaExample = (jsonContent.schema as Record<string, unknown> | undefined)?.example;
