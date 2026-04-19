@@ -1,6 +1,5 @@
 "use client"
 
-import { Languages } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import type { Language } from "@/lib/translations"
 import { Button } from "@/components/ui/button"
@@ -38,14 +37,20 @@ function FlagFR({ className }: { className?: string }) {
   )
 }
 
+const flagMap: Record<Language, React.ComponentType<{ className?: string }>> = {
+  en: FlagGB,
+  fr: FlagFR,
+}
+
 export function LanguageToggle() {
   const { language, setLanguage, t } = useLanguage()
+  const CurrentFlag = flagMap[language]
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" aria-label={t.toggleLanguage}>
-          <Languages className="size-[1.2rem]" />
+          <CurrentFlag className="w-5 h-auto rounded-sm" />
           <span className="sr-only">{t.toggleLanguage}</span>
         </Button>
       </DropdownMenuTrigger>
