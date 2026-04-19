@@ -86,7 +86,7 @@ describe("generateHttpFile", () => {
     expect(result).toContain("page={{page}}");
   });
 
-  it("declares @var entries for body properties and emits literal values in the body", () => {
+  it("emits literal values in the body (no @var declarations for body fields)", () => {
     const endpoint: ParsedEndpoint = {
       method: "POST",
       path: "/users",
@@ -105,9 +105,9 @@ describe("generateHttpFile", () => {
       },
     };
     const result = generateHttpFile(baseSpec, endpoint);
-    // @var declarations are emitted for body fields
-    expect(result).toContain('@name = ""');
-    expect(result).toContain("@age = 1");
+    // No @var declarations for body-only fields
+    expect(result).not.toContain("@name");
+    expect(result).not.toContain("@age");
     // Body uses literal values, NOT {{var}} references
     expect(result).toContain('"name": ""');
     expect(result).toContain('"age": 0');
@@ -136,9 +136,26 @@ describe("generateHttpFile", () => {
     const result = generateHttpFile(baseSpec, endpoint);
     expect(result).toContain('"priority": "Low"');
     expect(result).toContain('"count": 0');
+    // No @var declarations for body fields
+    expect(result).not.toContain("@priority");
+    expect(result).not.toContain("@count");
   });
 
-  it("does not redeclare a path param variable when it also appears as a body field", () => {
+  it("uses enum first value for query param @var declarations", () => {
+    const endpoint: ParsedEndpoint = {
+      method: "GET",
+      path: "/issues",
+      parameters: [
+        { name: "sort", in: "query", schema: { type: "string", enum: ["asc", "desc"] } as Record<string, unknown> },
+        { name: "page", in: "query", schema: { type: "integer" } },
+      ],
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+    expect(result).toContain('@sort = "asc"');
+    expect(result).toContain("@page = 1");
+  });
+
+  it("does not emit @var for body fields; only path/query params get @var declarations", () => {
     const endpoint: ParsedEndpoint = {
       method: "PUT",
       path: "/projects/{id}",
@@ -158,11 +175,9 @@ describe("generateHttpFile", () => {
       },
     };
     const result = generateHttpFile(baseSpec, endpoint);
-    // @id = 1 should appear only once (path param wins; body field skipped)
-    const declarations = result.match(/@id = 1/g) ?? [];
-    expect(declarations).toHaveLength(1);
+    // Only path param @id = 1; no @name for body field
     expect(result).toContain("@id = 1");
-    expect(result).toContain('@name = ""');
+    expect(result).not.toContain("@name");
     // Body uses literal values
     expect(result).toContain('"id": 0');
     expect(result).toContain('"name": ""');
@@ -207,8 +222,9 @@ describe("generateHttpFile", () => {
       },
     };
     const result = generateHttpFile(baseSpec, endpoint);
-    expect(result).toContain("@id = 1");
-    expect(result).toContain('@name = ""');
+    // No @var declarations for body-only fields
+    expect(result).not.toContain("@id");
+    expect(result).not.toContain("@name");
     // Body uses literal values
     expect(result).toContain('"id": 0');
     expect(result).toContain('"name": ""');
@@ -230,7 +246,9 @@ describe("generateHttpFile", () => {
       },
     };
     const result = generateHttpFile(baseSpec, endpoint);
-    expect(result).toContain('@label = ""');
+    // @id declared for path param; @label not declared (body field)
+    expect(result).toContain("@id = 1");
+    expect(result).not.toContain("@label");
     expect(result).toContain('"label": ""');
     expect(result).not.toContain('"label": {{label}}');
   });
@@ -253,8 +271,9 @@ describe("generateHttpFile", () => {
       },
     };
     const result = generateHttpFile(baseSpec, endpoint);
-    expect(result).toContain('@firstName = ""');
-    expect(result).toContain("@age = 1");
+    // No @var for body fields
+    expect(result).not.toContain("@firstName");
+    expect(result).not.toContain("@age");
     // Body uses literal values
     expect(result).toContain('"firstName": ""');
     expect(result).toContain('"age": 0');
@@ -270,7 +289,7 @@ describe("generateHttpFile", () => {
     expect(result).toContain("### List all items");
   });
 
-  it("generates body vars when content-type key includes a charset suffix", () => {
+  it("generates body from schema when content-type key includes a charset suffix", () => {
     const endpoint: ParsedEndpoint = {
       method: "POST",
       path: "/users",
@@ -286,12 +305,13 @@ describe("generateHttpFile", () => {
       },
     };
     const result = generateHttpFile(baseSpec, endpoint);
-    expect(result).toContain('@username = ""');
+    // No @var for body-only field
+    expect(result).not.toContain("@username");
     expect(result).toContain('"username": ""');
     expect(result).not.toContain('"username": {{username}}');
   });
 
-  it("generates body vars when content-type key uses a json suffix (+json)", () => {
+  it("generates body from schema when content-type key uses a json suffix (+json)", () => {
     const endpoint: ParsedEndpoint = {
       method: "POST",
       path: "/resources",
@@ -307,7 +327,8 @@ describe("generateHttpFile", () => {
       },
     };
     const result = generateHttpFile(baseSpec, endpoint);
-    expect(result).toContain('@title = ""');
+    // No @var for body-only field
+    expect(result).not.toContain("@title");
     expect(result).toContain('"title": ""');
     expect(result).not.toContain('"title": {{title}}');
   });

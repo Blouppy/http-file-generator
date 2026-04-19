@@ -11,6 +11,11 @@ function getVariableDefault(
   context: "path" | "query"
 ): string {
   if (schema) {
+    // Enum: use the first declared value so the variable is immediately usable
+    if (Array.isArray(schema.enum) && schema.enum.length > 0) {
+      const first = schema.enum[0];
+      return typeof first === "string" ? JSON.stringify(first) : String(first);
+    }
     switch (schema.type) {
       case "integer":
       case "number":
@@ -140,10 +145,9 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
   });
   const jsonContent = jsonKey ? (bodyRaw[jsonKey] as Record<string, unknown>) : undefined;
 
-  // Body field entries: { name, varDefault, literal }
-  // varDefault → @var = value declaration
-  // literal    → literal value used directly in the JSON body template
-  interface BodyField { name: string; varDefault: string; literal: string }
+  // Body field entries: { name, literal }
+  // literal → literal value used directly in the JSON body template (no @var declarations)
+  interface BodyField { name: string; literal: string }
   const bodyFields: BodyField[] = [];
   let hasBodyFields = false;
 
@@ -158,7 +162,6 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
           const ps = propSchema as Record<string, unknown>;
           bodyFields.push({
             name: key,
-            varDefault: getVariableDefault(ps, "query"), // body @vars use query-style defaults (quoted strings)
             literal: getBodyLiteralDefault(ps),
           });
         }
@@ -167,15 +170,7 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
     }
   }
 
-  // Emit @var declarations for body fields (they serve as user-editable references)
-  for (const f of bodyFields) {
-    if (!declaredNames.has(f.name)) {
-      declaredNames.add(f.name);
-      vars.push({ name: f.name, value: f.varDefault });
-    }
-  }
-
-  // Emit all variable declarations right after the ### label
+  // Emit all variable declarations right after the ### label (path + query params only)
   for (const v of vars) {
     lines.push(`@${v.name} = ${v.value}`);
   }
