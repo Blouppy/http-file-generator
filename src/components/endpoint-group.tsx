@@ -1,7 +1,10 @@
+"use client";
+
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { EndpointItem } from "@/components/endpoint-item";
 import { getEndpointId } from "@/services/openapi.service";
+import { useLanguage } from "@/contexts/language-context";
 import type { ParsedEndpoint } from "@/types/openapi";
 
 interface EndpointGroupProps {
@@ -23,6 +26,7 @@ export function EndpointGroup({
   onDeselectAll,
   isFirst = false,
 }: EndpointGroupProps) {
+  const { t } = useLanguage();
   const selectedCount = endpoints.filter((e) => selectedIds.has(getEndpointId(e))).length;
 
   return (
@@ -39,13 +43,13 @@ export function EndpointGroup({
               className="text-xs text-muted-foreground hover:text-foreground"
               onClick={onSelectAll}
             >
-              All
+              {t.groupAll}
             </button>
             <button
               className="text-xs text-muted-foreground hover:text-foreground"
               onClick={onDeselectAll}
             >
-              None
+              {t.groupNone}
             </button>
           </div>
         </div>

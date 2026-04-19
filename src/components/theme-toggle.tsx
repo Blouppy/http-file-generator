@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Moon, Sun, Monitor } from "lucide-react"
 import { useTheme } from "next-themes"
+import { useLanguage } from "@/contexts/language-context"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -15,6 +16,7 @@ import {
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme()
+  const { t } = useLanguage()
   const [mounted, setMounted] = React.useState(false)
 
   React.useEffect(() => {
@@ -26,26 +28,26 @@ export function ThemeToggle() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Toggle theme">
+        <Button variant="ghost" size="icon" aria-label={t.toggleTheme}>
           {selectedTheme === "light" && <Sun className="size-[1.2rem]" />}
           {selectedTheme === "dark" && <Moon className="size-[1.2rem]" />}
           {selectedTheme === "system" && <Monitor className="size-[1.2rem]" />}
-          <span className="sr-only">Toggle theme</span>
+          <span className="sr-only">{t.toggleTheme}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuRadioGroup value={selectedTheme} onValueChange={setTheme}>
           <DropdownMenuRadioItem value="light" className="gap-2">
           <Sun />
-          Light
+          {t.themeLight}
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="dark" className="gap-2">
           <Moon />
-          Dark
+          {t.themeDark}
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="system" className="gap-2">
           <Monitor />
-          System
+          {t.themeSystem}
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>

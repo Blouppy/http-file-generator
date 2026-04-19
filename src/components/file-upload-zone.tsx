@@ -3,6 +3,7 @@
 import { useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useLanguage } from "@/contexts/language-context";
 
 interface FileUploadZoneProps {
   onFile: (file: File) => void;
@@ -14,6 +15,7 @@ interface FileUploadZoneProps {
 export function FileUploadZone({ onFile, isLoading = false, error = null, onClear }: FileUploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { t } = useLanguage();
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -44,7 +46,7 @@ export function FileUploadZone({ onFile, isLoading = false, error = null, onClea
             className="mt-3"
             onClick={onClear}
           >
-            Try again
+            {t.dropzoneTryAgain}
           </Button>
         </CardContent>
       </Card>
@@ -86,15 +88,15 @@ export function FileUploadZone({ onFile, isLoading = false, error = null, onClea
             </div>
             <div>
               <p className="text-lg font-medium">
-                {isLoading ? "Parsing..." : "Drop your OpenAPI spec here"}
+                {isLoading ? t.dropzoneParsing : t.dropzone}
               </p>
               <p className="text-sm text-muted-foreground mt-1">
-                Supports .json, .yaml, and .yml files
+                {t.dropzoneFormats}
               </p>
             </div>
             {!isLoading && (
               <Button variant="outline" size="sm">
-                Browse files
+                {t.dropzoneBrowse}
               </Button>
             )}
           </div>

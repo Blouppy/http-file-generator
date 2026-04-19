@@ -1,6 +1,9 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { useLanguage } from "@/contexts/language-context";
 import type { ParsedSpec } from "@/types/openapi";
 
 interface SpecInfoProps {
@@ -20,6 +23,8 @@ export function SpecInfo({
   onDeselectAll,
   onReset,
 }: SpecInfoProps) {
+  const { t } = useLanguage();
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -27,13 +32,13 @@ export function SpecInfo({
           <div>
             <CardTitle className="text-xl">{spec.title}</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              Version {spec.version} &bull; Base URL:{" "}
+              {t.specVersion} {spec.version} &bull; {t.specBaseUrl}:{" "}
               <code className="text-xs bg-muted px-1 py-0.5 rounded">{spec.baseUrl}</code>
             </p>
           </div>
           {onReset && (
             <Button variant="ghost" size="sm" onClick={onReset}>
-              Upload new file
+              {t.specUploadNew}
             </Button>
           )}
         </div>
@@ -42,14 +47,14 @@ export function SpecInfo({
       <CardContent className="pt-4">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm text-muted-foreground">
-            {totalCount} endpoints &bull; {selectedCount} selected
+            {t.specEndpointCount(totalCount)} &bull; {t.specSelectedCount(selectedCount)}
           </span>
           <div className="ml-auto flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={onSelectAll}>
-              Select All
+              {t.specSelectAll}
             </Button>
             <Button variant="outline" size="sm" onClick={onDeselectAll}>
-              Deselect All
+              {t.specDeselectAll}
             </Button>
           </div>
         </div>

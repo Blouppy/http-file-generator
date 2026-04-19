@@ -4,10 +4,12 @@ import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FileUploadZone } from "@/components/file-upload-zone";
 import { useSpec } from "@/contexts/spec-context";
+import { useLanguage } from "@/contexts/language-context";
 import { parseSpec } from "@/services/openapi.service";
 
 function StepIndicator({ current }: { current: number }) {
-  const steps = ["1. Upload", "2. Select", "3. Generate"];
+  const { t } = useLanguage();
+  const steps = [t.stepUpload, t.stepSelect, t.stepGenerate];
   return (
     <div className="flex items-center gap-2 mb-8">
       {steps.map((step, i) => (
@@ -31,8 +33,10 @@ function StepIndicator({ current }: { current: number }) {
 export default function UploadPage() {
   const router = useRouter();
   const { setSpec } = useSpec();
+  const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const parseErrorMsg = t.dropzoneParseError;
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -44,11 +48,11 @@ export default function UploadPage() {
         setSpec(parsed);
         router.push("/select");
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to parse OpenAPI spec");
+        setError(err instanceof Error ? err.message : parseErrorMsg);
         setIsLoading(false);
       }
     },
-    [setSpec, router]
+    [setSpec, router, parseErrorMsg]
   );
 
   return (
@@ -56,9 +60,9 @@ export default function UploadPage() {
       <div className="max-w-3xl mx-auto px-4 py-12">
         <StepIndicator current={1} />
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Upload your OpenAPI spec</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">{t.uploadTitle}</h1>
           <p className="text-muted-foreground">
-            Drop or browse to upload a .json, .yaml, or .yml file.
+            {t.uploadDescription}
           </p>
         </div>
         <FileUploadZone
