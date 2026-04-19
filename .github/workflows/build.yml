@@ -1,4 +1,4 @@
-name: CI
+name: Build
 
 on:
   pull_request:
@@ -6,27 +6,27 @@ on:
   workflow_dispatch:
 
 jobs:
-  quality:
+  build:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Setup Node.js
+      - name: Setup Node.js 📦
         uses: actions/setup-node@v6
         with:
           node-version: lts/*
           cache: npm
 
-      - name: Install dependencies
+      - name: Install dependencies 📂
         run: npm ci
 
-      - name: Lint
+      - name: Lint 📝
         run: npm run lint
 
-      - name: Test
-        run: npm run test -- --ci
-
-      - name: Build
+      - name: Build 🧱
         run: npm run build
+
+      - name: Test 🧪
+        run: npm run test -- --ci
