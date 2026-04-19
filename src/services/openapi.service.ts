@@ -34,12 +34,16 @@ export function filterEndpoints(
 
   return endpoints.filter((endpoint) => {
     if (lowerSearch) {
-      const matchesSearch =
-        endpoint.path.toLowerCase().includes(lowerSearch) ||
-        (endpoint.summary?.toLowerCase().includes(lowerSearch) ?? false) ||
-        (endpoint.operationId?.toLowerCase().includes(lowerSearch) ?? false) ||
-        (endpoint.description?.toLowerCase().includes(lowerSearch) ?? false);
-      if (!matchesSearch) return false;
+      const searchable = [
+        endpoint.path,
+        endpoint.summary,
+        endpoint.operationId,
+        endpoint.description,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      if (!searchable.includes(lowerSearch)) return false;
     }
 
     if (methods.size > 0 && !methods.has(endpoint.method)) {

@@ -9,6 +9,7 @@ import { EndpointFilters } from "@/components/endpoint-filters";
 import { GenerationActions } from "@/components/generation-actions";
 import { useSpec } from "@/contexts/spec-context";
 import { groupEndpointsByTag, getEndpointId, filterEndpoints } from "@/services/openapi.service";
+import type { ParsedEndpoint } from "@/types/openapi";
 
 function StepIndicator({ current }: { current: number }) {
   const steps = ["1. Upload", "2. Select"];
@@ -96,13 +97,13 @@ export default function SelectPage() {
     setSelectedTags(new Set());
   };
 
-  const handleSelectAllInTag = (tagEndpoints: typeof spec.endpoints) => {
+  const handleSelectAllInTag = (tagEndpoints: ParsedEndpoint[]) => {
     const next = new Set(selectedIds);
     tagEndpoints.forEach((e) => next.add(getEndpointId(e)));
     setSelectedIds(next);
   };
 
-  const handleDeselectAllInTag = (tagEndpoints: typeof spec.endpoints) => {
+  const handleDeselectAllInTag = (tagEndpoints: ParsedEndpoint[]) => {
     const next = new Set(selectedIds);
     tagEndpoints.forEach((e) => next.delete(getEndpointId(e)));
     setSelectedIds(next);
