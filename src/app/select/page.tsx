@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SpecInfo } from "@/components/spec-info";
 import { EndpointGroup } from "@/components/endpoint-group";
+import { EndpointFilters } from "@/components/endpoint-filters";
 import { GenerationActions } from "@/components/generation-actions";
 import { useSpec } from "@/contexts/spec-context";
-import { groupEndpointsByTag, getEndpointId } from "@/services/openapi.service";
+import { groupEndpointsByTag, getEndpointId, filterEndpoints } from "@/services/openapi.service";
 
 function StepIndicator({ current }: { current: number }) {
   const steps = ["1. Upload", "2. Select"];
@@ -36,13 +37,64 @@ export default function SelectPage() {
   const { spec, setSpec, selectedIds, setSelectedIds, toggleEndpoint, selectAll, deselectAll, selectedEndpoints } =
     useSpec();
 
+  const [searchText, setSearchText] = useState("");
+  const [selectedMethods, setSelectedMethods] = useState<Set<string>>(new Set());
+  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     if (!spec) router.replace("/upload");
   }, [spec, router]);
 
+  const availableMethods = useMemo(
+    () => Array.from(new Set((spec?.endpoints ?? []).map((e) => e.method))).sort(),
+    [spec]
+  );
+
+  const availableTags = useMemo(
+    () => Array.from(new Set((spec?.endpoints ?? []).map((e) => e.tags?.[0] || "Other"))).sort(),
+    [spec]
+  );
+
+  const filteredEndpoints = useMemo(
+    () =>
+      filterEndpoints(spec?.endpoints ?? [], {
+        searchText,
+        methods: selectedMethods,
+        tags: selectedTags,
+      }),
+    [spec, searchText, selectedMethods, selectedTags]
+  );
+
+  const filteredEndpointsByTag = useMemo(
+    () => groupEndpointsByTag(filteredEndpoints),
+    [filteredEndpoints]
+  );
+
   if (!spec) return null;
 
-  const endpointsByTag = groupEndpointsByTag(spec.endpoints);
+  const handleMethodToggle = (method: string) => {
+    setSelectedMethods((prev) => {
+      const next = new Set(prev);
+      if (next.has(method)) next.delete(method);
+      else next.add(method);
+      return next;
+    });
+  };
+
+  const handleTagToggle = (tag: string) => {
+    setSelectedTags((prev) => {
+      const next = new Set(prev);
+      if (next.has(tag)) next.delete(tag);
+      else next.add(tag);
+      return next;
+    });
+  };
+
+  const handleClearFilters = () => {
+    setSearchText("");
+    setSelectedMethods(new Set());
+    setSelectedTags(new Set());
+  };
 
   const handleSelectAllInTag = (tagEndpoints: typeof spec.endpoints) => {
     const next = new Set(selectedIds);
@@ -81,18 +133,37 @@ export default function SelectPage() {
               <CardTitle className="text-base">Endpoints</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              {Object.entries(endpointsByTag).map(([tag, endpoints], idx) => (
-                <EndpointGroup
-                  key={tag}
-                  tag={tag}
-                  endpoints={endpoints}
-                  selectedIds={selectedIds}
-                  onToggleEndpoint={toggleEndpoint}
-                  onSelectAll={() => handleSelectAllInTag(endpoints)}
-                  onDeselectAll={() => handleDeselectAllInTag(endpoints)}
-                  isFirst={idx === 0}
+              <div className="px-6 py-4 border-b">
+                <EndpointFilters
+                  searchText={searchText}
+                  onSearchChange={setSearchText}
+                  availableMethods={availableMethods}
+                  selectedMethods={selectedMethods}
+                  onMethodToggle={handleMethodToggle}
+                  availableTags={availableTags}
+                  selectedTags={selectedTags}
+                  onTagToggle={handleTagToggle}
+                  onClearFilters={handleClearFilters}
                 />
-              ))}
+              </div>
+              {Object.keys(filteredEndpointsByTag).length === 0 ? (
+                <p className="px-6 py-8 text-center text-sm text-muted-foreground">
+                  No endpoints match your filters.
+                </p>
+              ) : (
+                Object.entries(filteredEndpointsByTag).map(([tag, endpoints], idx) => (
+                  <EndpointGroup
+                    key={tag}
+                    tag={tag}
+                    endpoints={endpoints}
+                    selectedIds={selectedIds}
+                    onToggleEndpoint={toggleEndpoint}
+                    onSelectAll={() => handleSelectAllInTag(endpoints)}
+                    onDeselectAll={() => handleDeselectAllInTag(endpoints)}
+                    isFirst={idx === 0}
+                  />
+                ))
+              )}
             </CardContent>
           </Card>
 
