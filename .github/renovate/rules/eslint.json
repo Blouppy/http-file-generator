@@ -1,0 +1,14 @@
+{
+  "packageRules": [
+    {
+      "matchManagers": ["npm"],
+      "matchPackageNames": [
+        "eslint",
+        "eslint-config-prettier",
+        "eslint-plugin-prettier",
+        "typescript-eslint"
+      ],
+      "groupName": "ESLint packages"
+    }
+  ]
+} 
