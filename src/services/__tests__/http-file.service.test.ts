@@ -1,4 +1,4 @@
-import { slugify, generateForEndpoints, buildZip } from "@/services/http-file.service";
+import { slugify, generateForEndpoints, buildZip, deriveZipPath } from "@/services/http-file.service";
 import type { ParsedSpec, ParsedEndpoint } from "@/types/openapi";
 
 const testSpec: ParsedSpec = {
@@ -29,6 +29,44 @@ describe("slugify", () => {
 
   it("handles multiple spaces (collapses to single hyphen)", () => {
     expect(slugify("a  b  c")).toBe("a-b-c");
+  });
+});
+
+describe("deriveZipPath", () => {
+  it("places a top-level resource in its own folder", () => {
+    const endpoints: ParsedEndpoint[] = [{ method: "GET", path: "/workspaces" }];
+    expect(deriveZipPath("workspaces", endpoints)).toBe("workspaces/workspaces.http");
+  });
+
+  it("places a nested resource under the parent folder", () => {
+    const endpoints: ParsedEndpoint[] = [
+      { method: "GET", path: "/api/workspaces/{workspaceId}/labels" },
+      { method: "POST", path: "/api/workspaces/{workspaceId}/labels" },
+    ];
+    expect(deriveZipPath("labels", endpoints)).toBe("workspaces/labels.http");
+  });
+
+  it("strips API and version prefixes", () => {
+    const endpoints: ParsedEndpoint[] = [{ method: "GET", path: "/api/v1/users" }];
+    expect(deriveZipPath("users", endpoints)).toBe("users/users.http");
+  });
+
+  it("falls back to a flat file when no meaningful segment is found", () => {
+    const endpoints: ParsedEndpoint[] = [{ method: "GET", path: "/" }];
+    expect(deriveZipPath("misc", endpoints)).toBe("misc.http");
+  });
+
+  it("falls back to a flat file for an empty endpoint list", () => {
+    expect(deriveZipPath("empty", [])).toBe("empty.http");
+  });
+
+  it("uses the most common first segment when endpoints have differing roots", () => {
+    const endpoints: ParsedEndpoint[] = [
+      { method: "GET", path: "/workspaces" },
+      { method: "GET", path: "/workspaces/{id}" },
+      { method: "GET", path: "/workspaces/{id}/details" },
+    ];
+    expect(deriveZipPath("workspaces", endpoints)).toBe("workspaces/workspaces.http");
   });
 });
 
