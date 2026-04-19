@@ -1,0 +1,68 @@
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { EndpointItem } from "@/components/endpoint-item";
+import { getEndpointId } from "@/services/openapi.service";
+import type { ParsedEndpoint } from "@/types/openapi";
+
+interface EndpointGroupProps {
+  tag: string;
+  endpoints: ParsedEndpoint[];
+  selectedIds: Set<string>;
+  onToggleEndpoint: (id: string) => void;
+  onSelectAll: () => void;
+  onDeselectAll: () => void;
+  isFirst?: boolean;
+}
+
+export function EndpointGroup({
+  tag,
+  endpoints,
+  selectedIds,
+  onToggleEndpoint,
+  onSelectAll,
+  onDeselectAll,
+  isFirst = false,
+}: EndpointGroupProps) {
+  const selectedCount = endpoints.filter((e) => selectedIds.has(getEndpointId(e))).length;
+
+  return (
+    <div>
+      {!isFirst && <Separator />}
+      <div className="px-6 py-3 bg-muted/50">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold">{tag}</span>
+          <Badge variant="secondary" className="text-xs">
+            {selectedCount}/{endpoints.length}
+          </Badge>
+          <div className="ml-auto flex gap-2">
+            <button
+              className="text-xs text-muted-foreground hover:text-foreground"
+              onClick={onSelectAll}
+            >
+              All
+            </button>
+            <button
+              className="text-xs text-muted-foreground hover:text-foreground"
+              onClick={onDeselectAll}
+            >
+              None
+            </button>
+          </div>
+        </div>
+      </div>
+      <div className="divide-y">
+        {endpoints.map((endpoint) => {
+          const id = getEndpointId(endpoint);
+          return (
+            <EndpointItem
+              key={id}
+              endpoint={endpoint}
+              isSelected={selectedIds.has(id)}
+              onToggle={() => onToggleEndpoint(id)}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}

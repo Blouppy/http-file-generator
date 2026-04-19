@@ -1,0 +1,36 @@
+import type { Metadata } from "next";
+import localFont from "next/font/local";
+import "./globals.css";
+import { SpecProvider } from "@/contexts/spec-context";
+
+const geistSans = localFont({
+  src: "./fonts/GeistVF.woff",
+  variable: "--font-geist-sans",
+  weight: "100 900",
+});
+const geistMono = localFont({
+  src: "./fonts/GeistMonoVF.woff",
+  variable: "--font-geist-mono",
+  weight: "100 900",
+});
+
+export const metadata: Metadata = {
+  title: "HTTP File Generator",
+  description: "Upload an OpenAPI spec and generate .http files for your endpoints",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        <SpecProvider>{children}</SpecProvider>
+      </body>
+    </html>
+  );
+}
