@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { generateForEndpoints, buildZipFromEndpoints, slugify } from "@/services/http-file.service";
+import { buildZipFromEndpoints, slugify } from "@/services/http-file.service";
 import { saveAs } from "file-saver";
 import type { ParsedSpec, ParsedEndpoint } from "@/types/openapi";
 
@@ -12,13 +12,6 @@ interface GenerationActionsProps {
 }
 
 export function GenerationActions({ spec, selectedEndpoints }: GenerationActionsProps) {
-  const downloadSingle = () => {
-    if (selectedEndpoints.length === 0) return;
-    const content = generateForEndpoints(spec, selectedEndpoints);
-    const blob = new Blob([content], { type: "text/plain" });
-    saveAs(blob, `${slugify(spec.title)}.http`);
-  };
-
   const downloadZip = async () => {
     if (selectedEndpoints.length === 0) return;
     const blob = await buildZipFromEndpoints(spec, selectedEndpoints);
@@ -36,19 +29,12 @@ export function GenerationActions({ spec, selectedEndpoints }: GenerationActions
                 : `Ready to generate for ${selectedEndpoints.length} endpoint${selectedEndpoints.length !== 1 ? "s" : ""}`}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Single .http file or ZIP archive grouped by tags
+              Download ZIP archive grouped by tags
             </p>
           </div>
           <div className="flex gap-2">
-            <Button onClick={downloadSingle} disabled={selectedEndpoints.length === 0}>
-              Download .http File
-            </Button>
-            <Button
-              variant="outline"
-              onClick={downloadZip}
-              disabled={selectedEndpoints.length === 0}
-            >
-              Download as ZIP
+            <Button onClick={downloadZip} disabled={selectedEndpoints.length === 0}>
+              Download
             </Button>
           </div>
         </div>
