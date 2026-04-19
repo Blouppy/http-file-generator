@@ -7,57 +7,67 @@ export function generateForEndpoints(spec: ParsedSpec, endpoints: ParsedEndpoint
   return generateHttpFileContent(spec, endpoints);
 }
 
-/**
- * Derives the ZIP file path for a tag group by examining the URL paths of its endpoints.
- *
- * Strategy: strip API/version prefix segments and path-param segments, then compute the
- * common path prefix across all endpoints for this tag. The resulting segments form the
- * folder hierarchy, and the file is named after the tag slug.
- *
- * Examples:
- *   tag="workspaces", path="/api/workspaces"                        → "workspaces/workspaces.http"
- *   tag="labels",     path="/api/workspaces/{workspaceId}/labels"   → "workspaces/labels/labels.http"
- *   tag="other",      path="/"                                      → "other.http"
- */
 const API_VERSION_SEG = /^(api|v\d+)$/i;
 
-export function deriveZipPath(tag: string, endpoints: ParsedEndpoint[]): string {
-  // Build the list of meaningful segments per endpoint (drop path params and api/version prefixes)
-  const allSegmentPaths = endpoints.map((e) =>
-    e.path
+/**
+ * Groups endpoints by their parent path context and returns one entry per unique context.
+ * A single tag can therefore produce multiple files in the ZIP when its endpoints live
+ * under different parent paths.
+ *
+ * The parent context is computed by:
+ *   1. Splitting the path and removing empty segments, path-param segments, and api/version prefixes.
+ *   2. Dropping the LAST segment (the resource itself), leaving the ancestor segments as the "parent".
+ *
+ * Examples:
+ *   tag="issues", paths=["/api/v1/issues", "/api/v1/issues/{id}"]
+ *     → [{ zipPath: "issues/issues.http", endpoints: [...] }]
+ *
+ *   tag="issues", paths=["/api/v1/issues", "/api/v1/projects/{id}/issues"]
+ *     → [
+ *         { zipPath: "issues/issues.http",          endpoints: ["/api/v1/issues"] },
+ *         { zipPath: "projects/issues/issues.http", endpoints: ["/api/v1/projects/{id}/issues"] },
+ *       ]
+ *
+ *   tag="labels", paths=["/api/v1/workspaces/{id}/labels"]
+ *     → [{ zipPath: "workspaces/labels/labels.http", endpoints: [...] }]
+ */
+export function splitEndpointsByParentPath(
+  tag: string,
+  endpoints: ParsedEndpoint[]
+): Array<{ zipPath: string; endpoints: ParsedEndpoint[] }> {
+  const slug = slugify(tag);
+  const groups = new Map<string, ParsedEndpoint[]>();
+
+  for (const endpoint of endpoints) {
+    const segs = endpoint.path
       .split("/")
-      .filter((s) => s && !s.startsWith("{") && !API_VERSION_SEG.test(s))
+      .filter((s) => s && !s.startsWith("{") && !API_VERSION_SEG.test(s));
+
+    // Parent = all meaningful segments except the last resource segment.
+    const parent = segs.slice(0, -1).join("/");
+
+    if (!groups.has(parent)) groups.set(parent, []);
+    groups.get(parent)!.push(endpoint);
+  }
+
+  // Stable order: root (empty parent) first, then alphabetical.
+  const sorted = Array.from(groups.entries()).sort(([a], [b]) =>
+    a === b ? 0 : a === "" ? -1 : b === "" ? 1 : a.localeCompare(b)
   );
 
-  if (allSegmentPaths.length === 0 || allSegmentPaths[0].length === 0) {
-    return `${slugify(tag)}.http`;
-  }
-
-  // Compute the common prefix segments across all endpoint paths for this tag
-  const first = allSegmentPaths[0];
-  const commonSegs: string[] = [];
-  for (let i = 0; i < first.length; i++) {
-    if (allSegmentPaths.every((segs) => i < segs.length && segs[i] === first[i])) {
-      commonSegs.push(first[i]);
-    } else {
-      break;
-    }
-  }
-
-  if (commonSegs.length === 0) {
-    // No common path prefix across endpoints (e.g. tag spans both /issues and
-    // /workspaces/{id}/issues). Always give the tag its own folder.
-    return `${slugify(tag)}/${slugify(tag)}.http`;
-  }
-
-  return `${commonSegs.join("/")}/${slugify(tag)}.http`;
+  return sorted.map(([parent, eps]) => {
+    const folder = parent ? `${parent}/${slug}` : slug;
+    return { zipPath: `${folder}/${slug}.http`, endpoints: eps };
+  });
 }
 
 export async function buildZip(spec: ParsedSpec, endpointsByTag: Record<string, ParsedEndpoint[]>): Promise<Blob> {
   const zip = new JSZip();
   for (const [tag, endpoints] of Object.entries(endpointsByTag)) {
-    const content = generateHttpFileContent(spec, endpoints);
-    zip.file(deriveZipPath(tag, endpoints), content);
+    for (const { zipPath, endpoints: eps } of splitEndpointsByParentPath(tag, endpoints)) {
+      const content = generateHttpFileContent(spec, eps);
+      zip.file(zipPath, content);
+    }
   }
   return zip.generateAsync({ type: "blob" });
 }
@@ -70,3 +80,4 @@ export function buildZipFromEndpoints(spec: ParsedSpec, endpoints: ParsedEndpoin
 export function slugify(name: string): string {
   return name.replace(/\s+/g, "-").toLowerCase();
 }
+

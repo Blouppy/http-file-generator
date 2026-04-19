@@ -86,7 +86,7 @@ describe("generateHttpFile", () => {
     expect(result).toContain("page={{page}}");
   });
 
-  it("declares variables for body properties when no example is provided", () => {
+  it("declares @var entries for body properties and emits literal values in the body", () => {
     const endpoint: ParsedEndpoint = {
       method: "POST",
       path: "/users",
@@ -105,27 +105,37 @@ describe("generateHttpFile", () => {
       },
     };
     const result = generateHttpFile(baseSpec, endpoint);
+    // @var declarations are emitted for body fields
     expect(result).toContain('@name = ""');
     expect(result).toContain("@age = 1");
+    // Body uses literal values, NOT {{var}} references
+    expect(result).toContain('"name": ""');
+    expect(result).toContain('"age": 0');
+    expect(result).not.toContain('"name": {{name}}');
+    expect(result).not.toContain('"age": {{age}}');
   });
 
-  it("uses variable references in the body template", () => {
+  it("uses enum first value as literal in the body", () => {
     const endpoint: ParsedEndpoint = {
       method: "POST",
-      path: "/users",
+      path: "/issues",
       requestBody: {
         content: {
           "application/json": {
             schema: {
               type: "object",
-              properties: { username: { type: "string" } },
-            },
+              properties: {
+                priority: { type: "string", enum: ["Low", "Medium", "High"] },
+                count: { type: "integer" },
+              } as Record<string, unknown>,
+            } as Record<string, unknown>,
           },
         },
       },
     };
     const result = generateHttpFile(baseSpec, endpoint);
-    expect(result).toContain('"username": {{username}}');
+    expect(result).toContain('"priority": "Low"');
+    expect(result).toContain('"count": 0');
   });
 
   it("does not redeclare a path param variable when it also appears as a body field", () => {
@@ -148,14 +158,14 @@ describe("generateHttpFile", () => {
       },
     };
     const result = generateHttpFile(baseSpec, endpoint);
-    // @id = 1 should appear only once
+    // @id = 1 should appear only once (path param wins; body field skipped)
     const declarations = result.match(/@id = 1/g) ?? [];
     expect(declarations).toHaveLength(1);
     expect(result).toContain("@id = 1");
     expect(result).toContain('@name = ""');
-    // Both body fields should still reference the variable
-    expect(result).toContain('"id": {{id}}');
-    expect(result).toContain('"name": {{name}}');
+    // Body uses literal values
+    expect(result).toContain('"id": 0');
+    expect(result).toContain('"name": ""');
   });
 
   it("uses spec example directly instead of variables when an example is present", () => {
@@ -199,8 +209,9 @@ describe("generateHttpFile", () => {
     const result = generateHttpFile(baseSpec, endpoint);
     expect(result).toContain("@id = 1");
     expect(result).toContain('@name = ""');
-    expect(result).toContain('"id": {{id}}');
-    expect(result).toContain('"name": {{name}}');
+    // Body uses literal values
+    expect(result).toContain('"id": 0');
+    expect(result).toContain('"name": ""');
   });
 
   it("generates body from anyOf schema using the first entry with properties", () => {
@@ -220,7 +231,8 @@ describe("generateHttpFile", () => {
     };
     const result = generateHttpFile(baseSpec, endpoint);
     expect(result).toContain('@label = ""');
-    expect(result).toContain('"label": {{label}}');
+    expect(result).toContain('"label": ""');
+    expect(result).not.toContain('"label": {{label}}');
   });
 
   it("merges properties from multiple allOf entries", () => {
@@ -243,8 +255,9 @@ describe("generateHttpFile", () => {
     const result = generateHttpFile(baseSpec, endpoint);
     expect(result).toContain('@firstName = ""');
     expect(result).toContain("@age = 1");
-    expect(result).toContain('"firstName": {{firstName}}');
-    expect(result).toContain('"age": {{age}}');
+    // Body uses literal values
+    expect(result).toContain('"firstName": ""');
+    expect(result).toContain('"age": 0');
   });
 
   it("includes the summary as label", () => {
@@ -274,7 +287,8 @@ describe("generateHttpFile", () => {
     };
     const result = generateHttpFile(baseSpec, endpoint);
     expect(result).toContain('@username = ""');
-    expect(result).toContain('"username": {{username}}');
+    expect(result).toContain('"username": ""');
+    expect(result).not.toContain('"username": {{username}}');
   });
 
   it("generates body vars when content-type key uses a json suffix (+json)", () => {
@@ -294,7 +308,8 @@ describe("generateHttpFile", () => {
     };
     const result = generateHttpFile(baseSpec, endpoint);
     expect(result).toContain('@title = ""');
-    expect(result).toContain('"title": {{title}}');
+    expect(result).toContain('"title": ""');
+    expect(result).not.toContain('"title": {{title}}');
   });
 });
 
@@ -321,3 +336,4 @@ describe("generateHttpFileContent", () => {
     expect(result).toContain("@baseUrl");
   });
 });
+

@@ -8,7 +8,7 @@ interface VarEntry {
 /** Returns the default variable value for a given schema type and parameter context. */
 function getVariableDefault(
   schema: Record<string, unknown> | undefined,
-  context: "path" | "query" | "body"
+  context: "path" | "query"
 ): string {
   if (schema) {
     switch (schema.type) {
@@ -23,9 +23,34 @@ function getVariableDefault(
         return "{}";
     }
   }
-  // Path params are most commonly numeric IDs; body/query params default to a quoted empty
-  // string (`""`) so the variable value is valid JSON when substituted inline.
+  // Path params are most commonly numeric IDs; query params default to a quoted empty string.
   return context === "path" ? "1" : '""';
+}
+
+/**
+ * Returns the literal JSON value for a body field, respecting the schema type and
+ * any enum values defined. Used to populate the body template directly (no {{var}}).
+ */
+function getBodyLiteralDefault(schema: Record<string, unknown> | undefined): string {
+  if (schema) {
+    // Enum: use the first declared value so the body is immediately valid
+    if (Array.isArray(schema.enum) && schema.enum.length > 0) {
+      const first = schema.enum[0];
+      return typeof first === "string" ? JSON.stringify(first) : String(first);
+    }
+    switch (schema.type) {
+      case "integer":
+      case "number":
+        return "0";
+      case "boolean":
+        return "true";
+      case "array":
+        return "[]";
+      case "object":
+        return "{}";
+    }
+  }
+  return '""';
 }
 
 /**
@@ -82,10 +107,9 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
   const pathParams = (endpoint.parameters || []).filter((p) => p.in === "path");
   const queryParams = (endpoint.parameters || []).filter((p) => p.in === "query");
 
-  // Collect variable declarations — path params first, then query params, then body props.
-  // Use a Set to avoid duplicate declarations (e.g. a path param reused as a body field).
-  const declaredNames = new Set<string>();
+  // Collect @var declarations — path params first, then query params.
   const vars: VarEntry[] = [];
+  const declaredNames = new Set<string>();
 
   for (const param of pathParams) {
     if (!declaredNames.has(param.name)) {
@@ -116,9 +140,13 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
   });
   const jsonContent = jsonKey ? (bodyRaw[jsonKey] as Record<string, unknown>) : undefined;
 
-  // Determine body property variables when no explicit example is available
-  const bodyVarNames: string[] = [];
-  let useBodyVars = false;
+  // Body field entries: { name, varDefault, literal }
+  // varDefault → @var = value declaration
+  // literal    → literal value used directly in the JSON body template
+  interface BodyField { name: string; varDefault: string; literal: string }
+  const bodyFields: BodyField[] = [];
+  let hasBodyFields = false;
+
   if (jsonContent) {
     const example = jsonContent.example;
     const schemaExample = (jsonContent.schema as Record<string, unknown> | undefined)?.example;
@@ -127,17 +155,23 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
       const properties = extractProperties(schema);
       if (properties) {
         for (const [key, propSchema] of Object.entries(properties)) {
-          bodyVarNames.push(key);
-          if (!declaredNames.has(key)) {
-            declaredNames.add(key);
-            vars.push({
-              name: key,
-              value: getVariableDefault(propSchema as Record<string, unknown>, "body"),
-            });
-          }
+          const ps = propSchema as Record<string, unknown>;
+          bodyFields.push({
+            name: key,
+            varDefault: getVariableDefault(ps, "query"), // body @vars use query-style defaults (quoted strings)
+            literal: getBodyLiteralDefault(ps),
+          });
         }
-        useBodyVars = bodyVarNames.length > 0;
+        hasBodyFields = bodyFields.length > 0;
       }
+    }
+  }
+
+  // Emit @var declarations for body fields (they serve as user-editable references)
+  for (const f of bodyFields) {
+    if (!declaredNames.has(f.name)) {
+      declaredNames.add(f.name);
+      vars.push({ name: f.name, value: f.varDefault });
     }
   }
 
@@ -179,12 +213,12 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
         lines.push(JSON.stringify(example, null, 2));
       } else if (schemaExample !== undefined) {
         lines.push(JSON.stringify(schemaExample, null, 2));
-      } else if (useBodyVars) {
-        // Emit body as a template using variable references
+      } else if (hasBodyFields) {
+        // Emit body with literal typed values — no {{var}} substitutions
         const bodyLines = ["{"];
-        bodyVarNames.forEach((name, i) => {
-          const comma = i < bodyVarNames.length - 1 ? "," : "";
-          bodyLines.push(`  "${name}": {{${name}}}${comma}`);
+        bodyFields.forEach((f, i) => {
+          const comma = i < bodyFields.length - 1 ? "," : "";
+          bodyLines.push(`  "${f.name}": ${f.literal}${comma}`);
         });
         bodyLines.push("}");
         lines.push(bodyLines.join("\n"));

@@ -1,4 +1,4 @@
-import { slugify, generateForEndpoints, buildZip, deriveZipPath } from "@/services/http-file.service";
+import { slugify, generateForEndpoints, buildZip, splitEndpointsByParentPath } from "@/services/http-file.service";
 import type { ParsedSpec, ParsedEndpoint } from "@/types/openapi";
 
 const testSpec: ParsedSpec = {
@@ -32,10 +32,12 @@ describe("slugify", () => {
   });
 });
 
-describe("deriveZipPath", () => {
+describe("splitEndpointsByParentPath", () => {
   it("places a top-level resource in its own folder", () => {
     const endpoints: ParsedEndpoint[] = [{ method: "GET", path: "/workspaces" }];
-    expect(deriveZipPath("workspaces", endpoints)).toBe("workspaces/workspaces.http");
+    const result = splitEndpointsByParentPath("workspaces", endpoints);
+    expect(result).toHaveLength(1);
+    expect(result[0].zipPath).toBe("workspaces/workspaces.http");
   });
 
   it("places a nested resource in a deep sub-folder mirroring the URL hierarchy", () => {
@@ -43,49 +45,79 @@ describe("deriveZipPath", () => {
       { method: "GET", path: "/api/workspaces/{workspaceId}/labels" },
       { method: "POST", path: "/api/workspaces/{workspaceId}/labels" },
     ];
-    expect(deriveZipPath("labels", endpoints)).toBe("workspaces/labels/labels.http");
+    const result = splitEndpointsByParentPath("labels", endpoints);
+    expect(result).toHaveLength(1);
+    expect(result[0].zipPath).toBe("workspaces/labels/labels.http");
   });
 
   it("strips API and version prefixes", () => {
     const endpoints: ParsedEndpoint[] = [{ method: "GET", path: "/api/v1/users" }];
-    expect(deriveZipPath("users", endpoints)).toBe("users/users.http");
+    const result = splitEndpointsByParentPath("users", endpoints);
+    expect(result).toHaveLength(1);
+    expect(result[0].zipPath).toBe("users/users.http");
   });
 
-  it("falls back to a flat file when no meaningful segment is found", () => {
-    const endpoints: ParsedEndpoint[] = [{ method: "GET", path: "/" }];
-    expect(deriveZipPath("misc", endpoints)).toBe("misc.http");
-  });
-
-  it("falls back to a flat file for an empty endpoint list", () => {
-    expect(deriveZipPath("empty", [])).toBe("empty.http");
-  });
-
-  it("uses tag as folder when endpoints span differing root segments", () => {
-    // e.g. a tag that covers both /issues and /workspaces/{id}/issues
-    const endpoints: ParsedEndpoint[] = [
-      { method: "GET", path: "/api/v1/issues" },
-      { method: "GET", path: "/api/v1/workspaces/{id}/issues" },
-    ];
-    // No shared prefix → use tag name as folder
-    expect(deriveZipPath("issues", endpoints)).toBe("issues/issues.http");
-  });
-
-  it("uses the common prefix when endpoints have differing depths but share a root", () => {
+  it("groups all same-parent endpoints into one entry", () => {
     const endpoints: ParsedEndpoint[] = [
       { method: "GET", path: "/workspaces" },
       { method: "GET", path: "/workspaces/{id}" },
-      { method: "GET", path: "/workspaces/{id}/details" },
     ];
-    expect(deriveZipPath("workspaces", endpoints)).toBe("workspaces/workspaces.http");
+    const result = splitEndpointsByParentPath("workspaces", endpoints);
+    expect(result).toHaveLength(1);
+    expect(result[0].zipPath).toBe("workspaces/workspaces.http");
+    expect(result[0].endpoints).toHaveLength(2);
   });
 
-  it("creates multiple folder levels when all endpoints share a deep path prefix", () => {
+  it("splits a tag into multiple files when endpoints span different parent paths", () => {
+    // "issues" appears both at root and nested under "projects"
+    const endpoints: ParsedEndpoint[] = [
+      { method: "GET", path: "/api/v1/issues" },
+      { method: "POST", path: "/api/v1/issues" },
+      { method: "GET", path: "/api/v1/projects/{id}/issues" },
+    ];
+    const result = splitEndpointsByParentPath("issues", endpoints);
+    expect(result).toHaveLength(2);
+    // Root context comes first
+    expect(result[0].zipPath).toBe("issues/issues.http");
+    expect(result[0].endpoints).toHaveLength(2);
+    // Nested under "projects"
+    expect(result[1].zipPath).toBe("projects/issues/issues.http");
+    expect(result[1].endpoints).toHaveLength(1);
+  });
+
+  it("handles a tag with deeply nested endpoints", () => {
     const endpoints: ParsedEndpoint[] = [
       { method: "GET", path: "/api/workspaces/{id}/labels" },
       { method: "DELETE", path: "/api/workspaces/{id}/labels/{labelId}" },
     ];
-    // Both share the prefix: workspaces/labels
-    expect(deriveZipPath("labels", endpoints)).toBe("workspaces/labels/labels.http");
+    const result = splitEndpointsByParentPath("labels", endpoints);
+    expect(result).toHaveLength(1);
+    expect(result[0].zipPath).toBe("workspaces/labels/labels.http");
+  });
+
+  it("returns a single entry with tag-as-folder when the path has no meaningful segments", () => {
+    const endpoints: ParsedEndpoint[] = [{ method: "GET", path: "/" }];
+    const result = splitEndpointsByParentPath("misc", endpoints);
+    expect(result).toHaveLength(1);
+    expect(result[0].zipPath).toBe("misc/misc.http");
+  });
+
+  it("returns an empty array for an empty endpoint list", () => {
+    const result = splitEndpointsByParentPath("empty", []);
+    expect(result).toHaveLength(0);
+  });
+
+  it("returns entries in stable order (root parent first, then alphabetical)", () => {
+    const endpoints: ParsedEndpoint[] = [
+      { method: "GET", path: "/api/v1/projects/{id}/issues" },
+      { method: "GET", path: "/api/v1/issues" },
+      { method: "GET", path: "/api/v1/categories/{id}/issues" },
+    ];
+    const result = splitEndpointsByParentPath("issues", endpoints);
+    expect(result).toHaveLength(3);
+    expect(result[0].zipPath).toBe("issues/issues.http");       // root first
+    expect(result[1].zipPath).toBe("categories/issues/issues.http"); // then alphabetical
+    expect(result[2].zipPath).toBe("projects/issues/issues.http");
   });
 });
 
@@ -128,4 +160,17 @@ describe("buildZip", () => {
     expect(blob).toBeInstanceOf(Blob);
     expect(blob.size).toBeGreaterThan(0);
   });
+
+  it("creates multiple ZIP entries when a tag has endpoints under different parent paths", async () => {
+    const endpointsByTag = {
+      issues: [
+        { method: "GET", path: "/api/v1/issues" },
+        { method: "GET", path: "/api/v1/projects/{id}/issues" },
+      ],
+    };
+    const blob = await buildZip(testSpec, endpointsByTag);
+    expect(blob).toBeInstanceOf(Blob);
+    expect(blob.size).toBeGreaterThan(0);
+  });
 });
+
