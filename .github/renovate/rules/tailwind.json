@@ -1,0 +1,5 @@
+{
+  "matchManagers": ["npm"],
+  "matchPackageNames": ["tailwindcss", "postcss", "autoprefixer", "tailwind-merge"],
+  "groupName": "tailwind and css tooling"
+}

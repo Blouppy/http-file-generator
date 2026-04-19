@@ -1,0 +1,4 @@
+{
+  "matchManagers": ["npm"],
+  "labels": ["dependencies 📦", "npm"]
+}

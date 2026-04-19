@@ -1,0 +1,28 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "local>Blouppy/http-file-generator//.github/renovate/default"
+  ],
+  "assignees": ["@jboinembalome"],
+  "commitMessagePrefix": "chore(deps):",
+  "baseBranches": ["master"],
+  "branchPrefix": "renovate/",
+  "additionalBranchPrefix": "{{parentDir}}/",
+  "schedule": [
+    "after 9pm every weekday",
+    "before 9am every weekday",
+    "every weekend"
+  ],
+  "major": {
+    "automerge": false
+  },
+  "minor": {
+    "automerge": false
+  },
+  "patch": {
+    "automerge": true
+  },
+  "dependencyDashboard": true,
+  "timezone": "Europe/Paris"
+}
