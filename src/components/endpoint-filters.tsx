@@ -1,8 +1,7 @@
 import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { MethodBadge } from "@/components/method-badge";
-import { cn } from "@/lib/utils";
+import { MultiSelectCombobox } from "@/components/multi-select-combobox";
 
 interface EndpointFiltersProps {
   searchText: string;
@@ -31,7 +30,7 @@ export function EndpointFilters({
     searchText.trim() !== "" || selectedMethods.size > 0 || selectedTags.size > 0;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
         <Input
@@ -43,69 +42,45 @@ export function EndpointFilters({
         />
       </div>
 
-      <div className="flex flex-wrap gap-6">
+      <div className="flex flex-wrap items-center gap-2">
         {availableMethods.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Method
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {availableMethods.map((method) => (
-                <label
-                  key={method}
-                  className={cn(
-                    "flex items-center gap-1.5 cursor-pointer rounded px-2 py-1 transition-colors",
-                    selectedMethods.has(method)
-                      ? "bg-muted"
-                      : "hover:bg-muted/50"
-                  )}
-                >
-                  <Checkbox
-                    checked={selectedMethods.has(method)}
-                    onCheckedChange={() => onMethodToggle(method)}
-                  />
-                  <MethodBadge method={method} />
-                </label>
-              ))}
-            </div>
-          </div>
+          <MultiSelectCombobox
+            label="Method"
+            placeholder="All"
+            searchPlaceholder="Search methods…"
+            options={availableMethods.map((method) => ({
+              value: method,
+              label: <MethodBadge method={method} />,
+            }))}
+            selected={selectedMethods}
+            onToggle={onMethodToggle}
+          />
         )}
 
         {availableTags.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              API
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {availableTags.map((tag) => (
-                <label
-                  key={tag}
-                  className={cn(
-                    "flex items-center gap-1.5 cursor-pointer rounded px-2 py-1 text-sm transition-colors",
-                    selectedTags.has(tag) ? "bg-muted" : "hover:bg-muted/50"
-                  )}
-                >
-                  <Checkbox
-                    checked={selectedTags.has(tag)}
-                    onCheckedChange={() => onTagToggle(tag)}
-                  />
-                  <span>{tag}</span>
-                </label>
-              ))}
-            </div>
-          </div>
+          <MultiSelectCombobox
+            label="API"
+            placeholder="All"
+            searchPlaceholder="Search APIs…"
+            options={availableTags.map((tag) => ({
+              value: tag,
+              label: <span className="text-sm">{tag}</span>,
+            }))}
+            selected={selectedTags}
+            onToggle={onTagToggle}
+          />
+        )}
+
+        {hasActiveFilters && (
+          <button
+            onClick={onClearFilters}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-1"
+          >
+            <X className="h-3 w-3" />
+            Clear filters
+          </button>
         )}
       </div>
-
-      {hasActiveFilters && (
-        <button
-          onClick={onClearFilters}
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <X className="h-3 w-3" />
-          Clear filters
-        </button>
-      )}
     </div>
   );
 }
