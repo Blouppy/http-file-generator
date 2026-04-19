@@ -99,11 +99,6 @@ export default function SelectPage() {
 
           <GenerationActions spec={spec} selectedEndpoints={selectedEndpoints} />
 
-          <div className="flex justify-start">
-            <Button variant="ghost" onClick={handleReset}>
-              Start Over
-            </Button>
-          </div>
         </div>
       </div>
     </div>
