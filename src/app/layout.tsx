@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { SpecProvider } from "@/contexts/spec-context";
+import { Toolbar } from "@/components/toolbar";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -29,7 +30,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SpecProvider>{children}</SpecProvider>
+        <SpecProvider>
+          <Toolbar />
+          {children}
+        </SpecProvider>
       </body>
     </html>
   );
