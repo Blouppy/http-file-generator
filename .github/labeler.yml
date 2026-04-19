@@ -1,0 +1,54 @@
+app-routes:
+  - changed-files:
+      - any-glob-to-any-file: src/app/**
+
+components:
+  - changed-files:
+      - any-glob-to-any-file: src/components/**
+
+contexts:
+  - changed-files:
+      - any-glob-to-any-file: src/contexts/**
+
+services:
+  - changed-files:
+      - any-glob-to-any-file: src/services/**
+
+utilities:
+  - changed-files:
+      - any-glob-to-any-file: src/lib/**
+
+types:
+  - changed-files:
+      - any-glob-to-any-file: src/types/**
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file: '**/__tests__/**'
+      - any-glob-to-any-file: '**/*.test.ts'
+      - any-glob-to-any-file: '**/*.test.tsx'
+
+styles-tailwind:
+  - changed-files:
+      - any-glob-to-any-file: src/app/globals.css
+      - any-glob-to-any-file: tailwind.config.ts
+      - any-glob-to-any-file: postcss.config.mjs
+
+configuration:
+  - changed-files:
+      - any-glob-to-any-file: components.json
+      - any-glob-to-any-file: jest.config.js
+      - any-glob-to-any-file: next.config.mjs
+      - any-glob-to-any-file: tsconfig.json
+      - any-glob-to-any-file: package.json
+      - any-glob-to-any-file: package-lock.json
+
+ci-cd:
+  - changed-files:
+      - any-glob-to-any-file: .github/workflows/**
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file: README.md
+      - any-glob-to-any-file: LICENSE
+      - any-glob-to-any-file: '**/*.md'
