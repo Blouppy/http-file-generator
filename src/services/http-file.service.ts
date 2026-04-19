@@ -10,48 +10,45 @@ export function generateForEndpoints(spec: ParsedSpec, endpoints: ParsedEndpoint
 /**
  * Derives the ZIP file path for a tag group by examining the URL paths of its endpoints.
  *
- * Strategy: strip API/version prefix segments, then use the first remaining path segment
- * as the parent folder. The file is named after the tag slug.
+ * Strategy: strip API/version prefix segments and path-param segments, then compute the
+ * common path prefix across all endpoints for this tag. The resulting segments form the
+ * folder hierarchy, and the file is named after the tag slug.
  *
  * Examples:
- *   tag="workspaces", path="/api/workspaces"            → "workspaces/workspaces.http"
- *   tag="labels",     path="/api/workspaces/{id}/labels" → "workspaces/labels.http"
- *   tag="other",      path="/"                           → "other.http"
+ *   tag="workspaces", path="/api/workspaces"                        → "workspaces/workspaces.http"
+ *   tag="labels",     path="/api/workspaces/{workspaceId}/labels"   → "workspaces/labels/labels.http"
+ *   tag="other",      path="/"                                      → "other.http"
  */
 const API_VERSION_SEG = /^(api|v\d+)$/i;
 
 export function deriveZipPath(tag: string, endpoints: ParsedEndpoint[]): string {
-  // Collect the first meaningful path segment (after removing path params and api/version prefixes)
-  const firstSegments = endpoints
-    .map((e) =>
-      e.path
-        .replace(/\{[^}]+\}/g, "") // remove path params
-        .replace(/\/+/g, "/") // collapse multiple slashes
-        .replace(/^\//, "") // strip leading slash
-        .replace(/\/$/, "") // strip trailing slash
-    )
-    .map((normalized) =>
-      normalized.split("/").filter((s) => s && !API_VERSION_SEG.test(s))
-    )
-    .map((segs) => segs[0])
-    .filter((s): s is string => !!s);
+  // Build the list of meaningful segments per endpoint (drop path params and api/version prefixes)
+  const allSegmentPaths = endpoints.map((e) =>
+    e.path
+      .split("/")
+      .filter((s) => s && !s.startsWith("{") && !API_VERSION_SEG.test(s))
+  );
 
-  if (firstSegments.length === 0) {
+  if (allSegmentPaths.length === 0 || allSegmentPaths[0].length === 0) {
     return `${slugify(tag)}.http`;
   }
 
-  // Use the most frequently occurring first segment as the root folder
-  const counts = firstSegments.reduce<Record<string, number>>((acc, s) => {
-    acc[s] = (acc[s] || 0) + 1;
-    return acc;
-  }, {});
-  const entries = Object.entries(counts);
-  if (entries.length === 0) {
+  // Compute the common prefix segments across all endpoint paths for this tag
+  const first = allSegmentPaths[0];
+  const commonSegs: string[] = [];
+  for (let i = 0; i < first.length; i++) {
+    if (allSegmentPaths.every((segs) => i < segs.length && segs[i] === first[i])) {
+      commonSegs.push(first[i]);
+    } else {
+      break;
+    }
+  }
+
+  if (commonSegs.length === 0) {
     return `${slugify(tag)}.http`;
   }
-  const rootFolder = entries.sort((a, b) => b[1] - a[1])[0][0];
 
-  return `${rootFolder}/${slugify(tag)}.http`;
+  return `${commonSegs.join("/")}/${slugify(tag)}.http`;
 }
 
 export async function buildZip(spec: ParsedSpec, endpointsByTag: Record<string, ParsedEndpoint[]>): Promise<Blob> {

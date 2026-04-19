@@ -28,6 +28,47 @@ function getVariableDefault(
   return context === "path" ? "1" : '""';
 }
 
+/**
+ * Extracts a flat properties map from a JSON Schema object, handling:
+ *  - direct `properties`
+ *  - `allOf` (merges all sub-schema properties)
+ *  - `anyOf` / `oneOf` (uses the first sub-schema that has properties)
+ */
+function extractProperties(
+  schema: Record<string, unknown> | undefined
+): Record<string, Record<string, unknown>> | undefined {
+  if (!schema) return undefined;
+
+  if (schema.properties) {
+    return schema.properties as Record<string, Record<string, unknown>>;
+  }
+
+  if (Array.isArray(schema.allOf)) {
+    const merged: Record<string, Record<string, unknown>> = {};
+    for (const sub of schema.allOf as Record<string, unknown>[]) {
+      const subProps = extractProperties(sub);
+      if (subProps) Object.assign(merged, subProps);
+    }
+    return Object.keys(merged).length > 0 ? merged : undefined;
+  }
+
+  if (Array.isArray(schema.anyOf)) {
+    for (const sub of schema.anyOf as Record<string, unknown>[]) {
+      const subProps = extractProperties(sub);
+      if (subProps) return subProps;
+    }
+  }
+
+  if (Array.isArray(schema.oneOf)) {
+    for (const sub of schema.oneOf as Record<string, unknown>[]) {
+      const subProps = extractProperties(sub);
+      if (subProps) return subProps;
+    }
+  }
+
+  return undefined;
+}
+
 export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): string {
   const lines: string[] = [];
   const baseUrl =
@@ -77,7 +118,7 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
       const schemaExample = (jsonContent.schema as Record<string, unknown> | undefined)?.example;
       if (example === undefined && schemaExample === undefined) {
         const schema = jsonContent.schema as Record<string, unknown> | undefined;
-        const properties = schema?.properties as Record<string, Record<string, unknown>> | undefined;
+        const properties = extractProperties(schema);
         if (properties) {
           for (const [key, propSchema] of Object.entries(properties)) {
             bodyVarNames.push(key);

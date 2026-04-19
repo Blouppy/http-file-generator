@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SpecInfo } from "@/components/spec-info";
 import { EndpointGroup } from "@/components/endpoint-group";
+import { GenerationActions } from "@/components/generation-actions";
 import { useSpec } from "@/contexts/spec-context";
 import { groupEndpointsByTag, getEndpointId } from "@/services/openapi.service";
 
 function StepIndicator({ current }: { current: number }) {
-  const steps = ["1. Upload", "2. Select", "3. Generate"];
+  const steps = ["1. Upload", "2. Select"];
   return (
     <div className="flex items-center gap-2 mb-8">
       {steps.map((step, i) => (
@@ -96,13 +97,11 @@ export default function SelectPage() {
             </CardContent>
           </Card>
 
-          <div className="flex justify-end">
-            <Button
-              size="lg"
-              disabled={selectedEndpoints.length === 0}
-              onClick={() => router.push("/generate")}
-            >
-              Generate .http Files
+          <GenerationActions spec={spec} selectedEndpoints={selectedEndpoints} />
+
+          <div className="flex justify-start">
+            <Button variant="ghost" onClick={handleReset}>
+              Start Over
             </Button>
           </div>
         </div>

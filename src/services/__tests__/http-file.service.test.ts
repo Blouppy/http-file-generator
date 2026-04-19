@@ -38,12 +38,12 @@ describe("deriveZipPath", () => {
     expect(deriveZipPath("workspaces", endpoints)).toBe("workspaces/workspaces.http");
   });
 
-  it("places a nested resource under the parent folder", () => {
+  it("places a nested resource in a deep sub-folder mirroring the URL hierarchy", () => {
     const endpoints: ParsedEndpoint[] = [
       { method: "GET", path: "/api/workspaces/{workspaceId}/labels" },
       { method: "POST", path: "/api/workspaces/{workspaceId}/labels" },
     ];
-    expect(deriveZipPath("labels", endpoints)).toBe("workspaces/labels.http");
+    expect(deriveZipPath("labels", endpoints)).toBe("workspaces/labels/labels.http");
   });
 
   it("strips API and version prefixes", () => {
@@ -60,13 +60,22 @@ describe("deriveZipPath", () => {
     expect(deriveZipPath("empty", [])).toBe("empty.http");
   });
 
-  it("uses the most common first segment when endpoints have differing roots", () => {
+  it("uses the common prefix when endpoints have differing depths", () => {
     const endpoints: ParsedEndpoint[] = [
       { method: "GET", path: "/workspaces" },
       { method: "GET", path: "/workspaces/{id}" },
       { method: "GET", path: "/workspaces/{id}/details" },
     ];
     expect(deriveZipPath("workspaces", endpoints)).toBe("workspaces/workspaces.http");
+  });
+
+  it("creates multiple folder levels when all endpoints share a deep path prefix", () => {
+    const endpoints: ParsedEndpoint[] = [
+      { method: "GET", path: "/api/workspaces/{id}/labels" },
+      { method: "DELETE", path: "/api/workspaces/{id}/labels/{labelId}" },
+    ];
+    // Both share the prefix: workspaces/labels
+    expect(deriveZipPath("labels", endpoints)).toBe("workspaces/labels/labels.http");
   });
 });
 

@@ -177,6 +177,76 @@ describe("generateHttpFile", () => {
     expect(result).not.toContain("@label");
   });
 
+  it("generates body from allOf schema when no direct properties exist", () => {
+    const endpoint: ParsedEndpoint = {
+      method: "POST",
+      path: "/projects",
+      requestBody: {
+        content: {
+          "application/json": {
+            schema: {
+              allOf: [
+                {
+                  type: "object",
+                  properties: { id: { type: "integer" }, name: { type: "string" } },
+                },
+              ],
+            } as Record<string, unknown>,
+          },
+        },
+      },
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+    expect(result).toContain("@id = 1");
+    expect(result).toContain('@name = ""');
+    expect(result).toContain('"id": {{id}}');
+    expect(result).toContain('"name": {{name}}');
+  });
+
+  it("generates body from anyOf schema using the first entry with properties", () => {
+    const endpoint: ParsedEndpoint = {
+      method: "PUT",
+      path: "/items/{id}",
+      parameters: [{ name: "id", in: "path", schema: { type: "integer" } }],
+      requestBody: {
+        content: {
+          "application/json": {
+            schema: {
+              anyOf: [{ type: "object", properties: { label: { type: "string" } } }],
+            } as Record<string, unknown>,
+          },
+        },
+      },
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+    expect(result).toContain('@label = ""');
+    expect(result).toContain('"label": {{label}}');
+  });
+
+  it("merges properties from multiple allOf entries", () => {
+    const endpoint: ParsedEndpoint = {
+      method: "POST",
+      path: "/users",
+      requestBody: {
+        content: {
+          "application/json": {
+            schema: {
+              allOf: [
+                { type: "object", properties: { firstName: { type: "string" } } },
+                { type: "object", properties: { age: { type: "integer" } } },
+              ],
+            } as Record<string, unknown>,
+          },
+        },
+      },
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+    expect(result).toContain('@firstName = ""');
+    expect(result).toContain("@age = 1");
+    expect(result).toContain('"firstName": {{firstName}}');
+    expect(result).toContain('"age": {{age}}');
+  });
+
   it("includes the summary as label", () => {
     const endpoint: ParsedEndpoint = {
       method: "GET",
