@@ -44,6 +44,19 @@ export const translations = {
     groupAll: "All",
     groupNone: "None",
 
+    // Endpoint filters
+    filterSearchPlaceholder: "Search endpoints by path, summary…",
+    filterMethodLabel: "Method",
+    filterApiLabel: "API",
+    filterPlaceholderAll: "All",
+    filterMethodSearchPlaceholder: "Search methods…",
+    filterApiSearchPlaceholder: "Search APIs…",
+    filterClearFilters: "Clear filters",
+    filterSelected: (n: number) => `${n} selected`,
+    filterNoResults: "No results found.",
+    filterClearSelection: "Clear selection",
+    filterNoMatches: "No endpoints match your filters.",
+
     // Generation actions
     noEndpoints: "No endpoints selected",
     readyGenerate: (n: number) =>
@@ -95,6 +108,19 @@ export const translations = {
     endpointsTitle: "Endpoints",
     groupAll: "Tous",
     groupNone: "Aucun",
+
+    // Endpoint filters
+    filterSearchPlaceholder: "Rechercher par chemin, résumé…",
+    filterMethodLabel: "Méthode",
+    filterApiLabel: "API",
+    filterPlaceholderAll: "Tous",
+    filterMethodSearchPlaceholder: "Rechercher les méthodes…",
+    filterApiSearchPlaceholder: "Rechercher les APIs…",
+    filterClearFilters: "Effacer les filtres",
+    filterSelected: (n: number) => `${n} sélectionné${n !== 1 ? "s" : ""}`,
+    filterNoResults: "Aucun résultat trouvé.",
+    filterClearSelection: "Effacer la sélection",
+    filterNoMatches: "Aucun endpoint ne correspond à vos filtres.",
 
     // Generation actions
     noEndpoints: "Aucun endpoint sélectionné",
