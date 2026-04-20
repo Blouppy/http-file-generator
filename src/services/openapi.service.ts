@@ -18,3 +18,43 @@ export function groupEndpointsByTag(endpoints: ParsedEndpoint[]): Record<string,
 export function getEndpointId(endpoint: ParsedEndpoint): string {
   return `${endpoint.method}:${endpoint.path}`;
 }
+
+export interface EndpointFilters {
+  searchText: string;
+  methods: Set<string>;
+  tags: Set<string>;
+}
+
+export function filterEndpoints(
+  endpoints: ParsedEndpoint[],
+  filters: EndpointFilters
+): ParsedEndpoint[] {
+  const { searchText, methods, tags } = filters;
+  const lowerSearch = searchText.toLowerCase().trim();
+
+  return endpoints.filter((endpoint) => {
+    if (lowerSearch) {
+      const searchable = [
+        endpoint.path,
+        endpoint.summary,
+        endpoint.operationId,
+        endpoint.description,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      if (!searchable.includes(lowerSearch)) return false;
+    }
+
+    if (methods.size > 0 && !methods.has(endpoint.method)) {
+      return false;
+    }
+
+    if (tags.size > 0) {
+      const endpointTag = endpoint.tags?.[0] || "Other";
+      if (!tags.has(endpointTag)) return false;
+    }
+
+    return true;
+  });
+}
