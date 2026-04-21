@@ -138,12 +138,12 @@ export default function SelectPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
             {/* Left panel — endpoint tree with filters */}
-            <Card>
+            <Card className="flex flex-col h-[600px] overflow-hidden">
               <CardHeader>
                 <CardTitle className="text-base">{t.endpointsTitle}</CardTitle>
               </CardHeader>
-              <CardContent className="p-0">
-                <div className="px-6 py-4 border-b">
+              <CardContent className="p-0 flex flex-col overflow-hidden flex-1">
+                <div className="px-6 py-4 border-b shrink-0">
                   <EndpointFilters
                     searchText={searchText}
                     onSearchChange={setSearchText}
@@ -156,26 +156,28 @@ export default function SelectPage() {
                     onClearFilters={handleClearFilters}
                   />
                 </div>
-                {Object.keys(filteredEndpointsByTag).length === 0 ? (
-                  <p className="px-6 py-8 text-center text-sm text-muted-foreground">
-                    {t.filterNoMatches}
-                  </p>
-                ) : (
-                  Object.entries(filteredEndpointsByTag).map(([tag, endpoints], idx) => (
-                    <EndpointGroup
-                      key={tag}
-                      tag={tag}
-                      endpoints={endpoints}
-                      selectedIds={selectedIds}
-                      onToggleEndpoint={toggleEndpoint}
-                      onSelectAll={() => handleSelectAllInTag(endpoints)}
-                      onDeselectAll={() => handleDeselectAllInTag(endpoints)}
-                      isFirst={idx === 0}
-                      onPreview={setPreviewEndpoint}
-                      previewEndpointId={previewEndpointId}
-                    />
-                  ))
-                )}
+                <div className="overflow-y-auto flex-1">
+                  {Object.keys(filteredEndpointsByTag).length === 0 ? (
+                    <p className="px-6 py-8 text-center text-sm text-muted-foreground">
+                      {t.filterNoMatches}
+                    </p>
+                  ) : (
+                    Object.entries(filteredEndpointsByTag).map(([tag, endpoints], idx) => (
+                      <EndpointGroup
+                        key={tag}
+                        tag={tag}
+                        endpoints={endpoints}
+                        selectedIds={selectedIds}
+                        onToggleEndpoint={toggleEndpoint}
+                        onSelectAll={() => handleSelectAllInTag(endpoints)}
+                        onDeselectAll={() => handleDeselectAllInTag(endpoints)}
+                        isFirst={idx === 0}
+                        onPreview={setPreviewEndpoint}
+                        previewEndpointId={previewEndpointId}
+                      />
+                    ))
+                  )}
+                </div>
               </CardContent>
             </Card>
 

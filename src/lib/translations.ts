@@ -68,6 +68,8 @@ export const translations = {
     previewTitle: "HTTP Preview",
     previewSelectEndpoint: "Click an endpoint to preview its .http file",
     previewDownload: "Download .http",
+    previewCopy: "Copy",
+    previewCopied: "Copied!",
 
     // Home page
     homeTitle: "HTTP File Generator",
@@ -151,6 +153,8 @@ export const translations = {
     previewTitle: "Aperçu HTTP",
     previewSelectEndpoint: "Cliquez sur un endpoint pour prévisualiser son fichier .http",
     previewDownload: "Télécharger .http",
+    previewCopy: "Copier",
+    previewCopied: "Copié !",
 
     // Home page
     homeTitle: "HTTP File Generator",

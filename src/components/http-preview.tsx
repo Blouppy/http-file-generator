@@ -1,7 +1,7 @@
 "use client";
 
-import { Fragment, useMemo } from "react";
-import { Download } from "lucide-react";
+import { Fragment, useMemo, useState, useCallback } from "react";
+import { Download, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -96,6 +96,7 @@ interface HttpPreviewProps {
 
 export function HttpPreview({ spec, endpoint }: HttpPreviewProps) {
   const { t } = useLanguage();
+  const [copied, setCopied] = useState(false);
 
   // Generate the full file content for the single selected endpoint so the preview
   // includes the @baseUrl / @token header and is immediately copy-pasteable.
@@ -122,21 +123,39 @@ export function HttpPreview({ spec, endpoint }: HttpPreviewProps) {
     URL.revokeObjectURL(url);
   };
 
+  const handleCopy = useCallback(() => {
+    if (!content) return;
+    navigator.clipboard.writeText(content).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [content]);
+
   const label = endpoint
     ? endpoint.summary || endpoint.operationId || `${endpoint.method} ${endpoint.path}`
     : null;
 
   return (
-    <Card className="flex flex-col overflow-hidden">
+    <Card className="flex flex-col h-[600px] overflow-hidden">
       <CardHeader className="pb-3 flex-row items-center justify-between space-y-0 shrink-0 gap-2">
         <CardTitle className="text-base truncate">
           {label ?? t.previewTitle}
         </CardTitle>
         {endpoint && (
-          <Button size="sm" variant="outline" onClick={handleDownload} className="shrink-0">
-            <Download className="w-3.5 h-3.5 mr-1.5" />
-            {t.previewDownload}
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button size="sm" variant="outline" onClick={handleCopy}>
+              {copied ? (
+                <Check className="w-3.5 h-3.5 mr-1.5 text-green-500" />
+              ) : (
+                <Copy className="w-3.5 h-3.5 mr-1.5" />
+              )}
+              {copied ? t.previewCopied : t.previewCopy}
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleDownload}>
+              <Download className="w-3.5 h-3.5 mr-1.5" />
+              {t.previewDownload}
+            </Button>
+          </div>
         )}
       </CardHeader>
       <CardContent className="p-0 overflow-y-auto flex-1">
@@ -145,7 +164,7 @@ export function HttpPreview({ spec, endpoint }: HttpPreviewProps) {
             {t.previewSelectEndpoint}
           </div>
         ) : (
-          <pre className="p-4 text-xs font-mono leading-relaxed bg-muted/30 overflow-x-auto">
+          <pre className="px-6 py-4 text-xs font-mono leading-relaxed bg-muted/30 overflow-x-auto">
             <code>
               {lines.map((line, i) => (
                 <Fragment key={i}>
