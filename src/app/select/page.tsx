@@ -7,6 +7,7 @@ import { SpecInfo } from "@/components/spec-info";
 import { EndpointGroup } from "@/components/endpoint-group";
 import { EndpointFilters } from "@/components/endpoint-filters";
 import { GenerationActions } from "@/components/generation-actions";
+import { HttpPreview } from "@/components/http-preview";
 import { useSpec } from "@/contexts/spec-context";
 import { useLanguage } from "@/contexts/language-context";
 import { groupEndpointsByTag, getEndpointId, filterEndpoints } from "@/services/openapi.service";
@@ -44,6 +45,7 @@ export default function SelectPage() {
   const [searchText, setSearchText] = useState("");
   const [selectedMethods, setSelectedMethods] = useState<Set<string>>(new Set());
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
+  const [previewEndpoint, setPreviewEndpoint] = useState<ParsedEndpoint | null>(null);
 
   useEffect(() => {
     if (!spec) router.replace("/upload");
@@ -117,9 +119,11 @@ export default function SelectPage() {
     router.push("/upload");
   };
 
+  const previewEndpointId = previewEndpoint ? getEndpointId(previewEndpoint) : null;
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-5xl mx-auto px-4 py-12">
+      <div className="max-w-7xl mx-auto px-4 py-12">
         <StepIndicator current={2} />
 
         <div className="space-y-6">
@@ -132,47 +136,56 @@ export default function SelectPage() {
             onReset={handleReset}
           />
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t.endpointsTitle}</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="px-6 py-4 border-b">
-                <EndpointFilters
-                  searchText={searchText}
-                  onSearchChange={setSearchText}
-                  availableMethods={availableMethods}
-                  selectedMethods={selectedMethods}
-                  onMethodToggle={handleMethodToggle}
-                  availableTags={availableTags}
-                  selectedTags={selectedTags}
-                  onTagToggle={handleTagToggle}
-                  onClearFilters={handleClearFilters}
-                />
-              </div>
-              {Object.keys(filteredEndpointsByTag).length === 0 ? (
-                <p className="px-6 py-8 text-center text-sm text-muted-foreground">
-                  {t.filterNoMatches}
-                </p>
-              ) : (
-                Object.entries(filteredEndpointsByTag).map(([tag, endpoints], idx) => (
-                  <EndpointGroup
-                    key={tag}
-                    tag={tag}
-                    endpoints={endpoints}
-                    selectedIds={selectedIds}
-                    onToggleEndpoint={toggleEndpoint}
-                    onSelectAll={() => handleSelectAllInTag(endpoints)}
-                    onDeselectAll={() => handleDeselectAllInTag(endpoints)}
-                    isFirst={idx === 0}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            {/* Left panel — endpoint tree with filters */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">{t.endpointsTitle}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="px-6 py-4 border-b">
+                  <EndpointFilters
+                    searchText={searchText}
+                    onSearchChange={setSearchText}
+                    availableMethods={availableMethods}
+                    selectedMethods={selectedMethods}
+                    onMethodToggle={handleMethodToggle}
+                    availableTags={availableTags}
+                    selectedTags={selectedTags}
+                    onTagToggle={handleTagToggle}
+                    onClearFilters={handleClearFilters}
                   />
-                ))
-              )}
-            </CardContent>
-          </Card>
+                </div>
+                {Object.keys(filteredEndpointsByTag).length === 0 ? (
+                  <p className="px-6 py-8 text-center text-sm text-muted-foreground">
+                    {t.filterNoMatches}
+                  </p>
+                ) : (
+                  Object.entries(filteredEndpointsByTag).map(([tag, endpoints], idx) => (
+                    <EndpointGroup
+                      key={tag}
+                      tag={tag}
+                      endpoints={endpoints}
+                      selectedIds={selectedIds}
+                      onToggleEndpoint={toggleEndpoint}
+                      onSelectAll={() => handleSelectAllInTag(endpoints)}
+                      onDeselectAll={() => handleDeselectAllInTag(endpoints)}
+                      isFirst={idx === 0}
+                      onPreview={setPreviewEndpoint}
+                      previewEndpointId={previewEndpointId}
+                    />
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Right panel — HTTP preview */}
+            <div className="sticky top-4">
+              <HttpPreview spec={spec} endpoint={previewEndpoint} />
+            </div>
+          </div>
 
           <GenerationActions spec={spec} selectedEndpoints={selectedEndpoints} />
-
         </div>
       </div>
     </div>

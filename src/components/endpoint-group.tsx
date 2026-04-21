@@ -15,6 +15,10 @@ interface EndpointGroupProps {
   onSelectAll: () => void;
   onDeselectAll: () => void;
   isFirst?: boolean;
+  /** Called with the endpoint whose row was clicked (to open the preview panel). */
+  onPreview: (endpoint: ParsedEndpoint) => void;
+  /** The id of the endpoint currently shown in the preview panel, or null. */
+  previewEndpointId: string | null;
 }
 
 export function EndpointGroup({
@@ -25,6 +29,8 @@ export function EndpointGroup({
   onSelectAll,
   onDeselectAll,
   isFirst = false,
+  onPreview,
+  previewEndpointId,
 }: EndpointGroupProps) {
   const { t } = useLanguage();
   const selectedCount = endpoints.filter((e) => selectedIds.has(getEndpointId(e))).length;
@@ -62,7 +68,9 @@ export function EndpointGroup({
               key={id}
               endpoint={endpoint}
               isSelected={selectedIds.has(id)}
+              isActive={previewEndpointId === id}
               onToggle={() => onToggleEndpoint(id)}
+              onPreview={() => onPreview(endpoint)}
             />
           );
         })}
