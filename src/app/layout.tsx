@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { SpecProvider } from "@/contexts/spec-context";
+import { LanguageProvider } from "@/contexts/language-context";
 import { Toolbar } from "@/components/toolbar";
 import { ThemeProvider } from "@/components/theme-provider";
 
@@ -37,10 +38,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <SpecProvider>
-            <Toolbar />
-            {children}
-          </SpecProvider>
+          <LanguageProvider>
+            <SpecProvider>
+              <Toolbar />
+              {children}
+            </SpecProvider>
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>

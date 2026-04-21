@@ -8,11 +8,13 @@ import { EndpointGroup } from "@/components/endpoint-group";
 import { EndpointFilters } from "@/components/endpoint-filters";
 import { GenerationActions } from "@/components/generation-actions";
 import { useSpec } from "@/contexts/spec-context";
+import { useLanguage } from "@/contexts/language-context";
 import { groupEndpointsByTag, getEndpointId, filterEndpoints } from "@/services/openapi.service";
 import type { ParsedEndpoint } from "@/types/openapi";
 
 function StepIndicator({ current }: { current: number }) {
-  const steps = ["1. Upload", "2. Select"];
+  const { t } = useLanguage();
+  const steps = [t.stepUpload, t.stepSelect];
   return (
     <div className="flex items-center gap-2 mb-8">
       {steps.map((step, i) => (
@@ -37,6 +39,7 @@ export default function SelectPage() {
   const router = useRouter();
   const { spec, setSpec, selectedIds, setSelectedIds, toggleEndpoint, selectAll, deselectAll, selectedEndpoints } =
     useSpec();
+  const { t } = useLanguage();
 
   const [searchText, setSearchText] = useState("");
   const [selectedMethods, setSelectedMethods] = useState<Set<string>>(new Set());
@@ -131,7 +134,7 @@ export default function SelectPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Endpoints</CardTitle>
+              <CardTitle className="text-base">{t.endpointsTitle}</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <div className="px-6 py-4 border-b">
@@ -149,7 +152,7 @@ export default function SelectPage() {
               </div>
               {Object.keys(filteredEndpointsByTag).length === 0 ? (
                 <p className="px-6 py-8 text-center text-sm text-muted-foreground">
-                  No endpoints match your filters.
+                  {t.filterNoMatches}
                 </p>
               ) : (
                 Object.entries(filteredEndpointsByTag).map(([tag, endpoints], idx) => (

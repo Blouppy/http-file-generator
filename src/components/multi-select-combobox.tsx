@@ -14,6 +14,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/contexts/language-context";
 
 interface MultiSelectComboboxProps {
   label: string;
@@ -32,6 +33,7 @@ export function MultiSelectCombobox({
   placeholder = "Select…",
   searchPlaceholder = "Search…",
 }: MultiSelectComboboxProps) {
+  const { t } = useLanguage();
   const [open, setOpen] = React.useState(false);
 
   const selectedCount = selected.size;
@@ -51,7 +53,7 @@ export function MultiSelectCombobox({
               <span className="text-sm">{placeholder}</span>
             ) : (
               <Badge variant="secondary" className="rounded-sm px-1 font-normal">
-                {selectedCount} selected
+                {t.filterSelected(selectedCount)}
               </Badge>
             )}
           </span>
@@ -62,7 +64,7 @@ export function MultiSelectCombobox({
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
           <CommandList>
-            <CommandEmpty>No results found.</CommandEmpty>
+            <CommandEmpty>{t.filterNoResults}</CommandEmpty>
             <CommandGroup>
               {options.map((opt) => (
                 <CommandItem
@@ -95,7 +97,7 @@ export function MultiSelectCombobox({
                 }}
               >
                 <X className="h-3 w-3" />
-                Clear selection
+                {t.filterClearSelection}
               </button>
             </div>
           )}

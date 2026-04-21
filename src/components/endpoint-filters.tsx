@@ -1,7 +1,10 @@
+"use client";
+
 import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { MethodBadge } from "@/components/method-badge";
 import { MultiSelectCombobox } from "@/components/multi-select-combobox";
+import { useLanguage } from "@/contexts/language-context";
 
 interface EndpointFiltersProps {
   searchText: string;
@@ -26,6 +29,7 @@ export function EndpointFilters({
   onTagToggle,
   onClearFilters,
 }: EndpointFiltersProps) {
+  const { t } = useLanguage();
   const hasActiveFilters =
     searchText.trim() !== "" || selectedMethods.size > 0 || selectedTags.size > 0;
 
@@ -35,7 +39,7 @@ export function EndpointFilters({
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
         <Input
           type="search"
-          placeholder="Search endpoints by path, summary…"
+          placeholder={t.filterSearchPlaceholder}
           value={searchText}
           onChange={(e) => onSearchChange(e.target.value)}
           className="pl-9"
@@ -45,9 +49,9 @@ export function EndpointFilters({
       <div className="flex flex-wrap items-center gap-2">
         {availableMethods.length > 0 && (
           <MultiSelectCombobox
-            label="Method"
-            placeholder="All"
-            searchPlaceholder="Search methods…"
+            label={t.filterMethodLabel}
+            placeholder={t.filterPlaceholderAll}
+            searchPlaceholder={t.filterMethodSearchPlaceholder}
             options={availableMethods.map((method) => ({
               value: method,
               label: <MethodBadge method={method} />,
@@ -59,9 +63,9 @@ export function EndpointFilters({
 
         {availableTags.length > 0 && (
           <MultiSelectCombobox
-            label="API"
-            placeholder="All"
-            searchPlaceholder="Search APIs…"
+            label={t.filterApiLabel}
+            placeholder={t.filterPlaceholderAll}
+            searchPlaceholder={t.filterApiSearchPlaceholder}
             options={availableTags.map((tag) => ({
               value: tag,
               label: <span className="text-sm">{tag}</span>,
@@ -77,7 +81,7 @@ export function EndpointFilters({
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-1"
           >
             <X className="h-3 w-3" />
-            Clear filters
+            {t.filterClearFilters}
           </button>
         )}
       </div>
