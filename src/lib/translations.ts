@@ -63,6 +63,19 @@ export const translations = {
       `Ready to generate for ${n} endpoint${n !== 1 ? "s" : ""}`,
     downloadZipDesc: "Download ZIP archive grouped by tags",
     download: "Download",
+
+    // Home page
+    homeTitle: "HTTP File Generator",
+    homeSubtitle: "Transform your OpenAPI specifications into ready-to-use .http files in seconds",
+    homeGetStarted: "Get Started",
+    homeFeature1Title: "Parse OpenAPI Specs",
+    homeFeature1Desc: "Upload JSON or YAML OpenAPI 3.x specs and let us do the parsing.",
+    homeFeature2Title: "Select Endpoints",
+    homeFeature2Desc: "Choose exactly which endpoints you want to generate .http files for.",
+    homeFeature3Title: "Generate .http Files",
+    homeFeature3Desc: "Instantly generate ready-to-use .http files compatible with VS Code REST Client.",
+    homeFeature4Title: "Download as ZIP",
+    homeFeature4Desc: "Download all files in one ZIP archive, organized by API tags.",
   },
   fr: {
     // Language toggle
@@ -128,6 +141,19 @@ export const translations = {
       `Prêt à générer pour ${n} endpoint${n !== 1 ? "s" : ""}`,
     downloadZipDesc: "Télécharger l'archive ZIP groupée par tags",
     download: "Télécharger",
+
+    // Home page
+    homeTitle: "HTTP File Generator",
+    homeSubtitle: "Transformez vos spécifications OpenAPI en fichiers .http prêts à l'emploi en quelques secondes",
+    homeGetStarted: "Commencer",
+    homeFeature1Title: "Analyser les specs OpenAPI",
+    homeFeature1Desc: "Importez vos specs OpenAPI 3.x en JSON ou YAML et laissez-nous faire l'analyse.",
+    homeFeature2Title: "Sélectionner les endpoints",
+    homeFeature2Desc: "Choisissez exactement les endpoints pour lesquels générer des fichiers .http.",
+    homeFeature3Title: "Générer les fichiers .http",
+    homeFeature3Desc: "Générez instantanément des fichiers .http prêts à l'emploi, compatibles avec VS Code REST Client.",
+    homeFeature4Title: "Télécharger en ZIP",
+    homeFeature4Desc: "Téléchargez tous les fichiers dans une archive ZIP, organisée par tags API.",
   },
 } as const;
 
