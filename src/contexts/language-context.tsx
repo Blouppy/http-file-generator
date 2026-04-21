@@ -3,6 +3,11 @@
 import { createContext, useContext, useState } from "react";
 import type { Language, Translations } from "@/lib/translations";
 import { translations } from "@/lib/translations";
+import {
+  getStorageItem,
+  setStorageItem,
+  STORAGE_KEYS,
+} from "@/services/local-storage.service";
 
 interface LanguageContextValue {
   language: Language;
@@ -13,7 +18,14 @@ interface LanguageContextValue {
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguage] = useState<Language>("en");
+  const [language, setLanguageState] = useState<Language>(() =>
+    getStorageItem<Language>(STORAGE_KEYS.LANGUAGE, "en")
+  );
+
+  const setLanguage = (lang: Language) => {
+    setStorageItem(STORAGE_KEYS.LANGUAGE, lang);
+    setLanguageState(lang);
+  };
 
   return (
     <LanguageContext.Provider
