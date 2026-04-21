@@ -1,7 +1,8 @@
 "use client"
 
+import * as React from "react"
 import { useLanguage } from "@/contexts/language-context"
-import type { Language } from "@/lib/translations"
+import { translations, type Language } from "@/lib/translations"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -43,8 +44,16 @@ const flagMap: Record<Language, React.ComponentType<{ className?: string }>> = {
 }
 
 export function LanguageToggle() {
-  const { language, setLanguage, t } = useLanguage()
-  const CurrentFlag = flagMap[language]
+  const { language, setLanguage } = useLanguage()
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const selectedLanguage = mounted ? language : "en"
+  const t = translations[selectedLanguage]
+  const CurrentFlag = flagMap[selectedLanguage]
 
   return (
     <DropdownMenu>
@@ -55,7 +64,7 @@ export function LanguageToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuRadioGroup value={language} onValueChange={(v) => setLanguage(v as Language)}>
+        <DropdownMenuRadioGroup value={selectedLanguage} onValueChange={(v) => setLanguage(v as Language)}>
           <DropdownMenuRadioItem value="en" className="gap-2">
             <FlagGB className="w-5 h-auto rounded-sm" />
             {t.languageEnglish}

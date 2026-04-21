@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import type { Language, Translations } from "@/lib/translations";
 import { translations } from "@/lib/translations";
 import {
@@ -18,9 +18,12 @@ interface LanguageContextValue {
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>(() =>
-    getStorageItem<Language>(STORAGE_KEYS.LANGUAGE, "en")
-  );
+  const [language, setLanguageState] = useState<Language>("en");
+
+  useEffect(() => {
+    const persistedLanguage = getStorageItem<Language>(STORAGE_KEYS.LANGUAGE, "en");
+    setLanguageState(persistedLanguage);
+  }, []);
 
   const setLanguage = (lang: Language) => {
     setStorageItem(STORAGE_KEYS.LANGUAGE, lang);
