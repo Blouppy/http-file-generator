@@ -28,7 +28,7 @@ function classifyLine(line: string): LineType {
   if (line.startsWith("#")) return "comment";
   if (line.startsWith("@")) return "variable";
   if (/^(GET|POST|PUT|DELETE|PATCH|OPTIONS|HEAD|TRACE)\s/.test(line)) return "method";
-  if (/^[A-Za-z][\w-]*:\s/.test(line)) return "header";
+  if (/^[A-Za-z][\w-]*:\s*/.test(line)) return "header";
   return "body";
 }
 
