@@ -128,6 +128,8 @@ export function HttpPreview({ spec, endpoint }: HttpPreviewProps) {
     navigator.clipboard.writeText(content).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      // Clipboard write failed (e.g. permissions denied) — silently ignore
     });
   }, [content]);
 
