@@ -21,7 +21,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-5xl mx-auto px-4 py-16">
+      <div className="max-w-7xl mx-auto px-4 py-16">
         <div className="text-center mb-16">
           <h1 className="text-5xl font-bold tracking-tight mb-4">{t.homeTitle}</h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
