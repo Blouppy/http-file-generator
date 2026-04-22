@@ -8,7 +8,6 @@
   "commitMessagePrefix": "chore(deps):",
   "baseBranches": ["master"],
   "branchPrefix": "renovate/",
-  "additionalBranchPrefix": "{{parentDir}}/",
   "schedule": [
     "after 9pm every weekday",
     "before 9am every weekday",
