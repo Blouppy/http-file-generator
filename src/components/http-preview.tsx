@@ -166,7 +166,7 @@ export function HttpPreview({ spec, endpoint }: HttpPreviewProps) {
             {t.previewSelectEndpoint}
           </div>
         ) : (
-          <pre className="px-6 py-4 text-xs font-mono leading-relaxed bg-muted/30 overflow-x-auto">
+          <pre className="px-6 py-4 h-full text-xs font-mono leading-relaxed bg-muted/30 overflow-x-auto">
             <code>
               {lines.map((line, i) => (
                 <Fragment key={i}>
