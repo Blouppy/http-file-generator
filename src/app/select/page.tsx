@@ -156,7 +156,7 @@ export default function SelectPage() {
                     onClearFilters={handleClearFilters}
                   />
                 </div>
-                <div className="overflow-y-auto overflow-x-hidden flex-1">
+                <div className="overflow-y-auto flex-1">
                   {Object.keys(filteredEndpointsByTag).length === 0 ? (
                     <p className="px-6 py-8 text-center text-sm text-muted-foreground">
                       {t.filterNoMatches}

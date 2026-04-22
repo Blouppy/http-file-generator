@@ -139,7 +139,7 @@ export function HttpPreview({ spec, endpoint }: HttpPreviewProps) {
 
   return (
     <Card className="flex flex-col h-[600px] overflow-hidden">
-      <CardHeader className="px-6 py-3 flex-row items-center justify-between space-y-0 shrink-0 gap-2 border-b">
+      <CardHeader className="pb-3 flex-row items-center justify-between space-y-0 shrink-0 gap-2">
         <CardTitle className="text-base truncate">
           {label ?? t.previewTitle}
         </CardTitle>
@@ -160,13 +160,13 @@ export function HttpPreview({ spec, endpoint }: HttpPreviewProps) {
           </div>
         )}
       </CardHeader>
-      <CardContent className="p-0 overflow-hidden flex-1 flex flex-col">
+      <CardContent className="p-0 overflow-y-auto flex-1">
         {!endpoint ? (
-          <div className="flex-1 flex items-center justify-center text-center text-sm text-muted-foreground px-6">
+          <div className="px-6 py-12 text-center text-sm text-muted-foreground">
             {t.previewSelectEndpoint}
           </div>
         ) : (
-          <pre className="flex-1 overflow-auto px-6 py-4 text-xs font-mono leading-relaxed bg-muted/30">
+          <pre className="px-6 py-4 text-xs font-mono leading-relaxed bg-muted/30 overflow-x-auto">
             <code>
               {lines.map((line, i) => (
                 <Fragment key={i}>
