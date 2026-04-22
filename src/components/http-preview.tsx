@@ -91,29 +91,26 @@ function SyntaxLine({ line }: { line: string }) {
 
 interface HttpPreviewProps {
   spec: ParsedSpec;
-  endpoint: ParsedEndpoint | null;
+  endpoints: ParsedEndpoint[];
 }
 
-export function HttpPreview({ spec, endpoint }: HttpPreviewProps) {
+export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
   const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
 
-  // Generate the full file content for the single selected endpoint so the preview
-  // includes the @baseUrl / @token header and is immediately copy-pasteable.
+  const hasEndpoints = endpoints.length > 0;
+
+  // Generate the full file content for all selected endpoints in selection order.
   const content = useMemo(() => {
-    if (!endpoint) return null;
-    return generateHttpFileContent(spec, [endpoint]);
-  }, [spec, endpoint]);
+    if (endpoints.length === 0) return null;
+    return generateHttpFileContent(spec, endpoints);
+  }, [spec, endpoints]);
 
   const lines = useMemo(() => (content ? content.split("\n") : []), [content]);
 
   const handleDownload = () => {
-    if (!endpoint || !content) return;
-    const rawLabel =
-      endpoint.summary ||
-      endpoint.operationId ||
-      `${endpoint.method}-${endpoint.path.replace(/\//g, "-")}`;
-    const filename = `${slugify(rawLabel)}.http`;
+    if (!content) return;
+    const filename = `${slugify(spec.title)}.http`;
     const blob = new Blob([content], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -133,17 +130,13 @@ export function HttpPreview({ spec, endpoint }: HttpPreviewProps) {
     });
   }, [content]);
 
-  const label = endpoint
-    ? endpoint.summary || endpoint.operationId || `${endpoint.method} ${endpoint.path}`
-    : null;
-
   return (
-    <Card className="flex flex-col h-[600px] overflow-hidden">
+    <Card className="flex flex-col h-full overflow-hidden">
       <CardHeader className="pb-3 flex-row items-center justify-between space-y-0 shrink-0 gap-2">
         <CardTitle className="text-base truncate">
-          {label ?? t.previewTitle}
+          {t.previewTitle}
         </CardTitle>
-        {endpoint && (
+        {hasEndpoints && (
           <div className="flex items-center gap-2 shrink-0">
             <Button size="sm" variant="outline" onClick={handleCopy}>
               {copied ? (
@@ -161,7 +154,7 @@ export function HttpPreview({ spec, endpoint }: HttpPreviewProps) {
         )}
       </CardHeader>
       <CardContent className="p-0 overflow-y-auto flex-1">
-        {!endpoint ? (
+        {!hasEndpoints ? (
           <div className="px-6 py-12 text-center text-sm text-muted-foreground">
             {t.previewSelectEndpoint}
           </div>

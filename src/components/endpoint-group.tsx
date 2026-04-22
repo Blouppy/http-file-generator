@@ -15,10 +15,6 @@ interface EndpointGroupProps {
   onSelectAll: () => void;
   onDeselectAll: () => void;
   isFirst?: boolean;
-  /** Called with the endpoint whose row was clicked (to open the preview panel). */
-  onPreview: (endpoint: ParsedEndpoint) => void;
-  /** The id of the endpoint currently shown in the preview panel, or null. */
-  previewEndpointId: string | null;
 }
 
 export function EndpointGroup({
@@ -29,8 +25,6 @@ export function EndpointGroup({
   onSelectAll,
   onDeselectAll,
   isFirst = false,
-  onPreview,
-  previewEndpointId,
 }: EndpointGroupProps) {
   const { t } = useLanguage();
   const selectedCount = endpoints.filter((e) => selectedIds.has(getEndpointId(e))).length;
@@ -38,7 +32,7 @@ export function EndpointGroup({
   return (
     <div>
       {!isFirst && <Separator />}
-      <div className="px-6 py-3 bg-muted/50">
+      <div className="px-6 py-3 bg-muted sticky top-0 z-10">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold">{tag}</span>
           <Badge variant="secondary" className="text-xs">
@@ -46,13 +40,13 @@ export function EndpointGroup({
           </Badge>
           <div className="ml-auto flex gap-2">
             <button
-              className="text-xs text-muted-foreground hover:text-foreground"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               onClick={onSelectAll}
             >
               {t.groupAll}
             </button>
             <button
-              className="text-xs text-muted-foreground hover:text-foreground"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               onClick={onDeselectAll}
             >
               {t.groupNone}
@@ -68,9 +62,7 @@ export function EndpointGroup({
               key={id}
               endpoint={endpoint}
               isSelected={selectedIds.has(id)}
-              isActive={previewEndpointId === id}
               onToggle={() => onToggleEndpoint(id)}
-              onPreview={() => onPreview(endpoint)}
             />
           );
         })}

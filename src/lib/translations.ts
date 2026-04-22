@@ -66,7 +66,7 @@ export const translations = {
 
     // HTTP preview panel
     previewTitle: "HTTP Preview",
-    previewSelectEndpoint: "Click an endpoint to preview its .http file",
+    previewSelectEndpoint: "Check endpoints to preview their .http file",
     previewDownload: "Download .http",
     previewCopy: "Copy",
     previewCopied: "Copied!",
@@ -151,7 +151,7 @@ export const translations = {
 
     // HTTP preview panel
     previewTitle: "Aperçu HTTP",
-    previewSelectEndpoint: "Cliquez sur un endpoint pour prévisualiser son fichier .http",
+    previewSelectEndpoint: "Cochez des endpoints pour prévisualiser leur fichier .http",
     previewDownload: "Télécharger .http",
     previewCopy: "Copier",
     previewCopied: "Copié !",

@@ -6,28 +6,17 @@ import type { ParsedEndpoint } from "@/types/openapi";
 interface EndpointItemProps {
   endpoint: ParsedEndpoint;
   isSelected: boolean;
-  /** Whether this endpoint is currently shown in the preview panel. */
-  isActive?: boolean;
   onToggle: () => void;
-  /** Called when the row (excluding the checkbox) is clicked to open the preview. */
-  onPreview: () => void;
 }
 
-export function EndpointItem({
-  endpoint,
-  isSelected,
-  isActive = false,
-  onToggle,
-  onPreview,
-}: EndpointItemProps) {
+export function EndpointItem({ endpoint, isSelected, onToggle }: EndpointItemProps) {
   return (
     <div
       className={cn(
         "flex items-start gap-3 px-6 py-3 cursor-pointer hover:bg-muted/30 transition-colors border-l-2",
-        isActive ? "bg-primary/10 border-primary" : "border-transparent",
-        isSelected && !isActive ? "bg-muted/20" : ""
+        isSelected ? "bg-primary/10 border-primary" : "border-transparent"
       )}
-      onClick={onPreview}
+      onClick={onToggle}
     >
       <Checkbox
         checked={isSelected}
