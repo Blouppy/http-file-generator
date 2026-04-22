@@ -60,7 +60,7 @@ export function EndpointGroup({
           </div>
         </div>
       </div>
-      <div className="divide-y">
+      <div>
         {endpoints.map((endpoint) => {
           const id = getEndpointId(endpoint);
           return (
