@@ -47,20 +47,6 @@ export function EndpointFilters({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        {availableMethods.length > 0 && (
-          <MultiSelectCombobox
-            label={t.filterMethodLabel}
-            placeholder={t.filterPlaceholderAll}
-            searchPlaceholder={t.filterMethodSearchPlaceholder}
-            options={availableMethods.map((method) => ({
-              value: method,
-              label: <MethodBadge method={method} />,
-            }))}
-            selected={selectedMethods}
-            onToggle={onMethodToggle}
-          />
-        )}
-
         {availableTags.length > 0 && (
           <MultiSelectCombobox
             label={t.filterApiLabel}
@@ -72,6 +58,20 @@ export function EndpointFilters({
             }))}
             selected={selectedTags}
             onToggle={onTagToggle}
+          />
+        )}
+        
+        {availableMethods.length > 0 && (
+          <MultiSelectCombobox
+            label={t.filterMethodLabel}
+            placeholder={t.filterPlaceholderAll}
+            searchPlaceholder={t.filterMethodSearchPlaceholder}
+            options={availableMethods.map((method) => ({
+              value: method,
+              label: <MethodBadge method={method} />,
+            }))}
+            selected={selectedMethods}
+            onToggle={onMethodToggle}
           />
         )}
 
