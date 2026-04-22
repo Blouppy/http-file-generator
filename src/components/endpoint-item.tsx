@@ -24,7 +24,7 @@ export function EndpointItem({
     <div
       className={cn(
         "flex items-start gap-3 px-6 py-3 cursor-pointer hover:bg-muted/30 transition-colors border-l-2",
-        isActive ? "bg-primary/10 border-primary border-t-0" : "border-transparent",
+        isActive ? "bg-primary/10 border-primary" : "border-transparent",
         isSelected && !isActive ? "bg-muted/20" : ""
       )}
       onClick={onPreview}
