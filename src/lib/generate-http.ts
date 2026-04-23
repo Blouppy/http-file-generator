@@ -5,6 +5,12 @@ interface VarEntry {
   value: string;
 }
 
+/** Converts a PascalCase string to camelCase by lowercasing the first character. */
+export function toCamelCase(str: string): string {
+  if (!str) return str;
+  return str.charAt(0).toLowerCase() + str.slice(1);
+}
+
 /** Returns the default variable value for a given schema type and parameter context. */
 function getVariableDefault(
   schema: Record<string, unknown> | undefined,
@@ -117,20 +123,22 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
   const declaredNames = new Set<string>();
 
   for (const param of pathParams) {
-    if (!declaredNames.has(param.name)) {
-      declaredNames.add(param.name);
+    const varName = toCamelCase(param.name);
+    if (!declaredNames.has(varName)) {
+      declaredNames.add(varName);
       vars.push({
-        name: param.name,
+        name: varName,
         value: getVariableDefault(param.schema as Record<string, unknown> | undefined, "path"),
       });
     }
   }
 
   for (const param of queryParams) {
-    if (!declaredNames.has(param.name)) {
-      declaredNames.add(param.name);
+    const varName = toCamelCase(param.name);
+    if (!declaredNames.has(varName)) {
+      declaredNames.add(varName);
       vars.push({
-        name: param.name,
+        name: varName,
         value: getVariableDefault(param.schema as Record<string, unknown> | undefined, "query"),
       });
     }
@@ -178,13 +186,13 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
   // Build URL with path param substitutions
   let urlPath = endpoint.path;
   for (const param of pathParams) {
-    urlPath = urlPath.replace(`{${param.name}}`, `{{${param.name}}}`);
+    urlPath = urlPath.replace(`{${param.name}}`, `{{${toCamelCase(param.name)}}}`);
   }
 
-  // Build query string using variable references
+  // Build query string using variable references (apply camelCase to both key and var reference)
   let queryString = "";
   if (queryParams.length > 0) {
-    queryString = "?" + queryParams.map((p) => `${p.name}={{${p.name}}}`).join("&");
+    queryString = "?" + queryParams.map((p) => `${toCamelCase(p.name)}={{${toCamelCase(p.name)}}}`).join("&");
   }
 
   lines.push(`${endpoint.method} ${baseUrl}${urlPath}${queryString}`);
