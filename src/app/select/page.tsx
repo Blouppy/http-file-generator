@@ -153,7 +153,7 @@ export default function SelectPage() {
   };
 
   return (
-    <div className="h-[calc(100vh-3.5rem)] overflow-hidden flex flex-col bg-background">
+    <div className="h-[calc(100vh-3.75rem)] overflow-hidden flex flex-col bg-background">
       <div className="max-w-7xl mx-auto w-full px-4 py-4 flex flex-col gap-4 h-full overflow-hidden">
 
         {/* Compact header: spec info + download action at the top */}
