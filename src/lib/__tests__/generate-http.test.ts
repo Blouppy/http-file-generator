@@ -69,7 +69,7 @@ describe("generateHttpFile", () => {
       parameters: [{ name: "q", in: "query" }],
     };
     const result = generateHttpFile(baseSpec, endpoint);
-    expect(result).toContain('@q = ""');
+    expect(result).toContain("@q = text");
   });
 
   it("uses variable references in the query string", () => {
@@ -151,7 +151,7 @@ describe("generateHttpFile", () => {
       ],
     };
     const result = generateHttpFile(baseSpec, endpoint);
-    expect(result).toContain('@sort = "asc"');
+    expect(result).toContain("@sort = asc");
     expect(result).toContain("@page = 1");
   });
 
