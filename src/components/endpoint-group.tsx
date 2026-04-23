@@ -32,7 +32,7 @@ export function EndpointGroup({
   return (
     <div>
       {!isFirst && <Separator />}
-      <div className="px-6 py-3 bg-muted sticky top-0 z-10">
+      <div className="px-6 py-3 bg-muted top-0 z-10">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold">{tag}</span>
           <Badge variant="secondary" className="text-xs">
