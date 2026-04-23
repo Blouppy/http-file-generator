@@ -30,8 +30,8 @@ function getVariableDefault(
       case "string":
         return "text";
       case "array":
-        // Curl-style comma-separated format for array query/path params
-        return "value1,value2";
+        // URL-encoded comma-separated format for array query/path params (curl %2C encoding)
+        return "value1%2Cvalue2";
       case "object":
         return "{}";
     }
