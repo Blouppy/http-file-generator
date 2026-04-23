@@ -1,4 +1,4 @@
-import { generateHttpFile, generateHttpFileContent } from "@/lib/generate-http";
+import { generateHttpFile, generateHttpFileContent, toCamelCase } from "@/lib/generate-http";
 import type { ParsedSpec, ParsedEndpoint } from "@/types/openapi";
 
 const baseSpec: ParsedSpec = {
@@ -331,6 +331,79 @@ describe("generateHttpFile", () => {
     expect(result).not.toContain("@title");
     expect(result).toContain('"title": ""');
     expect(result).not.toContain('"title": {{title}}');
+  });
+});
+
+describe("toCamelCase", () => {
+  it("converts snake_case to camelCase", () => {
+    expect(toCamelCase("user_id")).toBe("userId");
+    expect(toCamelCase("page_size")).toBe("pageSize");
+    expect(toCamelCase("first_name")).toBe("firstName");
+  });
+
+  it("converts kebab-case to camelCase", () => {
+    expect(toCamelCase("page-size")).toBe("pageSize");
+    expect(toCamelCase("user-name")).toBe("userName");
+  });
+
+  it("leaves already-camelCase strings unchanged", () => {
+    expect(toCamelCase("itemId")).toBe("itemId");
+    expect(toCamelCase("q")).toBe("q");
+    expect(toCamelCase("page")).toBe("page");
+  });
+});
+
+describe("generateHttpFile camelCase variable names", () => {
+  it("converts snake_case path param to camelCase in @var declaration and URL", () => {
+    const endpoint: ParsedEndpoint = {
+      method: "GET",
+      path: "/users/{user_id}",
+      parameters: [{ name: "user_id", in: "path", schema: { type: "integer" } }],
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+    expect(result).toContain("@userId = 1");
+    expect(result).toContain("GET https://api.example.com/users/{{userId}}");
+    expect(result).not.toContain("@user_id");
+    expect(result).not.toContain("{{user_id}}");
+  });
+
+  it("converts kebab-case path param to camelCase in @var declaration and URL", () => {
+    const endpoint: ParsedEndpoint = {
+      method: "GET",
+      path: "/items/{item-id}",
+      parameters: [{ name: "item-id", in: "path" }],
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+    expect(result).toContain("@itemId = 1");
+    expect(result).toContain("GET https://api.example.com/items/{{itemId}}");
+    expect(result).not.toContain("@item-id");
+    expect(result).not.toContain("{{item-id}}");
+  });
+
+  it("converts snake_case query param to camelCase in @var declaration and query string var reference", () => {
+    const endpoint: ParsedEndpoint = {
+      method: "GET",
+      path: "/search",
+      parameters: [{ name: "page_size", in: "query", schema: { type: "integer" } }],
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+    expect(result).toContain("@pageSize = 1");
+    expect(result).toContain("page_size={{pageSize}}");
+    expect(result).not.toContain("@page_size");
+    expect(result).not.toContain("{{page_size}}");
+  });
+
+  it("converts kebab-case query param to camelCase in @var declaration and query string var reference", () => {
+    const endpoint: ParsedEndpoint = {
+      method: "GET",
+      path: "/search",
+      parameters: [{ name: "max-results", in: "query", schema: { type: "integer" } }],
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+    expect(result).toContain("@maxResults = 1");
+    expect(result).toContain("max-results={{maxResults}}");
+    expect(result).not.toContain("@max-results");
+    expect(result).not.toContain("{{max-results}}");
   });
 });
 
