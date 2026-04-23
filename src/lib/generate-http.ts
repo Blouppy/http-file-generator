@@ -189,10 +189,10 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
     urlPath = urlPath.replace(`{${param.name}}`, `{{${toCamelCase(param.name)}}}`);
   }
 
-  // Build query string using variable references (keep original key name, use camelCase var)
+  // Build query string using variable references (apply camelCase to both key and var reference)
   let queryString = "";
   if (queryParams.length > 0) {
-    queryString = "?" + queryParams.map((p) => `${p.name}={{${toCamelCase(p.name)}}}`).join("&");
+    queryString = "?" + queryParams.map((p) => `${toCamelCase(p.name)}={{${toCamelCase(p.name)}}}`).join("&");
   }
 
   lines.push(`${endpoint.method} ${baseUrl}${urlPath}${queryString}`);

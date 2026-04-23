@@ -406,7 +406,7 @@ describe("generateHttpFile camelCase variable names", () => {
     };
     const result = generateHttpFile(baseSpec, endpoint);
     expect(result).toContain("@pageSize = 1");
-    expect(result).toContain("PageSize={{pageSize}}");
+    expect(result).toContain("pageSize={{pageSize}}");
     expect(result).not.toContain("@PageSize");
     expect(result).not.toContain("{{PageSize}}");
   });
