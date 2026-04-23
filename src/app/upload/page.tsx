@@ -56,7 +56,7 @@ export default function UploadPage() {
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-[calc(100vh-3.75rem)] overflow-y-auto bg-background">
       <div className="max-w-3xl mx-auto px-4 py-12">
         <StepIndicator current={1} />
         <div className="mb-8">

@@ -20,7 +20,7 @@ export default function Home() {
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-[calc(100vh-3.75rem)] overflow-y-auto bg-background">
       <div className="max-w-7xl mx-auto px-4 py-16">
         <div className="text-center mb-16">
           <h1 className="text-5xl font-bold tracking-tight mb-4">{t.homeTitle}</h1>
