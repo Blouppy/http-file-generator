@@ -5,11 +5,10 @@ interface VarEntry {
   value: string;
 }
 
-/** Converts a snake_case, kebab-case, or space-separated string to camelCase. */
+/** Converts a PascalCase string to camelCase by lowercasing the first character. */
 export function toCamelCase(str: string): string {
-  return str
-    .replace(/[-_\s]+(.)/g, (_, char: string) => char.toUpperCase())
-    .replace(/^(.)/, (_, char: string) => char.toLowerCase());
+  if (!str) return str;
+  return str.charAt(0).toLowerCase() + str.slice(1);
 }
 
 /** Returns the default variable value for a given schema type and parameter context. */

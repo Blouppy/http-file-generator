@@ -335,15 +335,10 @@ describe("generateHttpFile", () => {
 });
 
 describe("toCamelCase", () => {
-  it("converts snake_case to camelCase", () => {
-    expect(toCamelCase("user_id")).toBe("userId");
-    expect(toCamelCase("page_size")).toBe("pageSize");
-    expect(toCamelCase("first_name")).toBe("firstName");
-  });
-
-  it("converts kebab-case to camelCase", () => {
-    expect(toCamelCase("page-size")).toBe("pageSize");
-    expect(toCamelCase("user-name")).toBe("userName");
+  it("converts PascalCase to camelCase by lowercasing the first character", () => {
+    expect(toCamelCase("UserId")).toBe("userId");
+    expect(toCamelCase("PageSize")).toBe("pageSize");
+    expect(toCamelCase("FirstName")).toBe("firstName");
   });
 
   it("leaves already-camelCase strings unchanged", () => {
@@ -352,18 +347,14 @@ describe("toCamelCase", () => {
     expect(toCamelCase("page")).toBe("page");
   });
 
-  it("lowercases an uppercase-first string", () => {
-    expect(toCamelCase("UserId")).toBe("userId");
-    expect(toCamelCase("PageSize")).toBe("pageSize");
+  it("leaves snake_case strings unchanged", () => {
+    expect(toCamelCase("user_id")).toBe("user_id");
+    expect(toCamelCase("page_size")).toBe("page_size");
   });
 
-  it("handles consecutive delimiters (e.g. double underscore)", () => {
-    expect(toCamelCase("user__id")).toBe("userId");
-    expect(toCamelCase("page--size")).toBe("pageSize");
-  });
-
-  it("handles mixed delimiters", () => {
-    expect(toCamelCase("user_id-name")).toBe("userIdName");
+  it("leaves kebab-case strings unchanged", () => {
+    expect(toCamelCase("page-size")).toBe("page-size");
+    expect(toCamelCase("max-results")).toBe("max-results");
   });
 
   it("returns an empty string unchanged", () => {
@@ -372,56 +363,74 @@ describe("toCamelCase", () => {
 });
 
 describe("generateHttpFile camelCase variable names", () => {
-  it("converts snake_case path param to camelCase in @var declaration and URL", () => {
+  it("converts PascalCase path param to camelCase in @var declaration and URL", () => {
+    const endpoint: ParsedEndpoint = {
+      method: "GET",
+      path: "/users/{UserId}",
+      parameters: [{ name: "UserId", in: "path", schema: { type: "integer" } }],
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+    expect(result).toContain("@userId = 1");
+    expect(result).toContain("GET https://api.example.com/users/{{userId}}");
+    expect(result).not.toContain("@UserId");
+    expect(result).not.toContain("{{UserId}}");
+  });
+
+  it("leaves snake_case path param name unchanged in @var declaration and URL", () => {
     const endpoint: ParsedEndpoint = {
       method: "GET",
       path: "/users/{user_id}",
       parameters: [{ name: "user_id", in: "path", schema: { type: "integer" } }],
     };
     const result = generateHttpFile(baseSpec, endpoint);
-    expect(result).toContain("@userId = 1");
-    expect(result).toContain("GET https://api.example.com/users/{{userId}}");
-    expect(result).not.toContain("@user_id");
-    expect(result).not.toContain("{{user_id}}");
+    expect(result).toContain("@user_id = 1");
+    expect(result).toContain("GET https://api.example.com/users/{{user_id}}");
   });
 
-  it("converts kebab-case path param to camelCase in @var declaration and URL", () => {
+  it("leaves kebab-case path param name unchanged in @var declaration and URL", () => {
     const endpoint: ParsedEndpoint = {
       method: "GET",
       path: "/items/{item-id}",
       parameters: [{ name: "item-id", in: "path" }],
     };
     const result = generateHttpFile(baseSpec, endpoint);
-    expect(result).toContain("@itemId = 1");
-    expect(result).toContain("GET https://api.example.com/items/{{itemId}}");
-    expect(result).not.toContain("@item-id");
-    expect(result).not.toContain("{{item-id}}");
+    expect(result).toContain("@item-id = 1");
+    expect(result).toContain("GET https://api.example.com/items/{{item-id}}");
   });
 
-  it("converts snake_case query param to camelCase in @var declaration and query string var reference", () => {
+  it("converts PascalCase query param to camelCase in @var declaration and query string var reference", () => {
+    const endpoint: ParsedEndpoint = {
+      method: "GET",
+      path: "/search",
+      parameters: [{ name: "PageSize", in: "query", schema: { type: "integer" } }],
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+    expect(result).toContain("@pageSize = 1");
+    expect(result).toContain("PageSize={{pageSize}}");
+    expect(result).not.toContain("@PageSize");
+    expect(result).not.toContain("{{PageSize}}");
+  });
+
+  it("leaves snake_case query param name unchanged in @var declaration and query string", () => {
     const endpoint: ParsedEndpoint = {
       method: "GET",
       path: "/search",
       parameters: [{ name: "page_size", in: "query", schema: { type: "integer" } }],
     };
     const result = generateHttpFile(baseSpec, endpoint);
-    expect(result).toContain("@pageSize = 1");
-    expect(result).toContain("page_size={{pageSize}}");
-    expect(result).not.toContain("@page_size");
-    expect(result).not.toContain("{{page_size}}");
+    expect(result).toContain("@page_size = 1");
+    expect(result).toContain("page_size={{page_size}}");
   });
 
-  it("converts kebab-case query param to camelCase in @var declaration and query string var reference", () => {
+  it("leaves kebab-case query param name unchanged in @var declaration and query string", () => {
     const endpoint: ParsedEndpoint = {
       method: "GET",
       path: "/search",
       parameters: [{ name: "max-results", in: "query", schema: { type: "integer" } }],
     };
     const result = generateHttpFile(baseSpec, endpoint);
-    expect(result).toContain("@maxResults = 1");
-    expect(result).toContain("max-results={{maxResults}}");
-    expect(result).not.toContain("@max-results");
-    expect(result).not.toContain("{{max-results}}");
+    expect(result).toContain("@max-results = 1");
+    expect(result).toContain("max-results={{max-results}}");
   });
 });
 
