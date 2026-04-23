@@ -351,6 +351,24 @@ describe("toCamelCase", () => {
     expect(toCamelCase("q")).toBe("q");
     expect(toCamelCase("page")).toBe("page");
   });
+
+  it("lowercases an uppercase-first string", () => {
+    expect(toCamelCase("UserId")).toBe("userId");
+    expect(toCamelCase("PageSize")).toBe("pageSize");
+  });
+
+  it("handles consecutive delimiters (e.g. double underscore)", () => {
+    expect(toCamelCase("user__id")).toBe("userId");
+    expect(toCamelCase("page--size")).toBe("pageSize");
+  });
+
+  it("handles mixed delimiters", () => {
+    expect(toCamelCase("user_id-name")).toBe("userIdName");
+  });
+
+  it("returns an empty string unchanged", () => {
+    expect(toCamelCase("")).toBe("");
+  });
 });
 
 describe("generateHttpFile camelCase variable names", () => {
