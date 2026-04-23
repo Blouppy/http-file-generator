@@ -64,6 +64,13 @@ export const translations = {
     downloadZipDesc: "Download ZIP archive grouped by tags",
     download: "Download",
 
+    // HTTP preview panel
+    previewTitle: "HTTP Preview",
+    previewSelectEndpoint: "Check endpoints to preview their .http file",
+    previewDownload: "Download .http",
+    previewCopy: "Copy",
+    previewCopied: "Copied!",
+
     // Home page
     homeTitle: "HTTP File Generator",
     homeSubtitle: "Transform your OpenAPI specifications into ready-to-use .http files in seconds",
@@ -141,6 +148,13 @@ export const translations = {
       `Prêt à générer pour ${n} endpoint${n !== 1 ? "s" : ""}`,
     downloadZipDesc: "Télécharger l'archive ZIP groupée par tags",
     download: "Télécharger",
+
+    // HTTP preview panel
+    previewTitle: "Aperçu HTTP",
+    previewSelectEndpoint: "Cochez des endpoints pour prévisualiser leur fichier .http",
+    previewDownload: "Télécharger .http",
+    previewCopy: "Copier",
+    previewCopied: "Copié !",
 
     // Home page
     homeTitle: "HTTP File Generator",

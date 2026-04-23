@@ -2,38 +2,18 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { Download } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { SpecInfo } from "@/components/spec-info";
+import { Button } from "@/components/ui/button";
 import { EndpointGroup } from "@/components/endpoint-group";
 import { EndpointFilters } from "@/components/endpoint-filters";
-import { GenerationActions } from "@/components/generation-actions";
+import { HttpPreview } from "@/components/http-preview";
 import { useSpec } from "@/contexts/spec-context";
 import { useLanguage } from "@/contexts/language-context";
 import { groupEndpointsByTag, getEndpointId, filterEndpoints } from "@/services/openapi.service";
+import { buildZipFromEndpoints, slugify } from "@/services/http-file.service";
+import { saveAs } from "file-saver";
 import type { ParsedEndpoint } from "@/types/openapi";
-
-function StepIndicator({ current }: { current: number }) {
-  const { t } = useLanguage();
-  const steps = [t.stepUpload, t.stepSelect];
-  return (
-    <div className="flex items-center gap-2 mb-8">
-      {steps.map((step, i) => (
-        <div key={step} className="flex items-center gap-2">
-          <span
-            className={`text-sm font-medium ${
-              i + 1 === current ? "text-foreground" : "text-muted-foreground"
-            }`}
-          >
-            {step}
-          </span>
-          {i < steps.length - 1 && (
-            <span className="text-muted-foreground text-sm">→</span>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
 
 export default function SelectPage() {
   const router = useRouter();
@@ -45,8 +25,16 @@ export default function SelectPage() {
   const [selectedMethods, setSelectedMethods] = useState<Set<string>>(new Set());
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
 
+  // Track selection order so the preview shows endpoints in the order they were checked.
+  const [selectionOrder, setSelectionOrder] = useState<string[]>([]);
+
   useEffect(() => {
-    if (!spec) router.replace("/upload");
+    if (!spec) {
+      router.replace("/upload");
+      return;
+    }
+    // Initialise selection order to match the spec's initial "all selected" state.
+    setSelectionOrder(spec.endpoints.map(getEndpointId));
   }, [spec, router]);
 
   const availableMethods = useMemo(
@@ -74,7 +62,36 @@ export default function SelectPage() {
     [filteredEndpoints]
   );
 
+  // Ordered list of selected endpoints for the preview panel.
+  const orderedPreviewEndpoints = useMemo(() => {
+    if (!spec) return [];
+    const endpointMap = new Map(spec.endpoints.map((e) => [getEndpointId(e), e]));
+    return selectionOrder
+      .map((id) => endpointMap.get(id))
+      .filter((e): e is ParsedEndpoint => e !== undefined);
+  }, [spec, selectionOrder]);
+
   if (!spec) return null;
+
+  // --- handlers ---
+
+  const handleToggle = (id: string) => {
+    const isCurrentlySelected = selectedIds.has(id);
+    toggleEndpoint(id);
+    setSelectionOrder((prev) =>
+      isCurrentlySelected ? prev.filter((eid) => eid !== id) : [...prev, id]
+    );
+  };
+
+  const handleGlobalSelectAll = () => {
+    selectAll();
+    setSelectionOrder(spec.endpoints.map(getEndpointId));
+  };
+
+  const handleGlobalDeselectAll = () => {
+    deselectAll();
+    setSelectionOrder([]);
+  };
 
   const handleMethodToggle = (method: string) => {
     setSelectedMethods((prev) => {
@@ -102,14 +119,26 @@ export default function SelectPage() {
 
   const handleSelectAllInTag = (tagEndpoints: ParsedEndpoint[]) => {
     const next = new Set(selectedIds);
-    tagEndpoints.forEach((e) => next.add(getEndpointId(e)));
+    const newIds: string[] = [];
+    tagEndpoints.forEach((e) => {
+      const id = getEndpointId(e);
+      if (!next.has(id)) {
+        next.add(id);
+        newIds.push(id);
+      }
+    });
     setSelectedIds(next);
+    if (newIds.length > 0) {
+      setSelectionOrder((prev) => [...prev, ...newIds]);
+    }
   };
 
   const handleDeselectAllInTag = (tagEndpoints: ParsedEndpoint[]) => {
+    const tagIds = new Set(tagEndpoints.map(getEndpointId));
     const next = new Set(selectedIds);
     tagEndpoints.forEach((e) => next.delete(getEndpointId(e)));
     setSelectedIds(next);
+    setSelectionOrder((prev) => prev.filter((id) => !tagIds.has(id)));
   };
 
   const handleReset = () => {
@@ -117,27 +146,72 @@ export default function SelectPage() {
     router.push("/upload");
   };
 
+  const handleDownloadZip = async () => {
+    if (selectedEndpoints.length === 0) return;
+    const blob = await buildZipFromEndpoints(spec, selectedEndpoints);
+    saveAs(blob, `${slugify(spec.title)}.zip`);
+  };
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-5xl mx-auto px-4 py-12">
-        <StepIndicator current={2} />
+    <div className="h-[calc(100vh-3.75rem)] overflow-hidden flex flex-col bg-background">
+      <div className="max-w-7xl mx-auto w-full px-4 py-4 flex flex-col gap-4 h-full overflow-hidden">
 
-        <div className="space-y-6">
-          <SpecInfo
-            spec={spec}
-            selectedCount={selectedEndpoints.length}
-            totalCount={spec.endpoints.length}
-            onSelectAll={selectAll}
-            onDeselectAll={deselectAll}
-            onReset={handleReset}
-          />
+        {/* Compact header: spec info + download action at the top */}
+        <div className="shrink-0 flex items-start justify-between gap-4 bg-card border rounded-lg px-4 py-3">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-base font-semibold truncate">{spec.title}</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {t.specVersion} {spec.version} &bull; {t.specBaseUrl}:{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">{spec.baseUrl}</code>
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {t.specEndpointCount(spec.endpoints.length)} &bull;{" "}
+              {t.specSelectedCount(selectedEndpoints.length)}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button variant="ghost" size="sm" onClick={handleReset}>
+              {t.specUploadNew}
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleDownloadZip}
+              disabled={selectedEndpoints.length === 0}
+            >
+              <Download className="w-3.5 h-3.5 mr-1.5" />
+              {t.download}
+            </Button>
+          </div>
+        </div>
 
-          <Card>
-            <CardHeader>
+        {/* Two-column grid — fills remaining viewport height, no body scroll */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
+
+          {/* Left panel — endpoint tree with filters */}
+          <Card className="flex flex-col overflow-hidden">
+            <CardHeader className="pb-3 flex-row items-center justify-between space-y-0 shrink-0 gap-2">
               <CardTitle className="text-base">{t.endpointsTitle}</CardTitle>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs h-7 px-2"
+                  onClick={handleGlobalSelectAll}
+                >
+                  {t.specSelectAll}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs h-7 px-2"
+                  onClick={handleGlobalDeselectAll}
+                >
+                  {t.specDeselectAll}
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent className="p-0">
-              <div className="px-6 py-4 border-b">
+            <CardContent className="p-0 flex flex-col overflow-hidden flex-1">
+              <div className="px-6 py-4 border-b shrink-0">
                 <EndpointFilters
                   searchText={searchText}
                   onSearchChange={setSearchText}
@@ -150,29 +224,31 @@ export default function SelectPage() {
                   onClearFilters={handleClearFilters}
                 />
               </div>
-              {Object.keys(filteredEndpointsByTag).length === 0 ? (
-                <p className="px-6 py-8 text-center text-sm text-muted-foreground">
-                  {t.filterNoMatches}
-                </p>
-              ) : (
-                Object.entries(filteredEndpointsByTag).map(([tag, endpoints], idx) => (
-                  <EndpointGroup
-                    key={tag}
-                    tag={tag}
-                    endpoints={endpoints}
-                    selectedIds={selectedIds}
-                    onToggleEndpoint={toggleEndpoint}
-                    onSelectAll={() => handleSelectAllInTag(endpoints)}
-                    onDeselectAll={() => handleDeselectAllInTag(endpoints)}
-                    isFirst={idx === 0}
-                  />
-                ))
-              )}
+              <div className="overflow-y-auto flex-1 scroll-smooth">
+                {Object.keys(filteredEndpointsByTag).length === 0 ? (
+                  <p className="px-6 py-8 text-center text-sm text-muted-foreground">
+                    {t.filterNoMatches}
+                  </p>
+                ) : (
+                  Object.entries(filteredEndpointsByTag).map(([tag, endpoints], idx) => (
+                    <EndpointGroup
+                      key={tag}
+                      tag={tag}
+                      endpoints={endpoints}
+                      selectedIds={selectedIds}
+                      onToggleEndpoint={handleToggle}
+                      onSelectAll={() => handleSelectAllInTag(endpoints)}
+                      onDeselectAll={() => handleDeselectAllInTag(endpoints)}
+                      isFirst={idx === 0}
+                    />
+                  ))
+                )}
+              </div>
             </CardContent>
           </Card>
 
-          <GenerationActions spec={spec} selectedEndpoints={selectedEndpoints} />
-
+          {/* Right panel — HTTP preview for all checked endpoints */}
+          <HttpPreview spec={spec} endpoints={orderedPreviewEndpoints} />
         </div>
       </div>
     </div>

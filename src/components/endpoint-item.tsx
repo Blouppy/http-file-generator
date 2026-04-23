@@ -1,5 +1,6 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { MethodBadge } from "@/components/method-badge";
+import { cn } from "@/lib/utils";
 import type { ParsedEndpoint } from "@/types/openapi";
 
 interface EndpointItemProps {
@@ -11,15 +12,16 @@ interface EndpointItemProps {
 export function EndpointItem({ endpoint, isSelected, onToggle }: EndpointItemProps) {
   return (
     <div
-      className={`flex items-start gap-3 px-6 py-3 cursor-pointer hover:bg-muted/30 transition-colors ${
-        isSelected ? "bg-muted/20" : ""
-      }`}
+      className={cn(
+        "flex items-start gap-3 px-6 py-3 cursor-pointer hover:bg-muted/30 transition-colors border-l-2",
+        isSelected ? "bg-primary/10 border-primary" : "border-transparent"
+      )}
       onClick={onToggle}
     >
       <Checkbox
         checked={isSelected}
         onCheckedChange={onToggle}
-        className="mt-0.5"
+        className="mt-0.5 shrink-0"
         onClick={(e) => e.stopPropagation()}
       />
       <div className="flex items-start gap-3 flex-1 min-w-0">

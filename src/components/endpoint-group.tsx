@@ -32,7 +32,7 @@ export function EndpointGroup({
   return (
     <div>
       {!isFirst && <Separator />}
-      <div className="px-6 py-3 bg-muted/50">
+      <div className="px-6 py-3 bg-muted top-0 z-10">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold">{tag}</span>
           <Badge variant="secondary" className="text-xs">
@@ -40,13 +40,13 @@ export function EndpointGroup({
           </Badge>
           <div className="ml-auto flex gap-2">
             <button
-              className="text-xs text-muted-foreground hover:text-foreground"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               onClick={onSelectAll}
             >
               {t.groupAll}
             </button>
             <button
-              className="text-xs text-muted-foreground hover:text-foreground"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               onClick={onDeselectAll}
             >
               {t.groupNone}
@@ -54,7 +54,7 @@ export function EndpointGroup({
           </div>
         </div>
       </div>
-      <div className="divide-y">
+      <div>
         {endpoints.map((endpoint) => {
           const id = getEndpointId(endpoint);
           return (
