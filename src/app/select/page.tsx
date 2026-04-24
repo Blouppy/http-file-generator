@@ -2,15 +2,16 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Download } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EndpointGroup } from "@/components/endpoint-group";
 import { EndpointFilters } from "@/components/endpoint-filters";
 import { HttpPreview } from "@/components/http-preview";
+import { SelectPageHeader } from "@/components/select-page-header";
 import { useSpec } from "@/contexts/spec-context";
 import { useLanguage } from "@/contexts/language-context";
-import { groupEndpointsByTag, getEndpointId, filterEndpoints } from "@/services/openapi.service";
+import { useEndpointFilters } from "@/hooks/use-endpoint-filters";
+import { getEndpointId } from "@/services/openapi.service";
 import { buildZipFromEndpoints, slugify } from "@/services/http-file.service";
 import { saveAs } from "file-saver";
 import type { ParsedEndpoint } from "@/types/openapi";
@@ -21,12 +22,21 @@ export default function SelectPage() {
     useSpec();
   const { t } = useLanguage();
 
-  const [searchText, setSearchText] = useState("");
-  const [selectedMethods, setSelectedMethods] = useState<Set<string>>(new Set());
-  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
-
   // Track selection order so the preview shows endpoints in the order they were checked.
   const [selectionOrder, setSelectionOrder] = useState<string[]>([]);
+
+  const {
+    searchText,
+    setSearchText,
+    selectedMethods,
+    selectedTags,
+    availableMethods,
+    availableTags,
+    filteredEndpointsByTag,
+    handleMethodToggle,
+    handleTagToggle,
+    handleClearFilters,
+  } = useEndpointFilters(spec?.endpoints ?? []);
 
   useEffect(() => {
     if (!spec) {
@@ -36,31 +46,6 @@ export default function SelectPage() {
     // Initialise selection order to match the spec's initial "all selected" state.
     setSelectionOrder(spec.endpoints.map(getEndpointId));
   }, [spec, router]);
-
-  const availableMethods = useMemo(
-    () => Array.from(new Set((spec?.endpoints ?? []).map((e) => e.method))).sort(),
-    [spec]
-  );
-
-  const availableTags = useMemo(
-    () => Array.from(new Set((spec?.endpoints ?? []).map((e) => e.tags?.[0] || "Other"))).sort(),
-    [spec]
-  );
-
-  const filteredEndpoints = useMemo(
-    () =>
-      filterEndpoints(spec?.endpoints ?? [], {
-        searchText,
-        methods: selectedMethods,
-        tags: selectedTags,
-      }),
-    [spec, searchText, selectedMethods, selectedTags]
-  );
-
-  const filteredEndpointsByTag = useMemo(
-    () => groupEndpointsByTag(filteredEndpoints),
-    [filteredEndpoints]
-  );
 
   // Ordered list of selected endpoints for the preview panel.
   const orderedPreviewEndpoints = useMemo(() => {
@@ -91,30 +76,6 @@ export default function SelectPage() {
   const handleGlobalDeselectAll = () => {
     deselectAll();
     setSelectionOrder([]);
-  };
-
-  const handleMethodToggle = (method: string) => {
-    setSelectedMethods((prev) => {
-      const next = new Set(prev);
-      if (next.has(method)) next.delete(method);
-      else next.add(method);
-      return next;
-    });
-  };
-
-  const handleTagToggle = (tag: string) => {
-    setSelectedTags((prev) => {
-      const next = new Set(prev);
-      if (next.has(tag)) next.delete(tag);
-      else next.add(tag);
-      return next;
-    });
-  };
-
-  const handleClearFilters = () => {
-    setSearchText("");
-    setSelectedMethods(new Set());
-    setSelectedTags(new Set());
   };
 
   const handleSelectAllInTag = (tagEndpoints: ParsedEndpoint[]) => {
@@ -156,33 +117,12 @@ export default function SelectPage() {
     <div className="h-[calc(100vh-3.75rem)] overflow-hidden flex flex-col bg-background">
       <div className="max-w-7xl mx-auto w-full px-4 py-4 flex flex-col gap-4 h-full overflow-hidden">
 
-        {/* Compact header: spec info + download action at the top */}
-        <div className="shrink-0 flex items-start justify-between gap-4 bg-card border rounded-lg px-4 py-3">
-          <div className="min-w-0 flex-1">
-            <h2 className="text-base font-semibold truncate">{spec.title}</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {t.specVersion} {spec.version} &bull; {t.specBaseUrl}:{" "}
-              <code className="text-xs bg-muted px-1 py-0.5 rounded">{spec.baseUrl}</code>
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {t.specEndpointCount(spec.endpoints.length)} &bull;{" "}
-              {t.specSelectedCount(selectedEndpoints.length)}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Button variant="ghost" size="sm" onClick={handleReset}>
-              {t.specUploadNew}
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleDownloadZip}
-              disabled={selectedEndpoints.length === 0}
-            >
-              <Download className="w-3.5 h-3.5 mr-1.5" />
-              {t.download}
-            </Button>
-          </div>
-        </div>
+        <SelectPageHeader
+          spec={spec}
+          selectedCount={selectedEndpoints.length}
+          onReset={handleReset}
+          onDownload={handleDownloadZip}
+        />
 
         {/* Two-column grid — fills remaining viewport height, no body scroll */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
