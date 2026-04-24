@@ -121,14 +121,14 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
   const queryParams = (endpoint.parameters || []).filter((p) => p.in === "query");
 
   // Collect @var declarations — path params first, then query params.
-  const vars: VarEntry[] = [];
+  const varDeclarations: VarEntry[] = [];
   const declaredNames = new Set<string>();
 
   for (const param of pathParams) {
     const varName = toCamelCase(param.name);
     if (!declaredNames.has(varName)) {
       declaredNames.add(varName);
-      vars.push({
+      varDeclarations.push({
         name: varName,
         value: getVariableDefault(param.schema as Record<string, unknown> | undefined, "path"),
       });
@@ -139,7 +139,7 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
     const varName = toCamelCase(param.name);
     if (!declaredNames.has(varName)) {
       declaredNames.add(varName);
-      vars.push({
+      varDeclarations.push({
         name: varName,
         value: getVariableDefault(param.schema as Record<string, unknown> | undefined, "query"),
       });
@@ -148,12 +148,12 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
 
   // Resolve the JSON content entry using a fuzzy match on the content-type key so that
   // variants like "application/json; charset=utf-8" or "application/vnd.api+json" are handled.
-  const bodyRaw = endpoint.requestBody?.content ?? {};
-  const jsonKey = Object.keys(bodyRaw).find((k) => {
+  const requestBodyContent = endpoint.requestBody?.content ?? {};
+  const jsonContentKey = Object.keys(requestBodyContent).find((k) => {
     const lower = k.toLowerCase();
     return lower.startsWith("application/json") || (lower.startsWith("application/") && lower.includes("+json"));
   });
-  const jsonContent = jsonKey ? (bodyRaw[jsonKey] as Record<string, unknown>) : undefined;
+  const jsonContent = jsonContentKey ? (requestBodyContent[jsonContentKey] as Record<string, unknown>) : undefined;
 
   // Body field entries: { name, literal }
   // literal → literal value used directly in the JSON body template (no @var declarations)
@@ -181,7 +181,7 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
   }
 
   // Emit all variable declarations right after the ### label (path + query params only)
-  for (const v of vars) {
+  for (const v of varDeclarations) {
     lines.push(`@${v.name} = ${v.value}`);
   }
 

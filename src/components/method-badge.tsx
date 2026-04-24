@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+
 const METHOD_COLORS: Record<string, string> = {
   GET: "bg-blue-100 text-blue-800 border-blue-200",
   POST: "bg-green-100 text-green-800 border-green-200",
@@ -8,14 +10,16 @@ const METHOD_COLORS: Record<string, string> = {
   OPTIONS: "bg-gray-100 text-gray-800 border-gray-200",
 };
 
+const DEFAULT_METHOD_COLORS = "bg-gray-100 text-gray-800 border-gray-200";
+
 interface MethodBadgeProps {
   method: string;
 }
 
 export function MethodBadge({ method }: MethodBadgeProps) {
-  const colorClass = METHOD_COLORS[method] ?? "bg-gray-100 text-gray-800 border-gray-200";
+  const colorClass = METHOD_COLORS[method] ?? DEFAULT_METHOD_COLORS;
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border shrink-0 ${colorClass}`}>
+    <span className={cn("inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border shrink-0", colorClass)}>
       {method}
     </span>
   );

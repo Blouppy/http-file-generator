@@ -19,7 +19,7 @@ export function getEndpointId(endpoint: ParsedEndpoint): string {
   return `${endpoint.method}:${endpoint.path}`;
 }
 
-export interface EndpointFilters {
+export interface EndpointFilterOptions {
   searchText: string;
   methods: Set<string>;
   tags: Set<string>;
@@ -27,7 +27,7 @@ export interface EndpointFilters {
 
 export function filterEndpoints(
   endpoints: ParsedEndpoint[],
-  filters: EndpointFilters
+  filters: EndpointFilterOptions
 ): ParsedEndpoint[] {
   const { searchText, methods, tags } = filters;
   const lowerSearch = searchText.toLowerCase().trim();
