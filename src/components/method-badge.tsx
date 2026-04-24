@@ -19,7 +19,12 @@ interface MethodBadgeProps {
 export function MethodBadge({ method }: MethodBadgeProps) {
   const colorClass = METHOD_COLORS[method] ?? DEFAULT_METHOD_COLORS;
   return (
-    <span className={cn("inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border shrink-0", colorClass)}>
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center rounded border px-2 py-0.5 text-xs font-bold",
+        colorClass,
+      )}
+    >
       {method}
     </span>
   );

@@ -2,14 +2,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import {
-  Upload,
-  ArrowRight,
-  FileCode,
-  Layers,
-  ShieldCheck,
-  Heart,
-} from "lucide-react";
+import { Upload, ArrowRight, FileCode, Layers, ShieldCheck, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -30,22 +23,22 @@ export default function Home() {
         description: t.homeStep3Desc,
       },
     ],
-    [t]
+    [t],
   );
 
   return (
-    <div className="overflow-y-auto bg-background">
+    <div className="bg-background overflow-y-auto">
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden py-20 md:py-28">
-        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-muted/60 to-background pointer-events-none" />
-        <div className="max-w-5xl mx-auto px-4 text-center">
+        <div className="from-muted/60 to-background pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b" />
+        <div className="mx-auto max-w-5xl px-4 text-center">
           <Badge variant="secondary" className="mb-6">
             {t.homeCompatibleWith}
           </Badge>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight mb-6 text-balance">
+          <h1 className="mb-6 text-4xl font-bold tracking-tight text-balance sm:text-5xl md:text-6xl">
             {t.homeTitle}
           </h1>
-          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 text-balance">
+          <p className="text-muted-foreground mx-auto mb-10 max-w-2xl text-lg text-balance sm:text-xl">
             {t.homeSubtitle}
           </p>
           <Button asChild size="lg" className="text-base">
@@ -59,14 +52,10 @@ export default function Home() {
 
       {/* ── App preview (select screen) ───────────────────────────────────── */}
       <section className="py-12 md:py-16">
-        <div className="max-w-4xl mx-auto px-4">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-semibold mb-2">
-              {t.homePreviewTitle}
-            </h2>
-            <p className="text-muted-foreground text-sm max-w-xl mx-auto">
-              {t.homePreviewDesc}
-            </p>
+        <div className="mx-auto max-w-4xl px-4">
+          <div className="mb-8 text-center">
+            <h2 className="mb-2 text-2xl font-semibold">{t.homePreviewTitle}</h2>
+            <p className="text-muted-foreground mx-auto max-w-xl text-sm">{t.homePreviewDesc}</p>
           </div>
           <SelectMockup />
         </div>
@@ -75,33 +64,28 @@ export default function Home() {
       <Separator />
 
       {/* ── How it works ─────────────────────────────────────────────────── */}
-      <section className="py-12 md:py-16 bg-muted/40">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold tracking-tight mb-3">
-              {t.homeHowItWorksTitle}
-            </h2>
+      <section className="bg-muted/40 py-12 md:py-16">
+        <div className="mx-auto max-w-5xl px-4">
+          <div className="mb-12 text-center">
+            <h2 className="mb-3 text-3xl font-bold tracking-tight">{t.homeHowItWorksTitle}</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+          <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
             {steps.map(({ icon: Icon, title, description }, index) => (
-              <div
-                key={title}
-                className="relative flex flex-col items-center text-center"
-              >
+              <div key={title} className="relative flex flex-col items-center text-center">
                 {/* Connector line between steps */}
                 {index < steps.length - 1 && (
-                  <div className="hidden md:block absolute top-8 left-[calc(50%+2.75rem)] right-[-50%] h-px bg-border" />
+                  <div className="bg-border absolute top-8 right-[-50%] left-[calc(50%+2.75rem)] hidden h-px md:block" />
                 )}
                 <div className="relative mb-4">
-                  <div className="size-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                    <Icon className="size-7 text-primary" />
+                  <div className="bg-primary/10 border-primary/20 flex size-16 items-center justify-center rounded-2xl border">
+                    <Icon className="text-primary size-7" />
                   </div>
-                  <div className="absolute -top-2 -right-2 size-6 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
+                  <div className="bg-primary text-primary-foreground absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full text-xs font-bold">
                     {index + 1}
                   </div>
                 </div>
-                <h3 className="font-semibold mb-2">{title}</h3>
-                <p className="text-sm text-muted-foreground">{description}</p>
+                <h3 className="mb-2 font-semibold">{title}</h3>
+                <p className="text-muted-foreground text-sm">{description}</p>
               </div>
             ))}
           </div>
@@ -110,13 +94,11 @@ export default function Home() {
 
       {/* ── Privacy ──────────────────────────────────────────────────────── */}
       <section className="py-12 md:py-16">
-        <div className="max-w-2xl mx-auto px-4 text-center">
-          <div className="size-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-5">
-            <ShieldCheck className="size-7 text-primary" />
+        <div className="mx-auto max-w-2xl px-4 text-center">
+          <div className="bg-primary/10 border-primary/20 mx-auto mb-5 flex size-14 items-center justify-center rounded-2xl border">
+            <ShieldCheck className="text-primary size-7" />
           </div>
-          <h2 className="text-2xl font-bold tracking-tight mb-3">
-            {t.homePrivacyTitle}
-          </h2>
+          <h2 className="mb-3 text-2xl font-bold tracking-tight">{t.homePrivacyTitle}</h2>
           <p className="text-muted-foreground text-sm">{t.homePrivacyDesc}</p>
         </div>
       </section>
@@ -125,13 +107,11 @@ export default function Home() {
 
       {/* ── CTA ──────────────────────────────────────────────────────────── */}
       <section className="py-20 md:py-28">
-        <div className="max-w-2xl mx-auto px-4 text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4 text-balance">
+        <div className="mx-auto max-w-2xl px-4 text-center">
+          <h2 className="mb-4 text-3xl font-bold tracking-tight text-balance sm:text-4xl">
             {t.homeCtaTitle}
           </h2>
-          <p className="text-muted-foreground mb-8 text-lg text-balance">
-            {t.homeCtaDesc}
-          </p>
+          <p className="text-muted-foreground mb-8 text-lg text-balance">{t.homeCtaDesc}</p>
           <Button asChild size="lg" className="text-base">
             <Link href="/upload">
               {t.homeGetStarted}
@@ -143,13 +123,10 @@ export default function Home() {
 
       {/* ── Footer ───────────────────────────────────────────────────────── */}
       <footer className="border-t py-8">
-        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
+        <div className="text-muted-foreground mx-auto flex max-w-5xl flex-col items-center justify-between gap-3 px-4 text-sm sm:flex-row">
           <div className="flex items-center gap-1.5">
             <span>{t.homeFooterMadeWith}</span>
-            <Heart
-              className="size-4 text-destructive fill-destructive"
-              aria-hidden="true"
-            />
+            <Heart className="text-destructive fill-destructive size-4" aria-hidden="true" />
             <span>{t.homeFooterBy}</span>
           </div>
           <span>© {new Date().getFullYear()} HTTP File Generator</span>

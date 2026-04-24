@@ -1,29 +1,19 @@
 {
   "packageRules": [
     {
-      "extends": [
-        "local>Blouppy/http-file-generator//.github/renovate/rules/npm"
-      ]
+      "extends": ["local>Blouppy/http-file-generator//.github/renovate/rules/npm"]
     },
     {
-      "extends": [
-        "local>Blouppy/http-file-generator//.github/renovate/rules/nextjs"
-      ]
+      "extends": ["local>Blouppy/http-file-generator//.github/renovate/rules/nextjs"]
     },
     {
-      "extends": [
-        "local>Blouppy/http-file-generator//.github/renovate/rules/jest"
-      ]
+      "extends": ["local>Blouppy/http-file-generator//.github/renovate/rules/jest"]
     },
     {
-      "extends": [
-        "local>Blouppy/http-file-generator//.github/renovate/rules/tailwind"
-      ]
+      "extends": ["local>Blouppy/http-file-generator//.github/renovate/rules/tailwind"]
     },
     {
-      "extends": [
-        "local>Blouppy/http-file-generator//.github/renovate/rules/eslint"
-      ]
+      "extends": ["local>Blouppy/http-file-generator//.github/renovate/rules/eslint"]
     }
   ]
 }

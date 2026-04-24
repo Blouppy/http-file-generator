@@ -24,9 +24,9 @@ types:
 
 tests:
   - changed-files:
-      - any-glob-to-any-file: '**/__tests__/**'
-      - any-glob-to-any-file: '**/*.test.ts'
-      - any-glob-to-any-file: '**/*.test.tsx'
+      - any-glob-to-any-file: "**/__tests__/**"
+      - any-glob-to-any-file: "**/*.test.ts"
+      - any-glob-to-any-file: "**/*.test.tsx"
 
 styles-tailwind:
   - changed-files:
@@ -51,4 +51,4 @@ documentation:
   - changed-files:
       - any-glob-to-any-file: README.md
       - any-glob-to-any-file: LICENSE
-      - any-glob-to-any-file: '**/*.md'
+      - any-glob-to-any-file: "**/*.md"

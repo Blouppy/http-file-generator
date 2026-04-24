@@ -29,22 +29,22 @@ export function useEndpointFilters(endpoints: ParsedEndpoint[]): UseEndpointFilt
 
   const availableMethods = useMemo(
     () => Array.from(new Set(endpoints.map((e) => e.method))).sort(),
-    [endpoints]
+    [endpoints],
   );
 
   const availableTags = useMemo(
     () => Array.from(new Set(endpoints.map((e) => e.tags?.[0] || "Other"))).sort(),
-    [endpoints]
+    [endpoints],
   );
 
   const filteredEndpoints = useMemo(
     () => filterEndpoints(endpoints, { searchText, methods: selectedMethods, tags: selectedTags }),
-    [endpoints, searchText, selectedMethods, selectedTags]
+    [endpoints, searchText, selectedMethods, selectedTags],
   );
 
   const filteredEndpointsByTag = useMemo(
     () => groupEndpointsByTag(filteredEndpoints),
-    [filteredEndpoints]
+    [filteredEndpoints],
   );
 
   const handleMethodToggle = (method: string) => {

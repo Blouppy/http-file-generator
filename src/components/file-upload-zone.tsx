@@ -13,7 +13,12 @@ interface FileUploadZoneProps {
   onClear?: () => void;
 }
 
-export function FileUploadZone({ onFile, isLoading = false, error = null, onClear }: FileUploadZoneProps) {
+export function FileUploadZone({
+  onFile,
+  isLoading = false,
+  error = null,
+  onClear,
+}: FileUploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { t } = useLanguage();
@@ -25,7 +30,7 @@ export function FileUploadZone({ onFile, isLoading = false, error = null, onClea
       const file = e.dataTransfer.files[0];
       if (file) onFile(file);
     },
-    [onFile]
+    [onFile],
   );
 
   const handleFileInput = useCallback(
@@ -33,7 +38,7 @@ export function FileUploadZone({ onFile, isLoading = false, error = null, onClea
       const file = e.target.files?.[0];
       if (file) onFile(file);
     },
-    [onFile]
+    [onFile],
   );
 
   if (error) {
@@ -41,12 +46,7 @@ export function FileUploadZone({ onFile, isLoading = false, error = null, onClea
       <Card className="border-destructive">
         <CardContent className="pt-6">
           <p className="text-destructive text-sm">{error}</p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-3"
-            onClick={onClear}
-          >
+          <Button variant="outline" size="sm" className="mt-3" onClick={onClear}>
             {t.dropzoneTryAgain}
           </Button>
         </CardContent>
@@ -58,7 +58,7 @@ export function FileUploadZone({ onFile, isLoading = false, error = null, onClea
     <Card>
       <CardContent className="p-0">
         <div
-          className={`border-2 border-dashed rounded-lg p-16 text-center cursor-pointer transition-colors ${
+          className={`cursor-pointer rounded-lg border-2 border-dashed p-16 text-center transition-colors ${
             isDragging
               ? "border-primary bg-primary/5"
               : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50"
@@ -72,16 +72,12 @@ export function FileUploadZone({ onFile, isLoading = false, error = null, onClea
           onClick={() => fileInputRef.current?.click()}
         >
           <div className="flex flex-col items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-              <CloudUpload className="w-8 h-8 text-muted-foreground" />
+            <div className="bg-muted flex h-16 w-16 items-center justify-center rounded-full">
+              <CloudUpload className="text-muted-foreground h-8 w-8" />
             </div>
             <div>
-              <p className="text-lg font-medium">
-                {isLoading ? t.dropzoneParsing : t.dropzone}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {t.dropzoneFormats}
-              </p>
+              <p className="text-lg font-medium">{isLoading ? t.dropzoneParsing : t.dropzone}</p>
+              <p className="text-muted-foreground mt-1 text-sm">{t.dropzoneFormats}</p>
             </div>
             {!isLoading && (
               <Button variant="outline" size="sm">

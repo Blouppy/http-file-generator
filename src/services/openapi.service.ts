@@ -27,7 +27,7 @@ export interface EndpointFilterOptions {
 
 export function filterEndpoints(
   endpoints: ParsedEndpoint[],
-  filters: EndpointFilterOptions
+  filters: EndpointFilterOptions,
 ): ParsedEndpoint[] {
   const { searchText, methods, tags } = filters;
   const lowerSearch = searchText.toLowerCase().trim();

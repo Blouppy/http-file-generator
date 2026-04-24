@@ -146,7 +146,11 @@ describe("generateHttpFile", () => {
       method: "GET",
       path: "/issues",
       parameters: [
-        { name: "sort", in: "query", schema: { type: "string", enum: ["asc", "desc"] } as Record<string, unknown> },
+        {
+          name: "sort",
+          in: "query",
+          schema: { type: "string", enum: ["asc", "desc"] } as Record<string, unknown>,
+        },
         { name: "page", in: "query", schema: { type: "integer" } },
       ],
     };
@@ -467,4 +471,3 @@ describe("generateHttpFileContent", () => {
     expect(result).toContain("@baseUrl");
   });
 });
-

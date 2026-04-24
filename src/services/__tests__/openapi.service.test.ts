@@ -92,7 +92,10 @@ describe("filterEndpoints", () => {
   });
 
   it("filters by multiple methods", () => {
-    const result = filterEndpoints(endpoints, { ...noFilters, methods: new Set(["GET", "DELETE"]) });
+    const result = filterEndpoints(endpoints, {
+      ...noFilters,
+      methods: new Set(["GET", "DELETE"]),
+    });
     expect(result.every((e) => ["GET", "DELETE"].includes(e.method))).toBe(true);
     expect(result).toHaveLength(4);
   });

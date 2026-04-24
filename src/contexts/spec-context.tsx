@@ -49,7 +49,18 @@ export function SpecProvider({ children }: { children: React.ReactNode }) {
   const selectedEndpoints = spec?.endpoints.filter((e) => selectedIds.has(getEndpointId(e))) ?? [];
 
   return (
-    <SpecContext value={{ spec, setSpec, selectedIds, setSelectedIds, toggleEndpoint, selectAll, deselectAll, selectedEndpoints }}>
+    <SpecContext
+      value={{
+        spec,
+        setSpec,
+        selectedIds,
+        setSelectedIds,
+        toggleEndpoint,
+        selectAll,
+        deselectAll,
+        selectedEndpoints,
+      }}
+    >
       {children}
     </SpecContext>
   );

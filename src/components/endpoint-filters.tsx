@@ -36,7 +36,7 @@ export function EndpointFilters({
   return (
     <div className="space-y-3">
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
         <Input
           type="search"
           placeholder={t.filterSearchPlaceholder}
@@ -60,7 +60,7 @@ export function EndpointFilters({
             onToggle={onTagToggle}
           />
         )}
-        
+
         {availableMethods.length > 0 && (
           <MultiSelectCombobox
             label={t.filterMethodLabel}
@@ -78,7 +78,7 @@ export function EndpointFilters({
         {hasActiveFilters && (
           <button
             onClick={onClearFilters}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-1"
+            className="text-muted-foreground hover:text-foreground ml-1 flex items-center gap-1 text-xs transition-colors"
           >
             <X className="h-3 w-3" />
             {t.filterClearFilters}
