@@ -14,7 +14,7 @@ export function toCamelCase(str: string): string {
 /** Returns the default variable value for a given schema type and parameter context. */
 function getVariableDefault(
   schema: Record<string, unknown> | undefined,
-  context: "path" | "query"
+  context: "path" | "query",
 ): string {
   if (schema) {
     // Enum: use the first declared value (unquoted — used directly in a URL/query string)
@@ -73,7 +73,7 @@ function getBodyLiteralDefault(schema: Record<string, unknown> | undefined): str
  *  - `anyOf` / `oneOf` (uses the first sub-schema that has properties)
  */
 function extractProperties(
-  schema: Record<string, unknown> | undefined
+  schema: Record<string, unknown> | undefined,
 ): Record<string, Record<string, unknown>> | undefined {
   if (!schema) return undefined;
 
@@ -151,13 +151,21 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
   const requestBodyContent = endpoint.requestBody?.content ?? {};
   const jsonContentKey = Object.keys(requestBodyContent).find((k) => {
     const lower = k.toLowerCase();
-    return lower.startsWith("application/json") || (lower.startsWith("application/") && lower.includes("+json"));
+    return (
+      lower.startsWith("application/json") ||
+      (lower.startsWith("application/") && lower.includes("+json"))
+    );
   });
-  const jsonContent = jsonContentKey ? (requestBodyContent[jsonContentKey] as Record<string, unknown>) : undefined;
+  const jsonContent = jsonContentKey
+    ? (requestBodyContent[jsonContentKey] as Record<string, unknown>)
+    : undefined;
 
   // Body field entries: { name, literal }
   // literal → literal value used directly in the JSON body template (no @var declarations)
-  interface BodyField { name: string; literal: string }
+  interface BodyField {
+    name: string;
+    literal: string;
+  }
   const bodyFields: BodyField[] = [];
   let hasBodyFields = false;
 
@@ -194,7 +202,8 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
   // Build query string using variable references (apply camelCase to both key and var reference)
   let queryString = "";
   if (queryParams.length > 0) {
-    queryString = "?" + queryParams.map((p) => `${toCamelCase(p.name)}={{${toCamelCase(p.name)}}}`).join("&");
+    queryString =
+      "?" + queryParams.map((p) => `${toCamelCase(p.name)}={{${toCamelCase(p.name)}}}`).join("&");
   }
 
   lines.push(`${endpoint.method} ${baseUrl}${urlPath}${queryString}`);

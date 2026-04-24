@@ -30,7 +30,9 @@ export async function parseOpenAPISpec(content: string, filename: string): Promi
     if (!pathItem || typeof pathItem !== "object") continue;
     const methods = ["get", "post", "put", "patch", "delete", "head", "options", "trace"];
     for (const method of methods) {
-      const operation = (pathItem as Record<string, unknown>)[method] as Record<string, unknown> | undefined;
+      const operation = (pathItem as Record<string, unknown>)[method] as
+        | Record<string, unknown>
+        | undefined;
       if (!operation) continue;
 
       endpoints.push({

@@ -1,6 +1,7 @@
 import tsEslint from "typescript-eslint";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
 import nextPlugin from "@next/eslint-plugin-next";
+import prettierConfig from "eslint-config-prettier";
 
 export default [
   ...tsEslint.configs.recommended,
@@ -14,6 +15,7 @@ export default [
     },
   },
   nextPlugin.configs["core-web-vitals"],
+  prettierConfig,
   {
     ignores: [".next/**", "node_modules/**", "coverage/**", "dist/**"],
   },

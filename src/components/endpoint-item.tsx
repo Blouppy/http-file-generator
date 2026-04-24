@@ -13,8 +13,8 @@ export function EndpointItem({ endpoint, isSelected, onToggle }: EndpointItemPro
   return (
     <div
       className={cn(
-        "flex items-start gap-3 px-6 py-3 cursor-pointer hover:bg-muted/30 transition-colors border-l-2",
-        isSelected ? "bg-primary/10 border-primary" : "border-transparent"
+        "hover:bg-muted/30 flex cursor-pointer items-start gap-3 border-l-2 px-6 py-3 transition-colors",
+        isSelected ? "bg-primary/10 border-primary" : "border-transparent",
       )}
       onClick={onToggle}
     >
@@ -24,12 +24,12 @@ export function EndpointItem({ endpoint, isSelected, onToggle }: EndpointItemPro
         className="mt-0.5 shrink-0"
         onClick={(e) => e.stopPropagation()}
       />
-      <div className="flex items-start gap-3 flex-1 min-w-0">
+      <div className="flex min-w-0 flex-1 items-start gap-3">
         <MethodBadge method={endpoint.method} />
         <div className="min-w-0">
-          <code className="text-sm font-mono break-all">{endpoint.path}</code>
+          <code className="font-mono text-sm break-all">{endpoint.path}</code>
           {endpoint.summary && (
-            <p className="text-xs text-muted-foreground mt-0.5">{endpoint.summary}</p>
+            <p className="text-muted-foreground mt-0.5 text-xs">{endpoint.summary}</p>
           )}
         </div>
       </div>

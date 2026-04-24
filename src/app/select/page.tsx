@@ -18,8 +18,16 @@ import type { ParsedEndpoint } from "@/types/openapi";
 
 export default function SelectPage() {
   const router = useRouter();
-  const { spec, setSpec, selectedIds, setSelectedIds, toggleEndpoint, selectAll, deselectAll, selectedEndpoints } =
-    useSpec();
+  const {
+    spec,
+    setSpec,
+    selectedIds,
+    setSelectedIds,
+    toggleEndpoint,
+    selectAll,
+    deselectAll,
+    selectedEndpoints,
+  } = useSpec();
   const { t } = useLanguage();
 
   // Track selection order so the preview shows endpoints in the order they were checked.
@@ -64,7 +72,7 @@ export default function SelectPage() {
     const isCurrentlySelected = selectedIds.has(id);
     toggleEndpoint(id);
     setSelectionOrder((prev) =>
-      isCurrentlySelected ? prev.filter((eid) => eid !== id) : [...prev, id]
+      isCurrentlySelected ? prev.filter((eid) => eid !== id) : [...prev, id],
     );
   };
 
@@ -114,9 +122,8 @@ export default function SelectPage() {
   };
 
   return (
-    <div className="h-[calc(100vh-3.75rem)] overflow-hidden flex flex-col bg-background">
-      <div className="max-w-7xl mx-auto w-full px-4 py-4 flex flex-col gap-4 h-full overflow-hidden">
-
+    <div className="bg-background flex h-[calc(100vh-3.75rem)] flex-col overflow-hidden">
+      <div className="mx-auto flex h-full w-full max-w-7xl flex-col gap-4 overflow-hidden px-4 py-4">
         <SelectPageHeader
           spec={spec}
           selectedCount={selectedEndpoints.length}
@@ -125,17 +132,16 @@ export default function SelectPage() {
         />
 
         {/* Two-column grid — fills remaining viewport height, no body scroll */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
-
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Left panel — endpoint tree with filters */}
           <Card className="flex flex-col overflow-hidden">
-            <CardHeader className="pb-3 flex-row items-center justify-between space-y-0 shrink-0 gap-2">
+            <CardHeader className="shrink-0 flex-row items-center justify-between gap-2 space-y-0 pb-3">
               <CardTitle className="text-base">{t.endpointsTitle}</CardTitle>
               <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-xs h-7 px-2"
+                  className="h-7 px-2 text-xs"
                   onClick={handleGlobalSelectAll}
                 >
                   {t.specSelectAll}
@@ -143,15 +149,15 @@ export default function SelectPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-xs h-7 px-2"
+                  className="h-7 px-2 text-xs"
                   onClick={handleGlobalDeselectAll}
                 >
                   {t.specDeselectAll}
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="p-0 flex flex-col overflow-hidden flex-1">
-              <div className="px-6 py-4 border-b shrink-0">
+            <CardContent className="flex flex-1 flex-col overflow-hidden p-0">
+              <div className="shrink-0 border-b px-6 py-4">
                 <EndpointFilters
                   searchText={searchText}
                   onSearchChange={setSearchText}
@@ -164,9 +170,9 @@ export default function SelectPage() {
                   onClearFilters={handleClearFilters}
                 />
               </div>
-              <div className="overflow-y-auto flex-1 scroll-smooth">
+              <div className="flex-1 overflow-y-auto scroll-smooth">
                 {Object.keys(filteredEndpointsByTag).length === 0 ? (
-                  <p className="px-6 py-8 text-center text-sm text-muted-foreground">
+                  <p className="text-muted-foreground px-6 py-8 text-center text-sm">
                     {t.filterNoMatches}
                   </p>
                 ) : (

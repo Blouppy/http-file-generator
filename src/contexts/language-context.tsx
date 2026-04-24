@@ -3,11 +3,7 @@
 import { createContext, use, useEffect, useState } from "react";
 import type { Language, Translations } from "@/lib/translations";
 import { translations } from "@/lib/translations";
-import {
-  getStorageItem,
-  setStorageItem,
-  STORAGE_KEYS,
-} from "@/services/local-storage.service";
+import { getStorageItem, setStorageItem, STORAGE_KEYS } from "@/services/local-storage.service";
 
 interface LanguageContextValue {
   language: Language;

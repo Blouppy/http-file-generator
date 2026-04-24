@@ -47,8 +47,8 @@ export function MultiSelectCombobox({
           aria-expanded={open}
           className="h-9 min-w-[140px] justify-between gap-2 font-normal"
         >
-          <span className="flex items-center gap-1.5 min-w-0">
-            <span className="text-sm text-muted-foreground">{label}:</span>
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="text-muted-foreground text-sm">{label}:</span>
             {selectedCount === 0 ? (
               <span className="text-sm">{placeholder}</span>
             ) : (
@@ -67,17 +67,11 @@ export function MultiSelectCombobox({
             <CommandEmpty>{t.filterNoResults}</CommandEmpty>
             <CommandGroup>
               {options.map((opt) => (
-                <CommandItem
-                  key={opt.value}
-                  value={opt.value}
-                  onSelect={() => onToggle(opt.value)}
-                >
+                <CommandItem key={opt.value} value={opt.value} onSelect={() => onToggle(opt.value)}>
                   <div
                     className={cn(
-                      "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                      selected.has(opt.value)
-                        ? "bg-primary text-primary-foreground"
-                        : "opacity-50"
+                      "border-primary mr-2 flex h-4 w-4 items-center justify-center rounded-sm border",
+                      selected.has(opt.value) ? "bg-primary text-primary-foreground" : "opacity-50",
                     )}
                   >
                     {selected.has(opt.value) && <Check className="h-3 w-3" />}
@@ -90,7 +84,7 @@ export function MultiSelectCombobox({
           {selectedCount > 0 && (
             <div className="border-t p-1">
               <button
-                className="w-full flex items-center justify-center gap-1 rounded-sm py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                className="text-muted-foreground hover:text-foreground hover:bg-accent flex w-full items-center justify-center gap-1 rounded-sm py-1.5 text-xs transition-colors"
                 onClick={() => {
                   Array.from(selected).forEach((v) => onToggle(v));
                   setOpen(false);

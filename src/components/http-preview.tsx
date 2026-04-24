@@ -39,9 +39,7 @@ function SyntaxLine({ line }: { line: string }) {
 
   switch (type) {
     case "section":
-      return (
-        <span className="text-yellow-500 dark:text-yellow-400 font-semibold">{line}</span>
-      );
+      return <span className="font-semibold text-yellow-500 dark:text-yellow-400">{line}</span>;
 
     case "comment":
       return <span className="text-muted-foreground">{line}</span>;
@@ -109,40 +107,41 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
 
   const handleCopy = useCallback(() => {
     if (!content) return;
-    navigator.clipboard.writeText(content).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }).catch(() => {
-      // Clipboard write failed (e.g. permissions denied) — silently ignore
-    });
+    navigator.clipboard
+      .writeText(content)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => {
+        // Clipboard write failed (e.g. permissions denied) — silently ignore
+      });
   }, [content]);
 
   return (
-    <Card className="flex flex-col h-full overflow-hidden">
-      <CardHeader className="pb-3 flex-row items-center justify-between space-y-0 shrink-0 gap-2">
-        <CardTitle className="text-base truncate">
-          {t.previewTitle}
-        </CardTitle>
+    <Card className="flex h-full flex-col overflow-hidden">
+      <CardHeader className="shrink-0 flex-row items-center justify-between gap-2 space-y-0 pb-3">
+        <CardTitle className="truncate text-base">{t.previewTitle}</CardTitle>
         {hasEndpoints && (
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex shrink-0 items-center gap-2">
             <Button size="sm" variant="outline" onClick={handleCopy}>
               {copied ? (
-                <Check className="w-3.5 h-3.5 mr-1.5 text-green-500" />
+                <Check className="mr-1.5 h-3.5 w-3.5 text-green-500" />
               ) : (
-                <Copy className="w-3.5 h-3.5 mr-1.5" />
+                <Copy className="mr-1.5 h-3.5 w-3.5" />
               )}
               {copied ? t.previewCopied : t.previewCopy}
             </Button>
           </div>
         )}
       </CardHeader>
-      <CardContent className="p-0 overflow-y-auto flex-1">
+      <CardContent className="flex-1 overflow-y-auto p-0">
         {!hasEndpoints ? (
-          <div className="px-6 py-12 text-center text-sm text-muted-foreground">
+          <div className="text-muted-foreground px-6 py-12 text-center text-sm">
             {t.previewSelectEndpoint}
           </div>
         ) : (
-          <pre className="px-6 py-4 h-full text-xs font-mono leading-relaxed bg-muted/30 overflow-x-auto">
+          <pre className="bg-muted/30 h-full overflow-x-auto px-6 py-4 font-mono text-xs leading-relaxed">
             <code>
               {lines.map((line, i) => (
                 <Fragment key={i}>

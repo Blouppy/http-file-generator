@@ -5,11 +5,11 @@ import { renderHook, act } from "@testing-library/react";
 import { useEndpointFilters } from "@/hooks/use-endpoint-filters";
 import type { ParsedEndpoint } from "@/types/openapi";
 
-const makeEndpoint = (
-  method: string,
-  path: string,
-  tags?: string[]
-): ParsedEndpoint => ({ method, path, tags });
+const makeEndpoint = (method: string, path: string, tags?: string[]): ParsedEndpoint => ({
+  method,
+  path,
+  tags,
+});
 
 const endpoints: ParsedEndpoint[] = [
   makeEndpoint("GET", "/users", ["users"]),

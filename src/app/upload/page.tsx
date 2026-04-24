@@ -29,17 +29,15 @@ export default function UploadPage() {
         setIsLoading(false);
       }
     },
-    [setSpec, router, parseErrorMsg]
+    [setSpec, router, parseErrorMsg],
   );
 
   return (
-    <div className="h-[calc(100vh-3.75rem)] overflow-y-auto bg-background">
-      <div className="max-w-3xl mx-auto px-4 py-12">
+    <div className="bg-background h-[calc(100vh-3.75rem)] overflow-y-auto">
+      <div className="mx-auto max-w-3xl px-4 py-12">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">{t.uploadTitle}</h1>
-          <p className="text-muted-foreground">
-            {t.uploadDescription}
-          </p>
+          <h1 className="mb-2 text-3xl font-bold tracking-tight">{t.uploadTitle}</h1>
+          <p className="text-muted-foreground">{t.uploadDescription}</p>
         </div>
         <FileUploadZone
           onFile={handleFile}

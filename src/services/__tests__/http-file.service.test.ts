@@ -1,4 +1,9 @@
-import { slugify, generateForEndpoints, buildZip, splitEndpointsByParentPath } from "@/services/http-file.service";
+import {
+  slugify,
+  generateForEndpoints,
+  buildZip,
+  splitEndpointsByParentPath,
+} from "@/services/http-file.service";
 import type { ParsedSpec, ParsedEndpoint } from "@/types/openapi";
 
 const testSpec: ParsedSpec = {
@@ -115,7 +120,7 @@ describe("splitEndpointsByParentPath", () => {
     ];
     const result = splitEndpointsByParentPath("issues", endpoints);
     expect(result).toHaveLength(3);
-    expect(result[0].zipPath).toBe("issues/issues.http");       // root first
+    expect(result[0].zipPath).toBe("issues/issues.http"); // root first
     expect(result[1].zipPath).toBe("categories/issues/issues.http"); // then alphabetical
     expect(result[2].zipPath).toBe("projects/issues/issues.http");
   });
@@ -173,4 +178,3 @@ describe("buildZip", () => {
     expect(blob.size).toBeGreaterThan(0);
   });
 });
-

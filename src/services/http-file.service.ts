@@ -33,7 +33,7 @@ const API_VERSION_SEG = /^(api|v\d+)$/i;
  */
 export function splitEndpointsByParentPath(
   tag: string,
-  endpoints: ParsedEndpoint[]
+  endpoints: ParsedEndpoint[],
 ): Array<{ zipPath: string; endpoints: ParsedEndpoint[] }> {
   const slug = slugify(tag);
   const groups = new Map<string, ParsedEndpoint[]>();
@@ -52,7 +52,7 @@ export function splitEndpointsByParentPath(
 
   // Stable order: root (empty parent) first, then alphabetical.
   const sorted = Array.from(groups.entries()).sort(([a], [b]) =>
-    a === b ? 0 : a === "" ? -1 : b === "" ? 1 : a.localeCompare(b)
+    a === b ? 0 : a === "" ? -1 : b === "" ? 1 : a.localeCompare(b),
   );
 
   return sorted.map(([parent, eps]) => {
@@ -61,7 +61,10 @@ export function splitEndpointsByParentPath(
   });
 }
 
-export async function buildZip(spec: ParsedSpec, endpointsByTag: Record<string, ParsedEndpoint[]>): Promise<Blob> {
+export async function buildZip(
+  spec: ParsedSpec,
+  endpointsByTag: Record<string, ParsedEndpoint[]>,
+): Promise<Blob> {
   const zip = new JSZip();
   for (const [tag, endpoints] of Object.entries(endpointsByTag)) {
     for (const { zipPath, endpoints: eps } of splitEndpointsByParentPath(tag, endpoints)) {
@@ -72,7 +75,10 @@ export async function buildZip(spec: ParsedSpec, endpointsByTag: Record<string, 
   return zip.generateAsync({ type: "blob" });
 }
 
-export function buildZipFromEndpoints(spec: ParsedSpec, endpoints: ParsedEndpoint[]): Promise<Blob> {
+export function buildZipFromEndpoints(
+  spec: ParsedSpec,
+  endpoints: ParsedEndpoint[],
+): Promise<Blob> {
   const byTag = groupEndpointsByTag(endpoints);
   return buildZip(spec, byTag);
 }
@@ -80,4 +86,3 @@ export function buildZipFromEndpoints(spec: ParsedSpec, endpoints: ParsedEndpoin
 export function slugify(name: string): string {
   return name.replace(/\s+/g, "-").toLowerCase();
 }
-
