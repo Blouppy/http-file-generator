@@ -1,12 +1,11 @@
 "use client";
 
 import { Fragment, useMemo, useState, useCallback } from "react";
-import { Download, Copy, Check } from "lucide-react";
+import { Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { generateHttpFileContent } from "@/lib/generate-http";
-import { slugify } from "@/services/http-file.service";
 import { useLanguage } from "@/contexts/language-context";
 import type { ParsedSpec, ParsedEndpoint } from "@/types/openapi";
 
@@ -108,18 +107,6 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
 
   const lines = useMemo(() => (content ? content.split("\n") : []), [content]);
 
-  const handleDownload = () => {
-    if (!content) return;
-    const filename = `${slugify(spec.title)}.http`;
-    const blob = new Blob([content], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   const handleCopy = useCallback(() => {
     if (!content) return;
     navigator.clipboard.writeText(content).then(() => {
@@ -145,10 +132,6 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
                 <Copy className="w-3.5 h-3.5 mr-1.5" />
               )}
               {copied ? t.previewCopied : t.previewCopy}
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleDownload}>
-              <Download className="w-3.5 h-3.5 mr-1.5" />
-              {t.previewDownload}
             </Button>
           </div>
         )}
