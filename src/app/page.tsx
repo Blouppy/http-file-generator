@@ -12,6 +12,7 @@ import {
   Download,
   ShieldCheck,
   Heart,
+  Copy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -94,6 +95,7 @@ function SelectMockup() {
               <Search className="size-3 shrink-0" />
               <span className="text-[10px]">Search endpoints…</span>
             </div>
+
             <div className="space-y-1">
               {MOCK_ENDPOINTS.map((ep) => (
                 <div
@@ -130,7 +132,13 @@ function SelectMockup() {
 
           {/* Right: HTTP preview */}
           <div className="p-3">
-            <div className="font-medium mb-2 text-[11px]">HTTP Preview</div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="font-medium text-[11px]">HTTP Preview</div>
+              <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded border text-muted-foreground cursor-default">
+                <Copy className="size-2.5" />
+                <span className="text-[9px]">Copy</span>
+              </div>
+            </div>
             <div className="bg-muted rounded p-2 font-mono text-[9px] leading-relaxed">
               <div className="text-muted-foreground">@limit = 10</div>
               <div className="text-muted-foreground">@offset = 0</div>
@@ -225,7 +233,7 @@ export default function Home() {
       <Separator />
 
       {/* ── How it works ─────────────────────────────────────────────────── */}
-      <section className="py-16 md:py-20 bg-muted/40">
+      <section className="py-12 md:py-16 bg-muted/40">
         <div className="max-w-5xl mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold tracking-tight mb-3">
@@ -259,7 +267,7 @@ export default function Home() {
       </section>
 
       {/* ── Privacy ──────────────────────────────────────────────────────── */}
-      <section className="py-16 md:py-20">
+      <section className="py-12 md:py-16">
         <div className="max-w-2xl mx-auto px-4 text-center">
           <div className="size-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-5">
             <ShieldCheck className="size-7 text-primary" />
@@ -267,7 +275,7 @@ export default function Home() {
           <h2 className="text-2xl font-bold tracking-tight mb-3">
             {t.homePrivacyTitle}
           </h2>
-          <p className="text-muted-foreground">{t.homePrivacyDesc}</p>
+          <p className="text-muted-foreground text-sm">{t.homePrivacyDesc}</p>
         </div>
       </section>
 
