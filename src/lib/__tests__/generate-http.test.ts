@@ -69,7 +69,7 @@ describe("generateHttpFile", () => {
       parameters: [{ name: "q", in: "query" }],
     };
     const result = generateHttpFile(baseSpec, endpoint);
-    expect(result).toContain('@q = ""');
+    expect(result).toContain("@q = text");
   });
 
   it("uses variable references in the query string", () => {
@@ -151,8 +151,18 @@ describe("generateHttpFile", () => {
       ],
     };
     const result = generateHttpFile(baseSpec, endpoint);
-    expect(result).toContain('@sort = "asc"');
+    expect(result).toContain("@sort = asc");
     expect(result).toContain("@page = 1");
+  });
+
+  it("uses URL-encoded comma-separated default for array query params", () => {
+    const endpoint: ParsedEndpoint = {
+      method: "GET",
+      path: "/items",
+      parameters: [{ name: "ids", in: "query", schema: { type: "array" } }],
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+    expect(result).toContain("@ids = value1%2Cvalue2");
   });
 
   it("does not emit @var for body fields; only path/query params get @var declarations", () => {

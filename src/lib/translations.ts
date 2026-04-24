@@ -13,11 +13,6 @@ export const translations = {
     themeDark: "Dark",
     themeSystem: "System",
 
-    // Step indicators
-    stepUpload: "1. Upload",
-    stepSelect: "2. Select",
-    stepGenerate: "3. Generate",
-
     // Upload page
     uploadTitle: "Upload your OpenAPI spec",
     uploadDescription: "Drop or browse to upload a .json, .yaml, or .yml file.",
@@ -45,7 +40,7 @@ export const translations = {
     groupNone: "None",
 
     // Endpoint filters
-    filterSearchPlaceholder: "Search endpoints by path, summary…",
+    filterSearchPlaceholder: "Search endpoints...",
     filterMethodLabel: "Method",
     filterApiLabel: "API",
     filterPlaceholderAll: "All",
@@ -67,7 +62,6 @@ export const translations = {
     // HTTP preview panel
     previewTitle: "HTTP Preview",
     previewSelectEndpoint: "Check endpoints to preview their .http file",
-    previewDownload: "Download .http",
     previewCopy: "Copy",
     previewCopied: "Copied!",
 
@@ -75,14 +69,22 @@ export const translations = {
     homeTitle: "HTTP File Generator",
     homeSubtitle: "Transform your OpenAPI specifications into ready-to-use .http files in seconds",
     homeGetStarted: "Get Started",
-    homeFeature1Title: "Parse OpenAPI Specs",
-    homeFeature1Desc: "Upload JSON or YAML OpenAPI 3.x specs and let us do the parsing.",
-    homeFeature2Title: "Select Endpoints",
-    homeFeature2Desc: "Choose exactly which endpoints you want to generate .http files for.",
-    homeFeature3Title: "Generate .http Files",
-    homeFeature3Desc: "Instantly generate ready-to-use .http files compatible with VS Code REST Client.",
-    homeFeature4Title: "Download as ZIP",
-    homeFeature4Desc: "Download all files in one ZIP archive, organized by API tags.",
+    homeCompatibleWith: "Compatible with VS Code REST Client & JetBrains HTTP Client",
+    homePreviewTitle: "See it in action",
+    homePreviewDesc: "Browse your endpoints, select exactly what you need, and instantly preview the generated .http file.",
+    homeHowItWorksTitle: "How it works",
+    homeStep1Title: "Upload your spec",
+    homeStep1Desc: "Drop a JSON or YAML OpenAPI 3.x spec file and we'll parse it instantly.",
+    homeStep2Title: "Select endpoints",
+    homeStep2Desc: "Browse and filter endpoints by method or tag. Check exactly what you need.",
+    homeStep3Title: "Download .http files",
+    homeStep3Desc: "Get ready-to-use .http files organized by API tags, or download them all as a ZIP.",
+    homePrivacyTitle: "Your data stays yours",
+    homePrivacyDesc: "Your OpenAPI specs are processed entirely in your browser — they are never uploaded to or stored on any server. Your API definitions stay private, always.",
+    homeCtaTitle: "Ready to streamline your API workflow?",
+    homeCtaDesc: "Start generating .http files from your OpenAPI spec in seconds. No login required.",
+    homeFooterMadeWith: "Made with",
+    homeFooterBy: "by Blouppy",
   },
   fr: {
     // Language toggle
@@ -95,11 +97,6 @@ export const translations = {
     themeLight: "Clair",
     themeDark: "Sombre",
     themeSystem: "Système",
-
-    // Step indicators
-    stepUpload: "1. Importer",
-    stepSelect: "2. Sélectionner",
-    stepGenerate: "3. Générer",
 
     // Upload page
     uploadTitle: "Importez votre spec OpenAPI",
@@ -130,7 +127,7 @@ export const translations = {
     groupNone: "Aucun",
 
     // Endpoint filters
-    filterSearchPlaceholder: "Rechercher par chemin, résumé…",
+    filterSearchPlaceholder: "Rechercher des endpoints...",
     filterMethodLabel: "Méthode",
     filterApiLabel: "API",
     filterPlaceholderAll: "Tous",
@@ -152,7 +149,6 @@ export const translations = {
     // HTTP preview panel
     previewTitle: "Aperçu HTTP",
     previewSelectEndpoint: "Cochez des endpoints pour prévisualiser leur fichier .http",
-    previewDownload: "Télécharger .http",
     previewCopy: "Copier",
     previewCopied: "Copié !",
 
@@ -160,14 +156,22 @@ export const translations = {
     homeTitle: "HTTP File Generator",
     homeSubtitle: "Transformez vos spécifications OpenAPI en fichiers .http prêts à l'emploi en quelques secondes",
     homeGetStarted: "Commencer",
-    homeFeature1Title: "Analyser les specs OpenAPI",
-    homeFeature1Desc: "Importez vos specs OpenAPI 3.x en JSON ou YAML et laissez-nous faire l'analyse.",
-    homeFeature2Title: "Sélectionner les endpoints",
-    homeFeature2Desc: "Choisissez exactement les endpoints pour lesquels générer des fichiers .http.",
-    homeFeature3Title: "Générer les fichiers .http",
-    homeFeature3Desc: "Générez instantanément des fichiers .http prêts à l'emploi, compatibles avec VS Code REST Client.",
-    homeFeature4Title: "Télécharger en ZIP",
-    homeFeature4Desc: "Téléchargez tous les fichiers dans une archive ZIP, organisée par tags API.",
+    homeCompatibleWith: "Compatible avec VS Code REST Client & JetBrains HTTP Client",
+    homePreviewTitle: "Voyez-le en action",
+    homePreviewDesc: "Parcourez vos endpoints, sélectionnez exactement ce dont vous avez besoin, et prévisualisez instantanément le fichier .http généré.",
+    homeHowItWorksTitle: "Comment ça fonctionne",
+    homeStep1Title: "Importez votre spec",
+    homeStep1Desc: "Déposez un fichier spec OpenAPI 3.x en JSON ou YAML et nous l'analyserons instantanément.",
+    homeStep2Title: "Sélectionnez les endpoints",
+    homeStep2Desc: "Parcourez et filtrez les endpoints par méthode ou tag. Cochez exactement ce dont vous avez besoin.",
+    homeStep3Title: "Téléchargez les fichiers .http",
+    homeStep3Desc: "Obtenez des fichiers .http prêts à l'emploi organisés par tags API, ou téléchargez-les tous en ZIP.",
+    homePrivacyTitle: "Vos données restent les vôtres",
+    homePrivacyDesc: "Vos specs OpenAPI sont traitées entièrement dans votre navigateur — elles ne sont jamais envoyées ni stockées sur un serveur. Vos définitions API restent privées, en permanence.",
+    homeCtaTitle: "Prêt à simplifier votre flux de travail API ?",
+    homeCtaDesc: "Commencez à générer des fichiers .http depuis votre spec OpenAPI en quelques secondes. Sans inscription.",
+    homeFooterMadeWith: "Fait avec",
+    homeFooterBy: "par Blouppy",
   },
 } as const;
 
