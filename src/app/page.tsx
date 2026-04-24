@@ -3,10 +3,6 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import {
-  FileJson,
-  CheckSquare,
-  Zap,
-  FolderArchive,
   Upload,
   ArrowRight,
   FileCode,
@@ -14,9 +10,10 @@ import {
   Search,
   CheckCheck,
   Download,
+  ShieldCheck,
+  Heart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useLanguage } from "@/contexts/language-context";
@@ -46,42 +43,6 @@ function BrowserMockup({
       {/* Page content */}
       <div className="bg-background">{children}</div>
     </div>
-  );
-}
-
-// ── Upload-page mockup ───────────────────────────────────────────────────────
-function UploadMockup() {
-  return (
-    <BrowserMockup title="HTTP File Generator — Upload">
-      <div className="p-6 text-sm select-none">
-        {/* Step indicator */}
-        <div className="flex items-center gap-2 mb-6 text-xs">
-          <span className="font-medium text-foreground">1. Upload</span>
-          <span className="text-muted-foreground">→</span>
-          <span className="text-muted-foreground">2. Select</span>
-          <span className="text-muted-foreground">→</span>
-          <span className="text-muted-foreground">3. Generate</span>
-        </div>
-        {/* Heading skeleton */}
-        <div className="mb-6">
-          <div className="h-4 w-48 bg-foreground/20 rounded mb-2" />
-          <div className="h-3 w-64 bg-muted-foreground/25 rounded" />
-        </div>
-        {/* Drop zone */}
-        <div className="border-2 border-dashed border-border rounded-xl p-10 flex flex-col items-center justify-center gap-3 bg-muted/30">
-          <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <Upload className="size-5 text-primary" />
-          </div>
-          <div className="text-center space-y-1.5">
-            <div className="h-3 w-40 bg-foreground/20 rounded mx-auto" />
-            <div className="h-2.5 w-32 bg-muted-foreground/25 rounded mx-auto" />
-          </div>
-          <div className="px-4 py-1.5 bg-primary text-primary-foreground rounded-md text-xs font-medium mt-1">
-            Browse files
-          </div>
-        </div>
-      </div>
-    </BrowserMockup>
   );
 }
 
@@ -209,32 +170,6 @@ function SelectMockup() {
 export default function Home() {
   const { t } = useLanguage();
 
-  const features = useMemo(
-    () => [
-      {
-        icon: FileJson,
-        title: t.homeFeature1Title,
-        description: t.homeFeature1Desc,
-      },
-      {
-        icon: CheckSquare,
-        title: t.homeFeature2Title,
-        description: t.homeFeature2Desc,
-      },
-      {
-        icon: Zap,
-        title: t.homeFeature3Title,
-        description: t.homeFeature3Desc,
-      },
-      {
-        icon: FolderArchive,
-        title: t.homeFeature4Title,
-        description: t.homeFeature4Desc,
-      },
-    ],
-    [t]
-  );
-
   const steps = useMemo(
     () => [
       { icon: Upload, title: t.homeStep1Title, description: t.homeStep1Desc },
@@ -272,64 +207,22 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── App preview ──────────────────────────────────────────────────── */}
+      {/* ── App preview (select screen) ───────────────────────────────────── */}
       <section className="py-12 md:py-16">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-            <div>
-              <Badge variant="outline" className="mb-3">
-                {t.homePreviewStep1}
-              </Badge>
-              <h3 className="text-xl font-semibold mb-2">{t.homeStep1Title}</h3>
-              <p className="text-muted-foreground mb-5 text-sm">
-                {t.homeStep1Desc}
-              </p>
-              <UploadMockup />
-            </div>
-            <div>
-              <Badge variant="outline" className="mb-3">
-                {t.homePreviewStep2}
-              </Badge>
-              <h3 className="text-xl font-semibold mb-2">{t.homeStep2Title}</h3>
-              <p className="text-muted-foreground mb-5 text-sm">
-                {t.homeStep2Desc}
-              </p>
-              <SelectMockup />
-            </div>
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-semibold mb-2">
+              {t.homePreviewTitle}
+            </h2>
+            <p className="text-muted-foreground text-sm max-w-xl mx-auto">
+              {t.homePreviewDesc}
+            </p>
           </div>
+          <SelectMockup />
         </div>
       </section>
 
       <Separator />
-
-      {/* ── Features ─────────────────────────────────────────────────────── */}
-      <section className="py-16 md:py-20">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold tracking-tight mb-3">
-              {t.homeSectionFeaturesTitle}
-            </h2>
-            <p className="text-muted-foreground max-w-xl mx-auto">
-              {t.homeSectionFeaturesDesc}
-            </p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {features.map(({ icon: Icon, title, description }) => (
-              <Card key={title} className="flex flex-col">
-                <CardHeader className="pb-3">
-                  <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
-                    <Icon className="size-5 text-primary" />
-                  </div>
-                  <CardTitle className="text-base">{title}</CardTitle>
-                </CardHeader>
-                <CardContent className="flex-1">
-                  <p className="text-sm text-muted-foreground">{description}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* ── How it works ─────────────────────────────────────────────────── */}
       <section className="py-16 md:py-20 bg-muted/40">
@@ -365,6 +258,21 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Privacy ──────────────────────────────────────────────────────── */}
+      <section className="py-16 md:py-20">
+        <div className="max-w-2xl mx-auto px-4 text-center">
+          <div className="size-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-5">
+            <ShieldCheck className="size-7 text-primary" />
+          </div>
+          <h2 className="text-2xl font-bold tracking-tight mb-3">
+            {t.homePrivacyTitle}
+          </h2>
+          <p className="text-muted-foreground">{t.homePrivacyDesc}</p>
+        </div>
+      </section>
+
+      <Separator />
+
       {/* ── CTA ──────────────────────────────────────────────────────────── */}
       <section className="py-20 md:py-28">
         <div className="max-w-2xl mx-auto px-4 text-center">
@@ -382,6 +290,21 @@ export default function Home() {
           </Button>
         </div>
       </section>
+
+      {/* ── Footer ───────────────────────────────────────────────────────── */}
+      <footer className="border-t py-8">
+        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <span>{t.homeFooterMadeWith}</span>
+            <Heart
+              className="size-4 text-destructive fill-destructive"
+              aria-hidden="true"
+            />
+            <span>{t.homeFooterBy}</span>
+          </div>
+          <span>© {new Date().getFullYear()} HTTP File Generator</span>
+        </div>
+      </footer>
     </div>
   );
 }
