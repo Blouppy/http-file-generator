@@ -17,10 +17,9 @@ function getVariableDefault(
   context: "path" | "query"
 ): string {
   if (schema) {
-    // Enum: use the first declared value so the variable is immediately usable
+    // Enum: use the first declared value (unquoted — used directly in a URL/query string)
     if (Array.isArray(schema.enum) && schema.enum.length > 0) {
-      const first = schema.enum[0];
-      return typeof first === "string" ? JSON.stringify(first) : String(first);
+      return String(schema.enum[0]);
     }
     switch (schema.type) {
       case "integer":
@@ -28,14 +27,17 @@ function getVariableDefault(
         return "1";
       case "boolean":
         return "true";
+      case "string":
+        return "text";
       case "array":
-        return "[]";
+        // URL-encoded comma-separated format for array query/path params (curl %2C encoding)
+        return "value1%2Cvalue2";
       case "object":
         return "{}";
     }
   }
-  // Path params are most commonly numeric IDs; query params default to a quoted empty string.
-  return context === "path" ? "1" : '""';
+  // Path params are most commonly numeric IDs; query/unknown params use a plain text placeholder.
+  return context === "path" ? "1" : "text";
 }
 
 /**
