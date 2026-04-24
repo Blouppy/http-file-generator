@@ -10,7 +10,9 @@ test.describe("Home page", () => {
   });
 
   test("displays the hero heading", async ({ page }) => {
-    await expect(page.getByRole("heading", { name: "HTTP File Generator", level: 1 })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "HTTP File Generator", level: 1 }),
+    ).toBeVisible();
   });
 
   test("displays the hero subtitle", async ({ page }) => {
