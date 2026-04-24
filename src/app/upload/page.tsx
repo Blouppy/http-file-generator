@@ -7,29 +7,6 @@ import { useSpec } from "@/contexts/spec-context";
 import { useLanguage } from "@/contexts/language-context";
 import { parseSpec } from "@/services/openapi.service";
 
-function StepIndicator({ current }: { current: number }) {
-  const { t } = useLanguage();
-  const steps = [t.stepUpload, t.stepSelect, t.stepGenerate];
-  return (
-    <div className="flex items-center gap-2 mb-8">
-      {steps.map((step, i) => (
-        <div key={step} className="flex items-center gap-2">
-          <span
-            className={`text-sm font-medium ${
-              i + 1 === current ? "text-foreground" : "text-muted-foreground"
-            }`}
-          >
-            {step}
-          </span>
-          {i < steps.length - 1 && (
-            <span className="text-muted-foreground text-sm">→</span>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export default function UploadPage() {
   const router = useRouter();
   const { setSpec } = useSpec();
@@ -58,7 +35,6 @@ export default function UploadPage() {
   return (
     <div className="h-[calc(100vh-3.75rem)] overflow-y-auto bg-background">
       <div className="max-w-3xl mx-auto px-4 py-12">
-        <StepIndicator current={1} />
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight mb-2">{t.uploadTitle}</h1>
           <p className="text-muted-foreground">
