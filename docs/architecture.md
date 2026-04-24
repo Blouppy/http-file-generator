@@ -77,10 +77,18 @@ src/
 
 The application follows a two-step wizard:
 
-```
-/ (redirect)
-    ↓
-/upload  ──(parsed ParsedSpec)──▶  /select  ──(Blob)──▶  browser download
+```mermaid
+flowchart LR
+    A(["/"]):::route -->|redirect| B(["/upload"]):::route
+    B -->|file selected| C{Parse OpenAPI spec\nswagger-parser}
+    C -->|error| B
+    C -->|ParsedSpec| D(["/select"]):::route
+    D -->|Download .http| E[single .http file\nsaveAs]:::output
+    D -->|Download ZIP| F[ZIP archive\njszip + saveAs]:::output
+    D -->|Upload new file| B
+
+    classDef route fill:#4f46e5,color:#fff,stroke:none
+    classDef output fill:#059669,color:#fff,stroke:none
 ```
 
 ### Step 1 — Upload (`/upload`)
@@ -103,6 +111,53 @@ The application follows a two-step wizard:
 ---
 
 ## Data Model
+
+```mermaid
+classDiagram
+    class ParsedSpec {
+        +string title
+        +string version
+        +string baseUrl
+        +ParsedEndpoint[] endpoints
+    }
+
+    class ParsedEndpoint {
+        +string path
+        +string method
+        +string? operationId
+        +string? summary
+        +string? description
+        +string[]? tags
+        +Parameter[]? parameters
+        +RequestBody? requestBody
+    }
+
+    class Parameter {
+        +string name
+        +string in
+        +boolean? required
+        +Schema? schema
+        +unknown? example
+        +string? description
+    }
+
+    class RequestBody {
+        +boolean? required
+        +Record~string,MediaType~? content
+        +string? description
+    }
+
+    class MediaType {
+        +Schema? schema
+        +unknown? example
+        +Record~string,unknown~? examples
+    }
+
+    ParsedSpec "1" --> "0..*" ParsedEndpoint : endpoints
+    ParsedEndpoint "1" --> "0..*" Parameter : parameters
+    ParsedEndpoint "1" --> "0..1" RequestBody : requestBody
+    RequestBody "1" --> "0..*" MediaType : content
+```
 
 ### `ParsedSpec`
 
@@ -165,6 +220,27 @@ When the user downloads the ZIP archive, endpoints are grouped by tag and then f
 - Meaningful path segments (non-param, non-version) are extracted.
 - The last segment (the resource itself) is dropped, leaving the parent segments.
 - One `.http` file is created per unique `(tag, parent)` combination.
+
+```mermaid
+flowchart TD
+    A[Selected endpoints] --> B[groupEndpointsByTag]
+    B --> C{For each tag}
+    C --> D[splitEndpointsByParentPath]
+    D --> E{For each endpoint}
+    E --> F[Extract meaningful path segments\nremove params, api, version prefixes]
+    F --> G[Drop last segment\nkeep parent context]
+    G --> H{Group by parent}
+    H -->|parent = ''| I["tag/tag.http"]:::file
+    H -->|parent = 'projects'| J["projects/tag/tag.http"]:::file
+    H -->|parent = 'workspaces'| K["workspaces/tag/tag.http"]:::file
+    I --> L[jszip]
+    J --> L
+    K --> L
+    L --> M[.zip archive]:::output
+
+    classDef file fill:#f59e0b,color:#000,stroke:none
+    classDef output fill:#059669,color:#fff,stroke:none
+```
 
 Example:
 
