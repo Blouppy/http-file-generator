@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, use, useState } from "react";
 import type { ParsedSpec, ParsedEndpoint } from "@/types/openapi";
 import { getEndpointId } from "@/services/openapi.service";
 
@@ -49,16 +49,14 @@ export function SpecProvider({ children }: { children: React.ReactNode }) {
   const selectedEndpoints = spec?.endpoints.filter((e) => selectedIds.has(getEndpointId(e))) ?? [];
 
   return (
-    <SpecContext.Provider
-      value={{ spec, setSpec, selectedIds, setSelectedIds, toggleEndpoint, selectAll, deselectAll, selectedEndpoints }}
-    >
+    <SpecContext value={{ spec, setSpec, selectedIds, setSelectedIds, toggleEndpoint, selectAll, deselectAll, selectedEndpoints }}>
       {children}
-    </SpecContext.Provider>
+    </SpecContext>
   );
 }
 
 export function useSpec(): SpecContextValue {
-  const ctx = useContext(SpecContext);
+  const ctx = use(SpecContext);
   if (!ctx) throw new Error("useSpec must be used within a SpecProvider");
   return ctx;
 }
