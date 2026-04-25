@@ -7,6 +7,9 @@ export const translations = {
     languageEnglish: "English",
     languageFrench: "French",
 
+    // GitHub link
+    githubRepository: "View source on GitHub",
+
     // Theme toggle
     toggleTheme: "Toggle theme",
     themeLight: "Light",
@@ -94,6 +97,9 @@ export const translations = {
     toggleLanguage: "Changer la langue",
     languageEnglish: "Anglais",
     languageFrench: "Français",
+
+    // GitHub link
+    githubRepository: "Voir le code source sur GitHub",
 
     // Theme toggle
     toggleTheme: "Changer le thème",
