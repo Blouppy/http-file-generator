@@ -1,9 +1,0 @@
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "rootDir": ".",
-    "types": ["jest", "node"],
-    "jsx": "react-jsx",
-    "ignoreDeprecations": "6.0"
-  }
-}
