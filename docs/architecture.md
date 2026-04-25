@@ -83,8 +83,8 @@ flowchart LR
     B -->|file selected| C{Parse OpenAPI spec\nswagger-parser}
     C -->|error| B
     C -->|ParsedSpec| D(["/select"]):::route
-    D -->|Download .http| E[single .http file\nsaveAs]:::output
-    D -->|Download ZIP| F[ZIP archive\njszip + saveAs]:::output
+    D -->|Copy button| E[copy to clipboard]:::output
+    D -->|Download button| F[ZIP archive\njszip + saveAs]:::output
     D -->|Upload new file| B
 
     classDef route fill:#4f46e5,color:#fff,stroke:none
@@ -104,9 +104,8 @@ flowchart LR
 2. All endpoints start as **selected**. The user can:
    - Search/filter via `useEndpointFilters` hook.
    - Toggle individual endpoints or whole tags.
-3. The right panel (`<HttpPreview>`) calls `generateHttpFileContent()` on every render to display live `.http` output.
-4. **Download** (single file): `generateForEndpoints()` → `saveAs(blob, title.http)`.
-5. **Download ZIP**: `buildZipFromEndpoints()` groups endpoints by tag with `groupEndpointsByTag()`, then calls `splitEndpointsByParentPath()` to produce one file per tag/parent-path combination, and packages them with `jszip`.
+3. The right panel (`<HttpPreview>`) calls `generateHttpFileContent()` on every render to display live `.http` output. The **Copy** button copies the content to the clipboard.
+4. **Download** (ZIP): `buildZipFromEndpoints()` groups endpoints by tag with `groupEndpointsByTag()`, then calls `splitEndpointsByParentPath()` to produce one file per tag/parent-path combination, and packages them with `jszip`.
 
 ---
 

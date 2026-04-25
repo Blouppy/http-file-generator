@@ -1,14 +1,14 @@
 # http-file-generator
 
 A lightweight web application that generates ready-to-use `.http` files from OpenAPI specifications (JSON or YAML).
-Upload your spec, select the endpoints you need, preview the output, and download a single `.http` file or a ZIP archive organized by API tags — no login required, everything runs in your browser.
+Upload your spec, select the endpoints you need, preview the output, and download a ZIP archive organized by API tags — no login required, everything runs in your browser.
 
 ## Features
 
 - 📂 **Drag-and-drop upload** — supports `.json`, `.yaml`, and `.yml` OpenAPI 3.x spec files
 - 🔍 **Endpoint browser** — filter by HTTP method or tag with a real-time search
 - 👁 **Live HTTP preview** — instantly preview the generated `.http` content as you select endpoints
-- 📥 **Flexible download** — single `.http` file or a ZIP archive with files organized by tag/path
+- 📥 **ZIP download** — download a ZIP archive with `.http` files organized by tag/path
 - 🌐 **Internationalization** — English and French UI
 - 🎨 **Theme support** — light, dark, and system themes
 - 🔒 **Privacy-first** — your spec is never sent to any server; all processing happens in the browser
@@ -100,7 +100,7 @@ e2e/                    # Playwright end-to-end tests
 
 1. **Upload** — drop a `.json` or `.yaml` OpenAPI 3.x spec. The file is parsed entirely in the browser using `@apidevtools/swagger-parser`.
 2. **Select** — browse the endpoint tree, filter by method or tag, and check the ones you want. A live preview panel shows the generated `.http` content.
-3. **Download** — click **Download** to get a single `.http` file for the selected endpoints, or **Download ZIP** to get one file per tag/path group packaged as a `.zip` archive.
+3. **Download** — the live preview panel shows the generated `.http` content for your selection; click **Copy** to copy it to the clipboard, or click **Download** to get a ZIP archive with one `.http` file per tag/path group.
 
 ## Documentation
 
