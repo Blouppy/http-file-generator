@@ -9,6 +9,8 @@ on:
 jobs:
   deploy-preview:
     runs-on: ubuntu-latest
+    # Skip deployments for pull requests coming from forks (secrets are not available there)
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
 
     permissions:
       contents: read
