@@ -29,14 +29,22 @@ export function SpecProvider({ children }: { children: React.ReactNode }) {
   const toggleEndpoint = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+
       return next;
     });
   };
 
   const selectAll = () => {
-    if (!spec) return;
+    if (!spec) {
+      return;
+    }
+
     setSelectedIds(new Set(spec.endpoints.map(getEndpointId)));
   };
 
@@ -64,6 +72,10 @@ export function SpecProvider({ children }: { children: React.ReactNode }) {
 
 export function useSpec(): SpecContextValue {
   const ctx = use(SpecContext);
-  if (!ctx) throw new Error("useSpec must be used within a SpecProvider");
+
+  if (!ctx) {
+    throw new Error("useSpec must be used within a SpecProvider");
+  }
+
   return ctx;
 }

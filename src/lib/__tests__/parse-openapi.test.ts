@@ -18,6 +18,7 @@ describe("parseOpenAPISpec", () => {
   it("parses JSON content", async () => {
     const spec = makeSpec();
     const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
+
     expect(result.title).toBe("Test API");
     expect(result.version).toBe("1.0.0");
     expect(result.baseUrl).toBe("https://api.example.com");
@@ -33,6 +34,7 @@ servers:
 paths: {}
 `;
     const result = await parseOpenAPISpec(yaml, "spec.yaml");
+
     expect(result.title).toBe("YAML API");
     expect(result.version).toBe("2.0");
     expect(result.baseUrl).toBe("https://yaml.example.com");
@@ -48,12 +50,14 @@ servers:
 paths: {}
 `;
     const result = await parseOpenAPISpec(yaml, "spec.yml");
+
     expect(result.title).toBe("YML API");
   });
 
   it("uses defaults when info is missing", async () => {
     const spec = { paths: {} };
     const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
+
     expect(result.title).toBe("API");
     expect(result.version).toBe("1.0.0");
     expect(result.baseUrl).toBe("{{baseUrl}}");
@@ -73,8 +77,11 @@ paths: {}
       },
     });
     const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
+
     expect(result.endpoints).toHaveLength(4);
+
     const methods = result.endpoints.map((e) => e.method);
+
     expect(methods).toContain("GET");
     expect(methods).toContain("POST");
     expect(methods).toContain("DELETE");
@@ -89,6 +96,7 @@ paths: {}
       },
     });
     const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
+
     expect(result.endpoints[0].path).toBe("/items");
     expect(result.endpoints[0].method).toBe("GET");
     expect(result.endpoints[0].summary).toBe("List items");

@@ -19,10 +19,13 @@ export default function UploadPage() {
     async (file: File) => {
       setError(null);
       setIsLoading(true);
+
       try {
         const content = await file.text();
         const parsed = await parseSpec(content, file.name);
+
         setSpec(parsed);
+
         router.push("/select");
       } catch (err) {
         setError(err instanceof Error ? err.message : parseErrorMsg);

@@ -49,6 +49,7 @@ export default function SelectPage() {
   useEffect(() => {
     if (!spec) {
       router.replace("/upload");
+
       return;
     }
     setSelectionOrder([]);
@@ -56,20 +57,28 @@ export default function SelectPage() {
 
   // Ordered list of selected endpoints for the preview panel.
   const orderedPreviewEndpoints = useMemo(() => {
-    if (!spec) return [];
+    if (!spec) {
+      return [];
+    }
+
     const endpointMap = new Map(spec.endpoints.map((e) => [getEndpointId(e), e]));
+
     return selectionOrder
       .map((id) => endpointMap.get(id))
       .filter((e): e is ParsedEndpoint => e !== undefined);
   }, [spec, selectionOrder]);
 
-  if (!spec) return null;
+  if (!spec) {
+    return null;
+  }
 
   // --- handlers ---
 
   const handleToggle = (id: string) => {
     const isCurrentlySelected = selectedIds.has(id);
+
     toggleEndpoint(id);
+
     setSelectionOrder((prev) =>
       isCurrentlySelected ? prev.filter((eid) => eid !== id) : [...prev, id],
     );
@@ -77,25 +86,31 @@ export default function SelectPage() {
 
   const handleGlobalSelectAll = () => {
     selectAll();
+
     setSelectionOrder(spec.endpoints.map(getEndpointId));
   };
 
   const handleGlobalDeselectAll = () => {
     deselectAll();
+
     setSelectionOrder([]);
   };
 
   const handleSelectAllInTag = (tagEndpoints: ParsedEndpoint[]) => {
     const next = new Set(selectedIds);
     const newIds: string[] = [];
+
     tagEndpoints.forEach((e) => {
       const id = getEndpointId(e);
+
       if (!next.has(id)) {
         next.add(id);
         newIds.push(id);
       }
     });
+
     setSelectedIds(next);
+
     if (newIds.length > 0) {
       setSelectionOrder((prev) => [...prev, ...newIds]);
     }
@@ -104,19 +119,27 @@ export default function SelectPage() {
   const handleDeselectAllInTag = (tagEndpoints: ParsedEndpoint[]) => {
     const tagIds = new Set(tagEndpoints.map(getEndpointId));
     const next = new Set(selectedIds);
+
     tagEndpoints.forEach((e) => next.delete(getEndpointId(e)));
+
     setSelectedIds(next);
+
     setSelectionOrder((prev) => prev.filter((id) => !tagIds.has(id)));
   };
 
   const handleReset = () => {
     setSpec(null);
+
     router.push("/upload");
   };
 
   const handleDownloadZip = async () => {
-    if (selectedEndpoints.length === 0) return;
+    if (selectedEndpoints.length === 0) {
+      return;
+    }
+
     const blob = await buildZipFromEndpoints(spec, selectedEndpoints);
+
     saveAs(blob, `${slugify(spec.title)}.zip`);
   };
 

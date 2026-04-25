@@ -18,6 +18,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const persistedLanguage = getStorageItem<Language>(STORAGE_KEYS.LANGUAGE, "en");
+
     setLanguageState(persistedLanguage);
   }, []);
 
@@ -35,6 +36,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
 export function useLanguage(): LanguageContextValue {
   const ctx = use(LanguageContext);
-  if (!ctx) throw new Error("useLanguage must be used within a LanguageProvider");
+
+  if (!ctx) {
+    throw new Error("useLanguage must be used within a LanguageProvider");
+  }
+
   return ctx;
 }

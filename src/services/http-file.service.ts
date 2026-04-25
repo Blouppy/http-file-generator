@@ -46,7 +46,10 @@ export function splitEndpointsByParentPath(
     // Parent = all meaningful segments except the last resource segment.
     const parent = segs.slice(0, -1).join("/");
 
-    if (!groups.has(parent)) groups.set(parent, []);
+    if (!groups.has(parent)) {
+      groups.set(parent, []);
+    }
+
     groups.get(parent)!.push(endpoint);
   }
 
@@ -57,6 +60,7 @@ export function splitEndpointsByParentPath(
 
   return sorted.map(([parent, eps]) => {
     const folder = parent ? `${parent}/${slug}` : slug;
+
     return { zipPath: `${folder}/${slug}.http`, endpoints: eps };
   });
 }
@@ -72,6 +76,7 @@ export async function buildZip(
       zip.file(zipPath, content);
     }
   }
+
   return zip.generateAsync({ type: "blob" });
 }
 
@@ -80,6 +85,7 @@ export function buildZipFromEndpoints(
   endpoints: ParsedEndpoint[],
 ): Promise<Blob> {
   const byTag = groupEndpointsByTag(endpoints);
+
   return buildZip(spec, byTag);
 }
 

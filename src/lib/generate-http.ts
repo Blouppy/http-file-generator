@@ -7,7 +7,10 @@ interface VarEntry {
 
 /** Converts a PascalCase string to camelCase by lowercasing the first character. */
 export function toCamelCase(str: string): string {
-  if (!str) return str;
+  if (!str) {
+    return str;
+  }
+
   return str.charAt(0).toLowerCase() + str.slice(1);
 }
 
@@ -21,6 +24,7 @@ function getVariableDefault(
     if (Array.isArray(schema.enum) && schema.enum.length > 0) {
       return String(schema.enum[0]);
     }
+
     switch (schema.type) {
       case "integer":
       case "number":
@@ -36,6 +40,7 @@ function getVariableDefault(
         return "{}";
     }
   }
+
   // Path params are most commonly numeric IDs; query/unknown params use a plain text placeholder.
   return context === "path" ? "1" : "text";
 }
@@ -51,6 +56,7 @@ function getBodyLiteralDefault(schema: Record<string, unknown> | undefined): str
       const first = schema.enum[0];
       return typeof first === "string" ? JSON.stringify(first) : String(first);
     }
+
     switch (schema.type) {
       case "integer":
       case "number":
@@ -63,6 +69,7 @@ function getBodyLiteralDefault(schema: Record<string, unknown> | undefined): str
         return "{}";
     }
   }
+
   return '""';
 }
 
@@ -75,7 +82,9 @@ function getBodyLiteralDefault(schema: Record<string, unknown> | undefined): str
 function extractProperties(
   schema: Record<string, unknown> | undefined,
 ): Record<string, Record<string, unknown>> | undefined {
-  if (!schema) return undefined;
+  if (!schema) {
+    return undefined;
+  }
 
   if (schema.properties) {
     return schema.properties as Record<string, Record<string, unknown>>;
@@ -83,24 +92,32 @@ function extractProperties(
 
   if (Array.isArray(schema.allOf)) {
     const merged: Record<string, Record<string, unknown>> = {};
+
     for (const sub of schema.allOf as Record<string, unknown>[]) {
       const subProps = extractProperties(sub);
       if (subProps) Object.assign(merged, subProps);
     }
+
     return Object.keys(merged).length > 0 ? merged : undefined;
   }
 
   if (Array.isArray(schema.anyOf)) {
     for (const sub of schema.anyOf as Record<string, unknown>[]) {
       const subProps = extractProperties(sub);
-      if (subProps) return subProps;
+
+      if (subProps) {
+        return subProps;
+      }
     }
   }
 
   if (Array.isArray(schema.oneOf)) {
     for (const sub of schema.oneOf as Record<string, unknown>[]) {
       const subProps = extractProperties(sub);
-      if (subProps) return subProps;
+
+      if (subProps) {
+        return subProps;
+      }
     }
   }
 
@@ -126,6 +143,7 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
 
   for (const param of pathParams) {
     const varName = toCamelCase(param.name);
+
     if (!declaredNames.has(varName)) {
       declaredNames.add(varName);
       varDeclarations.push({
@@ -137,6 +155,7 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
 
   for (const param of queryParams) {
     const varName = toCamelCase(param.name);
+
     if (!declaredNames.has(varName)) {
       declaredNames.add(varName);
       varDeclarations.push({
@@ -151,6 +170,7 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
   const requestBodyContent = endpoint.requestBody?.content ?? {};
   const jsonContentKey = Object.keys(requestBodyContent).find((k) => {
     const lower = k.toLowerCase();
+
     return (
       lower.startsWith("application/json") ||
       (lower.startsWith("application/") && lower.includes("+json"))
@@ -166,23 +186,27 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
     name: string;
     literal: string;
   }
+
   const bodyFields: BodyField[] = [];
   let hasBodyFields = false;
 
   if (jsonContent) {
     const example = jsonContent.example;
     const schemaExample = (jsonContent.schema as Record<string, unknown> | undefined)?.example;
+
     if (example === undefined && schemaExample === undefined) {
       const schema = jsonContent.schema as Record<string, unknown> | undefined;
       const properties = extractProperties(schema);
       if (properties) {
         for (const [key, propSchema] of Object.entries(properties)) {
           const ps = propSchema as Record<string, unknown>;
+
           bodyFields.push({
             name: key,
             literal: getBodyLiteralDefault(ps),
           });
         }
+
         hasBodyFields = bodyFields.length > 0;
       }
     }
@@ -195,6 +219,7 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
 
   // Build URL with path param substitutions
   let urlPath = endpoint.path;
+
   for (const param of pathParams) {
     urlPath = urlPath.replace(`{${param.name}}`, `{{${toCamelCase(param.name)}}}`);
   }
@@ -208,6 +233,7 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
 
   lines.push(`${endpoint.method} ${baseUrl}${urlPath}${queryString}`);
   lines.push("Authorization: Bearer {{token}}");
+
   // Only add Content-Type for methods that typically carry a request body
   const methodsWithBody = ["POST", "PUT", "PATCH"];
   if (methodsWithBody.includes(endpoint.method) || endpoint.requestBody) {
@@ -220,9 +246,11 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
 
   if (endpoint.requestBody) {
     lines.push("");
+
     if (jsonContent) {
       const example = jsonContent.example;
       const schemaExample = (jsonContent.schema as Record<string, unknown> | undefined)?.example;
+
       if (example !== undefined) {
         lines.push(JSON.stringify(example, null, 2));
       } else if (schemaExample !== undefined) {
@@ -230,11 +258,14 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
       } else if (hasBodyFields) {
         // Emit body with literal typed values — no {{var}} substitutions
         const bodyLines = ["{"];
+
         bodyFields.forEach((f, i) => {
           const comma = i < bodyFields.length - 1 ? "," : "";
           bodyLines.push(`  "${f.name}": ${f.literal}${comma}`);
         });
+
         bodyLines.push("}");
+
         lines.push(bodyLines.join("\n"));
       } else {
         lines.push("{}");
@@ -245,11 +276,13 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
   }
 
   lines.push("");
+
   return lines.join("\n");
 }
 
 export function generateHttpFileContent(spec: ParsedSpec, endpoints: ParsedEndpoint[]): string {
   const header = `# ${spec.title} v${spec.version}\n# Base URL: ${spec.baseUrl}\n\n@baseUrl = ${spec.baseUrl}\n@token = your_token_here\n\n`;
   const body = endpoints.map((e) => generateHttpFile(spec, e)).join("\n");
+
   return header + body;
 }

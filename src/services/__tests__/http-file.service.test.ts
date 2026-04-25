@@ -41,6 +41,7 @@ describe("splitEndpointsByParentPath", () => {
   it("places a top-level resource in its own folder", () => {
     const endpoints: ParsedEndpoint[] = [{ method: "GET", path: "/workspaces" }];
     const result = splitEndpointsByParentPath("workspaces", endpoints);
+
     expect(result).toHaveLength(1);
     expect(result[0].zipPath).toBe("workspaces/workspaces.http");
   });
@@ -51,6 +52,7 @@ describe("splitEndpointsByParentPath", () => {
       { method: "POST", path: "/api/workspaces/{workspaceId}/labels" },
     ];
     const result = splitEndpointsByParentPath("labels", endpoints);
+
     expect(result).toHaveLength(1);
     expect(result[0].zipPath).toBe("workspaces/labels/labels.http");
   });
@@ -58,6 +60,7 @@ describe("splitEndpointsByParentPath", () => {
   it("strips API and version prefixes", () => {
     const endpoints: ParsedEndpoint[] = [{ method: "GET", path: "/api/v1/users" }];
     const result = splitEndpointsByParentPath("users", endpoints);
+
     expect(result).toHaveLength(1);
     expect(result[0].zipPath).toBe("users/users.http");
   });
@@ -68,6 +71,7 @@ describe("splitEndpointsByParentPath", () => {
       { method: "GET", path: "/workspaces/{id}" },
     ];
     const result = splitEndpointsByParentPath("workspaces", endpoints);
+
     expect(result).toHaveLength(1);
     expect(result[0].zipPath).toBe("workspaces/workspaces.http");
     expect(result[0].endpoints).toHaveLength(2);
@@ -81,6 +85,7 @@ describe("splitEndpointsByParentPath", () => {
       { method: "GET", path: "/api/v1/projects/{id}/issues" },
     ];
     const result = splitEndpointsByParentPath("issues", endpoints);
+
     expect(result).toHaveLength(2);
     // Root context comes first
     expect(result[0].zipPath).toBe("issues/issues.http");
@@ -96,6 +101,7 @@ describe("splitEndpointsByParentPath", () => {
       { method: "DELETE", path: "/api/workspaces/{id}/labels/{labelId}" },
     ];
     const result = splitEndpointsByParentPath("labels", endpoints);
+
     expect(result).toHaveLength(1);
     expect(result[0].zipPath).toBe("workspaces/labels/labels.http");
   });
@@ -103,12 +109,14 @@ describe("splitEndpointsByParentPath", () => {
   it("returns a single entry with tag-as-folder when the path has no meaningful segments", () => {
     const endpoints: ParsedEndpoint[] = [{ method: "GET", path: "/" }];
     const result = splitEndpointsByParentPath("misc", endpoints);
+
     expect(result).toHaveLength(1);
     expect(result[0].zipPath).toBe("misc/misc.http");
   });
 
   it("returns an empty array for an empty endpoint list", () => {
     const result = splitEndpointsByParentPath("empty", []);
+
     expect(result).toHaveLength(0);
   });
 
@@ -119,6 +127,7 @@ describe("splitEndpointsByParentPath", () => {
       { method: "GET", path: "/api/v1/categories/{id}/issues" },
     ];
     const result = splitEndpointsByParentPath("issues", endpoints);
+
     expect(result).toHaveLength(3);
     expect(result[0].zipPath).toBe("issues/issues.http"); // root first
     expect(result[1].zipPath).toBe("categories/issues/issues.http"); // then alphabetical
@@ -129,21 +138,25 @@ describe("splitEndpointsByParentPath", () => {
 describe("generateForEndpoints", () => {
   it("includes the HTTP method in the output", () => {
     const result = generateForEndpoints(testSpec, [testEndpoint]);
+
     expect(result).toContain("GET");
   });
 
   it("includes the path in the output", () => {
     const result = generateForEndpoints(testSpec, [testEndpoint]);
+
     expect(result).toContain("/users");
   });
 
   it("includes spec title header", () => {
     const result = generateForEndpoints(testSpec, [testEndpoint]);
+
     expect(result).toContain("Test API");
   });
 
   it("returns empty body section for no endpoints", () => {
     const result = generateForEndpoints(testSpec, []);
+
     expect(result).toContain("Test API");
     expect(result).not.toContain("/users");
   });
@@ -153,6 +166,7 @@ describe("buildZip", () => {
   it("returns a Blob", async () => {
     const endpointsByTag = { users: [testEndpoint] };
     const blob = await buildZip(testSpec, endpointsByTag);
+
     expect(blob).toBeInstanceOf(Blob);
   });
 
@@ -162,6 +176,7 @@ describe("buildZip", () => {
       posts: [{ method: "POST", path: "/posts" }],
     };
     const blob = await buildZip(testSpec, endpointsByTag);
+
     expect(blob).toBeInstanceOf(Blob);
     expect(blob.size).toBeGreaterThan(0);
   });
@@ -174,6 +189,7 @@ describe("buildZip", () => {
       ],
     };
     const blob = await buildZip(testSpec, endpointsByTag);
+
     expect(blob).toBeInstanceOf(Blob);
     expect(blob.size).toBeGreaterThan(0);
   });

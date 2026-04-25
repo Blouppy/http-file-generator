@@ -18,6 +18,7 @@ interface MethodBadgeProps {
 
 export function MethodBadge({ method }: MethodBadgeProps) {
   const colorClass = METHOD_COLORS[method] ?? DEFAULT_METHOD_COLORS;
+
   return (
     <span
       className={cn(
