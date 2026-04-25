@@ -101,7 +101,7 @@ flowchart LR
 ### Step 2 — Select (`/select`)
 
 1. The page reads `ParsedSpec` from `SpecContext`. If the context is empty the user is redirected back to `/upload`.
-2. All endpoints start as **selected**. The user can:
+2. No endpoints are selected by default. The user can:
    - Search/filter via `useEndpointFilters` hook.
    - Toggle individual endpoints or whole tags.
 3. The right panel (`<HttpPreview>`) calls `generateHttpFileContent()` on every render to display live `.http` output. The **Copy** button copies the content to the clipboard.

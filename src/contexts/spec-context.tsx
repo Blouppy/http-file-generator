@@ -23,11 +23,7 @@ export function SpecProvider({ children }: { children: React.ReactNode }) {
 
   const setSpec = (newSpec: ParsedSpec | null) => {
     setSpecState(newSpec);
-    if (newSpec) {
-      setSelectedIds(new Set(newSpec.endpoints.map(getEndpointId)));
-    } else {
-      setSelectedIds(new Set());
-    }
+    setSelectedIds(new Set());
   };
 
   const toggleEndpoint = (id: string) => {

@@ -51,8 +51,7 @@ export default function SelectPage() {
       router.replace("/upload");
       return;
     }
-    // Initialise selection order to match the spec's initial "all selected" state.
-    setSelectionOrder(spec.endpoints.map(getEndpointId));
+    setSelectionOrder([]);
   }, [spec, router]);
 
   // Ordered list of selected endpoints for the preview panel.
