@@ -14,13 +14,82 @@ export function toCamelCase(str: string): string {
   return str.charAt(0).toLowerCase() + str.slice(1);
 }
 
-/** Returns the default variable value for a given schema type and parameter context. */
+/**
+ * Derives a short, lowercase contextual noun for an endpoint, used to generate
+ * meaningful placeholder values (e.g. `pets1`, `users1`) instead of generic
+ * strings like `text` or `value1,value2`.
+ *
+ * Priority: first declared tag → last non-parameter path segment → "value".
+ */
+export function deriveContextName(endpoint: ParsedEndpoint): string {
+  const normalize = (raw: string): string => raw.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  const tag = endpoint.tags?.[0];
+  if (tag) {
+    const normalized = normalize(tag);
+    if (normalized) return normalized;
+  }
+
+  const segments = (endpoint.path || "")
+    .split("/")
+    .map((s) => s.trim())
+    .filter((s) => s && !s.startsWith("{"));
+
+  for (let i = segments.length - 1; i >= 0; i--) {
+    const normalized = normalize(segments[i]);
+    if (normalized) return normalized;
+  }
+
+  return "value";
+}
+
+/**
+ * Returns the first non-nullish (`!== undefined && !== null`) candidate.
+ */
+function firstNonNullish(...candidates: unknown[]): unknown {
+  for (const c of candidates) {
+    if (c !== undefined && c !== null) return c;
+  }
+  return undefined;
+}
+
+/**
+ * Converts a value to its raw URL/query-string representation.
+ * Objects/arrays are JSON-stringified.
+ */
+function toUrlString(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+/**
+ * Returns the default variable value for a given schema type and parameter context.
+ *
+ * Priority:
+ *   1. Explicit parameter-level `example`
+ *   2. Schema `example`
+ *   3. Schema `default`
+ *   4. First enum value
+ *   5. Type-based contextual fallback (uses `context` name to produce values
+ *      like `pets1` or `pets1%2Cpets2` instead of generic `text`/`value1,value2`)
+ */
 function getVariableDefault(
   schema: Record<string, unknown> | undefined,
-  context: "path" | "query",
+  paramContext: "path" | "query",
+  context: string,
+  paramExample?: unknown,
 ): string {
+  const specValue = firstNonNullish(paramExample, schema?.example, schema?.default);
+  if (specValue !== undefined) {
+    return toUrlString(specValue);
+  }
+
   if (schema) {
-    // Enum: use the first declared value (unquoted — used directly in a URL/query string)
     if (Array.isArray(schema.enum) && schema.enum.length > 0) {
       return String(schema.enum[0]);
     }
@@ -32,26 +101,38 @@ function getVariableDefault(
       case "boolean":
         return "true";
       case "string":
-        return "text";
+        return `${context}1`;
       case "array":
         // URL-encoded comma-separated format for array query/path params (curl %2C encoding)
-        return "value1%2Cvalue2";
+        return `${context}1%2C${context}2`;
       case "object":
         return "{}";
     }
   }
 
-  // Path params are most commonly numeric IDs; query/unknown params use a plain text placeholder.
-  return context === "path" ? "1" : "text";
+  // Path params are most commonly numeric IDs; query/unknown params use a contextual placeholder.
+  return paramContext === "path" ? "1" : `${context}1`;
 }
 
 /**
  * Returns the literal JSON value for a body field, respecting the schema type and
- * any enum values defined. Used to populate the body template directly (no {{var}}).
+ * any enum / example / default values defined. Used to populate the body template
+ * directly (no {{var}}).
+ *
+ * Priority mirrors {@link getVariableDefault}: schema example → schema default →
+ * enum → typed contextual fallback. The `context` is used to generate meaningful
+ * string/array placeholders (e.g. `"pets1"` instead of `""`).
  */
-function getBodyLiteralDefault(schema: Record<string, unknown> | undefined): string {
+function getBodyLiteralDefault(
+  schema: Record<string, unknown> | undefined,
+  context: string,
+): string {
+  const specValue = firstNonNullish(schema?.example, schema?.default);
+  if (specValue !== undefined) {
+    return JSON.stringify(specValue);
+  }
+
   if (schema) {
-    // Enum: use the first declared value so the body is immediately valid
     if (Array.isArray(schema.enum) && schema.enum.length > 0) {
       const first = schema.enum[0];
       return typeof first === "string" ? JSON.stringify(first) : String(first);
@@ -64,13 +145,15 @@ function getBodyLiteralDefault(schema: Record<string, unknown> | undefined): str
       case "boolean":
         return "true";
       case "array":
-        return "[]";
+        return JSON.stringify([`${context}1`, `${context}2`]);
       case "object":
         return "{}";
+      case "string":
+        return JSON.stringify(`${context}1`);
     }
   }
 
-  return '""';
+  return JSON.stringify(`${context}1`);
 }
 
 /**
@@ -124,6 +207,28 @@ function extractProperties(
   return undefined;
 }
 
+/**
+ * Returns the first example from an OpenAPI `examples` map, if any. The map
+ * values are `{ value: ... }` per the OpenAPI 3 spec; raw values (including
+ * arrays) are accepted defensively as a fall-through.
+ */
+function firstExampleFromMap(examples: unknown): unknown {
+  if (!examples || typeof examples !== "object") return undefined;
+  const values = Object.values(examples as Record<string, unknown>);
+  if (values.length === 0) return undefined;
+
+  const first = values[0];
+  if (
+    first !== null &&
+    typeof first === "object" &&
+    !Array.isArray(first) &&
+    "value" in (first as Record<string, unknown>)
+  ) {
+    return (first as Record<string, unknown>).value;
+  }
+  return first;
+}
+
 export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): string {
   const lines: string[] = [];
   const baseUrl =
@@ -133,6 +238,8 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
 
   const label = endpoint.summary || endpoint.operationId || `${endpoint.method} ${endpoint.path}`;
   lines.push(`### ${label}`);
+
+  const contextName = deriveContextName(endpoint);
 
   const pathParams = (endpoint.parameters || []).filter((p) => p.in === "path");
   const queryParams = (endpoint.parameters || []).filter((p) => p.in === "query");
@@ -148,7 +255,12 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
       declaredNames.add(varName);
       varDeclarations.push({
         name: varName,
-        value: getVariableDefault(param.schema as Record<string, unknown> | undefined, "path"),
+        value: getVariableDefault(
+          param.schema as Record<string, unknown> | undefined,
+          "path",
+          contextName,
+          param.example,
+        ),
       });
     }
   }
@@ -160,7 +272,12 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
       declaredNames.add(varName);
       varDeclarations.push({
         name: varName,
-        value: getVariableDefault(param.schema as Record<string, unknown> | undefined, "query"),
+        value: getVariableDefault(
+          param.schema as Record<string, unknown> | undefined,
+          "query",
+          contextName,
+          param.example,
+        ),
       });
     }
   }
@@ -190,12 +307,20 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
   const bodyFields: BodyField[] = [];
   let hasBodyFields = false;
 
-  if (jsonContent) {
-    const example = jsonContent.example;
-    const schemaExample = (jsonContent.schema as Record<string, unknown> | undefined)?.example;
+  // Resolve a body example from the spec, in order of precedence:
+  //   media `example` → media `examples` (first) → schema `example`
+  let resolvedBodyExample: unknown = undefined;
 
-    if (example === undefined && schemaExample === undefined) {
-      const schema = jsonContent.schema as Record<string, unknown> | undefined;
+  if (jsonContent) {
+    const schema = jsonContent.schema as Record<string, unknown> | undefined;
+
+    resolvedBodyExample = firstNonNullish(
+      jsonContent.example,
+      firstExampleFromMap(jsonContent.examples),
+      schema?.example,
+    );
+
+    if (resolvedBodyExample === undefined) {
       const properties = extractProperties(schema);
       if (properties) {
         for (const [key, propSchema] of Object.entries(properties)) {
@@ -203,7 +328,7 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
 
           bodyFields.push({
             name: key,
-            literal: getBodyLiteralDefault(ps),
+            literal: getBodyLiteralDefault(ps, contextName),
           });
         }
 
@@ -248,13 +373,8 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
     lines.push("");
 
     if (jsonContent) {
-      const example = jsonContent.example;
-      const schemaExample = (jsonContent.schema as Record<string, unknown> | undefined)?.example;
-
-      if (example !== undefined) {
-        lines.push(JSON.stringify(example, null, 2));
-      } else if (schemaExample !== undefined) {
-        lines.push(JSON.stringify(schemaExample, null, 2));
+      if (resolvedBodyExample !== undefined) {
+        lines.push(JSON.stringify(resolvedBodyExample, null, 2));
       } else if (hasBodyFields) {
         // Emit body with literal typed values — no {{var}} substitutions
         const bodyLines = ["{"];
