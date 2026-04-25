@@ -15,40 +15,32 @@ export function toCamelCase(str: string): string {
 }
 
 /**
- * Derives a short, lowercase contextual noun for an endpoint, used to generate
- * meaningful placeholder values (e.g. `pets1`, `users1`) instead of generic
- * strings like `text` or `value1,value2`.
- *
- * Priority: first declared tag → last non-parameter path segment → "value".
- */
-export function deriveContextName(endpoint: ParsedEndpoint): string {
-  const normalize = (raw: string): string => raw.toLowerCase().replace(/[^a-z0-9]/g, "");
-
-  const tag = endpoint.tags?.[0];
-  if (tag) {
-    const normalized = normalize(tag);
-    if (normalized) return normalized;
-  }
-
-  const segments = (endpoint.path || "")
-    .split("/")
-    .map((s) => s.trim())
-    .filter((s) => s && !s.startsWith("{"));
-
-  for (let i = segments.length - 1; i >= 0; i--) {
-    const normalized = normalize(segments[i]);
-    if (normalized) return normalized;
-  }
-
-  return "value";
-}
-
-/**
  * Returns the first non-nullish (`!== undefined && !== null`) candidate.
  */
 function firstNonNullish(...candidates: unknown[]): unknown {
   for (const c of candidates) {
     if (c !== undefined && c !== null) return c;
+  }
+  return undefined;
+}
+
+/**
+ * Resolves a single effective JSON Schema type. JSON Schema (and OpenAPI 3.1)
+ * allow `type` to be an array of types — in that case we prefer numeric/boolean
+ * types over string so that an `["integer", "string"]` schema (commonly used
+ * for IDs that may serialize as either) is treated as numeric.
+ */
+function effectiveSchemaType(schema: Record<string, unknown> | undefined): string | undefined {
+  if (!schema) return undefined;
+  const t = schema.type;
+  if (typeof t === "string") return t;
+  if (Array.isArray(t)) {
+    const preference = ["integer", "number", "boolean", "array", "object", "string"];
+    for (const candidate of preference) {
+      if (t.includes(candidate)) return candidate;
+    }
+    const first = t.find((entry) => typeof entry === "string");
+    return typeof first === "string" ? first : undefined;
   }
   return undefined;
 }
@@ -68,20 +60,22 @@ function toUrlString(value: unknown): string {
 }
 
 /**
- * Returns the default variable value for a given schema type and parameter context.
+ * Returns the default variable value for a given schema type and parameter.
  *
  * Priority:
  *   1. Explicit parameter-level `example`
  *   2. Schema `example`
  *   3. Schema `default`
  *   4. First enum value
- *   5. Type-based contextual fallback (uses `context` name to produce values
- *      like `pets1` or `pets1%2Cpets2` instead of generic `text`/`value1,value2`)
+ *   5. Type-based fallback. When the schema's effective type is `string` (or
+ *      no schema is given), the parameter's own name is used as the value
+ *      (e.g. `@sort = sort`) instead of a generic placeholder. Path params
+ *      without a schema continue to default to `1` since they are usually IDs.
  */
 function getVariableDefault(
   schema: Record<string, unknown> | undefined,
   paramContext: "path" | "query",
-  context: string,
+  paramName: string,
   paramExample?: unknown,
 ): string {
   const specValue = firstNonNullish(paramExample, schema?.example, schema?.default);
@@ -94,38 +88,39 @@ function getVariableDefault(
       return String(schema.enum[0]);
     }
 
-    switch (schema.type) {
+    switch (effectiveSchemaType(schema)) {
       case "integer":
       case "number":
         return "1";
       case "boolean":
         return "true";
       case "string":
-        return `${context}1`;
+        return paramName;
       case "array":
         // URL-encoded comma-separated format for array query/path params (curl %2C encoding)
-        return `${context}1%2C${context}2`;
+        return `${paramName}1%2C${paramName}2`;
       case "object":
         return "{}";
     }
   }
 
-  // Path params are most commonly numeric IDs; query/unknown params use a contextual placeholder.
-  return paramContext === "path" ? "1" : `${context}1`;
+  // Path params are most commonly numeric IDs; query/unknown params fall back
+  // to the parameter name itself when we have no other information.
+  return paramContext === "path" ? "1" : paramName;
 }
 
 /**
- * Returns the literal JSON value for a body field, respecting the schema type and
- * any enum / example / default values defined. Used to populate the body template
- * directly (no {{var}}).
+ * Returns the literal JSON value for a body field, respecting the schema type
+ * and any enum / example / default values defined. Used to populate the body
+ * template directly (no {{var}}).
  *
- * Priority mirrors {@link getVariableDefault}: schema example → schema default →
- * enum → typed contextual fallback. The `context` is used to generate meaningful
- * string/array placeholders (e.g. `"pets1"` instead of `""`).
+ * Priority mirrors {@link getVariableDefault}: schema example → schema default
+ * → enum → typed fallback. The property name is used as the placeholder value
+ * for string/array fallbacks (e.g. `"name": "name"`).
  */
 function getBodyLiteralDefault(
   schema: Record<string, unknown> | undefined,
-  context: string,
+  propertyName: string,
 ): string {
   const specValue = firstNonNullish(schema?.example, schema?.default);
   if (specValue !== undefined) {
@@ -138,22 +133,22 @@ function getBodyLiteralDefault(
       return typeof first === "string" ? JSON.stringify(first) : String(first);
     }
 
-    switch (schema.type) {
+    switch (effectiveSchemaType(schema)) {
       case "integer":
       case "number":
         return "0";
       case "boolean":
         return "true";
       case "array":
-        return JSON.stringify([`${context}1`, `${context}2`]);
+        return JSON.stringify([`${propertyName}1`, `${propertyName}2`]);
       case "object":
         return "{}";
       case "string":
-        return JSON.stringify(`${context}1`);
+        return JSON.stringify(propertyName);
     }
   }
 
-  return JSON.stringify(`${context}1`);
+  return JSON.stringify(propertyName);
 }
 
 /**
@@ -239,8 +234,6 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
   const label = endpoint.summary || endpoint.operationId || `${endpoint.method} ${endpoint.path}`;
   lines.push(`### ${label}`);
 
-  const contextName = deriveContextName(endpoint);
-
   const pathParams = (endpoint.parameters || []).filter((p) => p.in === "path");
   const queryParams = (endpoint.parameters || []).filter((p) => p.in === "query");
 
@@ -258,7 +251,7 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
         value: getVariableDefault(
           param.schema as Record<string, unknown> | undefined,
           "path",
-          contextName,
+          varName,
           param.example,
         ),
       });
@@ -275,7 +268,7 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
         value: getVariableDefault(
           param.schema as Record<string, unknown> | undefined,
           "query",
-          contextName,
+          varName,
           param.example,
         ),
       });
@@ -328,7 +321,7 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
 
           bodyFields.push({
             name: key,
-            literal: getBodyLiteralDefault(ps, contextName),
+            literal: getBodyLiteralDefault(ps, key),
           });
         }
 

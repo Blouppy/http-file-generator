@@ -67,7 +67,7 @@ describe("generateHttpFile", () => {
     expect(result).toContain("@itemId = 1");
   });
 
-  it("uses contextual default for query params without a schema (derived from path)", () => {
+  it("uses the parameter name as default for query params without a schema", () => {
     const endpoint: ParsedEndpoint = {
       method: "GET",
       path: "/search",
@@ -75,8 +75,7 @@ describe("generateHttpFile", () => {
     };
     const result = generateHttpFile(baseSpec, endpoint);
 
-    // Falls back to the last non-parameter path segment ("search") when no tag is present.
-    expect(result).toContain("@q = search1");
+    expect(result).toContain("@q = q");
   });
 
   it("uses variable references in the query string", () => {
@@ -116,8 +115,8 @@ describe("generateHttpFile", () => {
     // No @var declarations for body-only fields
     expect(result).not.toContain("@name");
     expect(result).not.toContain("@age");
-    // Body uses literal values, NOT {{var}} references; strings use a contextual placeholder.
-    expect(result).toContain('"name": "users1"');
+    // Body uses literal values, NOT {{var}} references; strings use the property name.
+    expect(result).toContain('"name": "name"');
     expect(result).toContain('"age": 0');
     expect(result).not.toContain('"name": {{name}}');
     expect(result).not.toContain('"age": {{age}}');
@@ -177,7 +176,7 @@ describe("generateHttpFile", () => {
     };
     const result = generateHttpFile(baseSpec, endpoint);
 
-    expect(result).toContain("@ids = items1%2Citems2");
+    expect(result).toContain("@ids = ids1%2Cids2");
   });
 
   it("does not emit @var for body fields; only path/query params get @var declarations", () => {
@@ -204,9 +203,9 @@ describe("generateHttpFile", () => {
     // Only path param @id = 1; no @name for body field
     expect(result).toContain("@id = 1");
     expect(result).not.toContain("@name");
-    // Body uses literal values; strings use a contextual placeholder.
+    // Body uses literal values; strings use the property name.
     expect(result).toContain('"id": 0');
-    expect(result).toContain('"name": "projects1"');
+    expect(result).toContain('"name": "name"');
   });
 
   it("uses spec example directly instead of variables when an example is present", () => {
@@ -253,9 +252,9 @@ describe("generateHttpFile", () => {
     // No @var declarations for body-only fields
     expect(result).not.toContain("@id");
     expect(result).not.toContain("@name");
-    // Body uses literal values; strings use a contextual placeholder.
+    // Body uses literal values; strings use the property name.
     expect(result).toContain('"id": 0');
-    expect(result).toContain('"name": "projects1"');
+    expect(result).toContain('"name": "name"');
   });
 
   it("generates body from anyOf schema using the first entry with properties", () => {
@@ -278,7 +277,7 @@ describe("generateHttpFile", () => {
     // @id declared for path param; @label not declared (body field)
     expect(result).toContain("@id = 1");
     expect(result).not.toContain("@label");
-    expect(result).toContain('"label": "items1"');
+    expect(result).toContain('"label": "label"');
     expect(result).not.toContain('"label": {{label}}');
   });
 
@@ -304,8 +303,8 @@ describe("generateHttpFile", () => {
     // No @var for body fields
     expect(result).not.toContain("@firstName");
     expect(result).not.toContain("@age");
-    // Body uses literal values; strings use a contextual placeholder.
-    expect(result).toContain('"firstName": "users1"');
+    // Body uses literal values; strings use the property name.
+    expect(result).toContain('"firstName": "firstName"');
     expect(result).toContain('"age": 0');
   });
 
@@ -339,7 +338,7 @@ describe("generateHttpFile", () => {
 
     // No @var for body-only field
     expect(result).not.toContain("@username");
-    expect(result).toContain('"username": "users1"');
+    expect(result).toContain('"username": "username"');
     expect(result).not.toContain('"username": {{username}}');
   });
 
@@ -362,7 +361,7 @@ describe("generateHttpFile", () => {
 
     // No @var for body-only field
     expect(result).not.toContain("@title");
-    expect(result).toContain('"title": "resources1"');
+    expect(result).toContain('"title": "title"');
     expect(result).not.toContain('"title": {{title}}');
   });
 });
@@ -481,8 +480,8 @@ describe("generateHttpFile spec-provided values (examples & defaults)", () => {
   });
 });
 
-describe("generateHttpFile contextual default values", () => {
-  it("uses the endpoint tag as context for string body fields", () => {
+describe("generateHttpFile name-based default values", () => {
+  it("uses the property name as default for string body fields", () => {
     const endpoint: ParsedEndpoint = {
       method: "POST",
       path: "/api/v1/items",
@@ -500,10 +499,10 @@ describe("generateHttpFile contextual default values", () => {
     };
     const result = generateHttpFile(baseSpec, endpoint);
 
-    expect(result).toContain('"name": "pets1"');
+    expect(result).toContain('"name": "name"');
   });
 
-  it("uses the endpoint tag as context for array query params", () => {
+  it("uses the parameter name as default for array query params", () => {
     const endpoint: ParsedEndpoint = {
       method: "GET",
       path: "/api/v1/items",
@@ -512,10 +511,10 @@ describe("generateHttpFile contextual default values", () => {
     };
     const result = generateHttpFile(baseSpec, endpoint);
 
-    expect(result).toContain("@names = cats1%2Ccats2");
+    expect(result).toContain("@names = names1%2Cnames2");
   });
 
-  it("uses the endpoint tag as context for array body fields", () => {
+  it("uses the property name as default for array body fields", () => {
     const endpoint: ParsedEndpoint = {
       method: "POST",
       path: "/store",
@@ -533,33 +532,79 @@ describe("generateHttpFile contextual default values", () => {
     };
     const result = generateHttpFile(baseSpec, endpoint);
 
-    expect(result).toContain('"tags": ["dogs1","dogs2"]');
+    expect(result).toContain('"tags": ["tags1","tags2"]');
   });
 
-  it("falls back to last non-parameter path segment when no tag is set", () => {
+  it("uses the parameter name as default for string query params (no schema)", () => {
     const endpoint: ParsedEndpoint = {
       method: "GET",
-      path: "/api/users/{id}",
+      path: "/api/v1/workspaces",
+      parameters: [{ name: "Sort", in: "query", schema: { type: "string" } }],
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+
+    expect(result).toContain("@sort = sort");
+  });
+});
+
+describe("generateHttpFile multi-type schemas", () => {
+  it("treats type=[integer,string] as integer for query params", () => {
+    const endpoint: ParsedEndpoint = {
+      method: "GET",
+      path: "/api/v1/workspaces",
       parameters: [
-        { name: "id", in: "path", schema: { type: "integer" } },
-        { name: "search", in: "query", schema: { type: "string" } },
+        {
+          name: "OrganizationId",
+          in: "query",
+          schema: { type: ["integer", "string"], format: "int32" } as unknown as Record<
+            string,
+            unknown
+          >,
+        },
       ],
     };
     const result = generateHttpFile(baseSpec, endpoint);
 
-    expect(result).toContain("@search = users1");
+    expect(result).toContain("@organizationId = 1");
   });
 
-  it("normalizes tags with non-alphanumeric characters", () => {
+  it("treats type=[integer,string] as integer for body fields", () => {
     const endpoint: ParsedEndpoint = {
-      method: "GET",
-      path: "/items",
-      tags: ["Pet Store"],
-      parameters: [{ name: "q", in: "query", schema: { type: "string" } }],
+      method: "POST",
+      path: "/api/v1/workspaces",
+      requestBody: {
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                organizationId: { type: ["integer", "string"], format: "int32" },
+              } as Record<string, unknown>,
+            } as Record<string, unknown>,
+          },
+        },
+      },
     };
     const result = generateHttpFile(baseSpec, endpoint);
 
-    expect(result).toContain("@q = petstore1");
+    expect(result).toContain('"organizationId": 0');
+  });
+
+  it("treats type=[number,null] as number", () => {
+    const endpoint: ParsedEndpoint = {
+      method: "GET",
+      path: "/values",
+      parameters: [
+        {
+          name: "amount",
+          in: "query",
+          schema: { type: ["number", "null"] } as unknown as Record<string, unknown>,
+        },
+      ],
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+
+    expect(result).toContain("@amount = 1");
   });
 });
 
