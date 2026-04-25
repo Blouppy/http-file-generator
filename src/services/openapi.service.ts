@@ -7,11 +7,17 @@ export async function parseSpec(content: string, filename: string): Promise<Pars
 
 export function groupEndpointsByTag(endpoints: ParsedEndpoint[]): Record<string, ParsedEndpoint[]> {
   const groups: Record<string, ParsedEndpoint[]> = {};
+
   for (const endpoint of endpoints) {
     const tag = endpoint.tags?.[0] || "Other";
-    if (!groups[tag]) groups[tag] = [];
+
+    if (!groups[tag]) {
+      groups[tag] = [];
+    }
+
     groups[tag].push(endpoint);
   }
+
   return groups;
 }
 
@@ -43,7 +49,10 @@ export function filterEndpoints(
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
-      if (!searchable.includes(lowerSearch)) return false;
+
+      if (!searchable.includes(lowerSearch)) {
+        return false;
+      }
     }
 
     if (methods.size > 0 && !methods.has(endpoint.method)) {
@@ -52,7 +61,10 @@ export function filterEndpoints(
 
     if (tags.size > 0) {
       const endpointTag = endpoint.tags?.[0] || "Other";
-      if (!tags.has(endpointTag)) return false;
+
+      if (!tags.has(endpointTag)) {
+        return false;
+      }
     }
 
     return true;

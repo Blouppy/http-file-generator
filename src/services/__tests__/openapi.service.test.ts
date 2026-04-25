@@ -10,11 +10,13 @@ const makeEndpoint = (method: string, path: string, tags?: string[]): ParsedEndp
 describe("getEndpointId", () => {
   it("returns METHOD:path format", () => {
     const endpoint = makeEndpoint("GET", "/users");
+
     expect(getEndpointId(endpoint)).toBe("GET:/users");
   });
 
   it("works with POST and nested path", () => {
     const endpoint = makeEndpoint("POST", "/users/{id}/posts");
+
     expect(getEndpointId(endpoint)).toBe("POST:/users/{id}/posts");
   });
 });
@@ -27,6 +29,7 @@ describe("groupEndpointsByTag", () => {
       makeEndpoint("GET", "/posts", ["posts"]),
     ];
     const groups = groupEndpointsByTag(endpoints);
+
     expect(Object.keys(groups)).toEqual(["users", "posts"]);
     expect(groups["users"]).toHaveLength(2);
     expect(groups["posts"]).toHaveLength(1);
@@ -38,6 +41,7 @@ describe("groupEndpointsByTag", () => {
       makeEndpoint("POST", "/also-untagged", []),
     ];
     const groups = groupEndpointsByTag(endpoints);
+
     expect(groups["Other"]).toHaveLength(2);
   });
 
@@ -47,6 +51,7 @@ describe("groupEndpointsByTag", () => {
       makeEndpoint("DELETE", "/misc"),
     ];
     const groups = groupEndpointsByTag(endpoints);
+
     expect(groups["users"]).toHaveLength(1);
     expect(groups["Other"]).toHaveLength(1);
   });
@@ -70,23 +75,27 @@ describe("filterEndpoints", () => {
 
   it("filters by search text on path", () => {
     const result = filterEndpoints(endpoints, { ...noFilters, searchText: "projects" });
+
     expect(result).toHaveLength(2);
     expect(result.every((e) => e.path.includes("projects"))).toBe(true);
   });
 
   it("filters by search text on summary (case-insensitive)", () => {
     const result = filterEndpoints(endpoints, { ...noFilters, searchText: "LIST" });
+
     expect(result).toHaveLength(2);
   });
 
   it("filters by search text on operationId", () => {
     const result = filterEndpoints(endpoints, { ...noFilters, searchText: "getUserById" });
+
     expect(result).toHaveLength(1);
     expect(result[0].operationId).toBe("getUserById");
   });
 
   it("filters by method", () => {
     const result = filterEndpoints(endpoints, { ...noFilters, methods: new Set(["DELETE"]) });
+
     expect(result).toHaveLength(1);
     expect(result[0].method).toBe("DELETE");
   });
@@ -96,12 +105,14 @@ describe("filterEndpoints", () => {
       ...noFilters,
       methods: new Set(["GET", "DELETE"]),
     });
+
     expect(result.every((e) => ["GET", "DELETE"].includes(e.method))).toBe(true);
     expect(result).toHaveLength(4);
   });
 
   it("filters by tag", () => {
     const result = filterEndpoints(endpoints, { ...noFilters, tags: new Set(["projects"]) });
+
     expect(result).toHaveLength(2);
     expect(result.every((e) => e.tags?.[0] === "projects")).toBe(true);
   });
@@ -112,6 +123,7 @@ describe("filterEndpoints", () => {
       methods: new Set(["POST"]),
       tags: new Set<string>(),
     });
+
     expect(result).toHaveLength(1);
     expect(result[0].method).toBe("POST");
     expect(result[0].path).toBe("/users");
@@ -119,6 +131,7 @@ describe("filterEndpoints", () => {
 
   it("returns empty array when no endpoints match", () => {
     const result = filterEndpoints(endpoints, { ...noFilters, searchText: "nonexistent" });
+
     expect(result).toHaveLength(0);
   });
 
@@ -128,6 +141,7 @@ describe("filterEndpoints", () => {
       { method: "GET", path: "/users", tags: ["users"] },
     ];
     const result = filterEndpoints(untagged, { ...noFilters, tags: new Set(["Other"]) });
+
     expect(result).toHaveLength(1);
     expect(result[0].path).toBe("/misc");
   });

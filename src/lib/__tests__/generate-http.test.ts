@@ -12,6 +12,7 @@ describe("generateHttpFile", () => {
   it("generates a GET request with correct method and path", () => {
     const endpoint: ParsedEndpoint = { method: "GET", path: "/items" };
     const result = generateHttpFile(baseSpec, endpoint);
+
     expect(result).toContain("GET https://api.example.com/items");
   });
 
@@ -28,6 +29,7 @@ describe("generateHttpFile", () => {
       },
     };
     const result = generateHttpFile(baseSpec, endpoint);
+
     expect(result).toContain("POST https://api.example.com/items");
     expect(result).toContain("Content-Type: application/json");
   });
@@ -39,6 +41,7 @@ describe("generateHttpFile", () => {
       parameters: [{ name: "id", in: "path" }],
     };
     const result = generateHttpFile(baseSpec, endpoint);
+
     expect(result).toContain("GET https://api.example.com/users/{{id}}");
   });
 
@@ -49,6 +52,7 @@ describe("generateHttpFile", () => {
       parameters: [{ name: "id", in: "path", schema: { type: "integer" } }],
     };
     const result = generateHttpFile(baseSpec, endpoint);
+
     expect(result).toContain("@id = 1");
   });
 
@@ -59,6 +63,7 @@ describe("generateHttpFile", () => {
       parameters: [{ name: "itemId", in: "path" }],
     };
     const result = generateHttpFile(baseSpec, endpoint);
+
     expect(result).toContain("@itemId = 1");
   });
 
@@ -69,6 +74,7 @@ describe("generateHttpFile", () => {
       parameters: [{ name: "q", in: "query" }],
     };
     const result = generateHttpFile(baseSpec, endpoint);
+
     expect(result).toContain("@q = text");
   });
 
@@ -82,6 +88,7 @@ describe("generateHttpFile", () => {
       ],
     };
     const result = generateHttpFile(baseSpec, endpoint);
+
     expect(result).toContain("q={{q}}");
     expect(result).toContain("page={{page}}");
   });
@@ -134,6 +141,7 @@ describe("generateHttpFile", () => {
       },
     };
     const result = generateHttpFile(baseSpec, endpoint);
+
     expect(result).toContain('"priority": "Low"');
     expect(result).toContain('"count": 0');
     // No @var declarations for body fields
@@ -155,6 +163,7 @@ describe("generateHttpFile", () => {
       ],
     };
     const result = generateHttpFile(baseSpec, endpoint);
+
     expect(result).toContain("@sort = asc");
     expect(result).toContain("@page = 1");
   });
@@ -166,6 +175,7 @@ describe("generateHttpFile", () => {
       parameters: [{ name: "ids", in: "query", schema: { type: "array" } }],
     };
     const result = generateHttpFile(baseSpec, endpoint);
+
     expect(result).toContain("@ids = value1%2Cvalue2");
   });
 
@@ -189,6 +199,7 @@ describe("generateHttpFile", () => {
       },
     };
     const result = generateHttpFile(baseSpec, endpoint);
+
     // Only path param @id = 1; no @name for body field
     expect(result).toContain("@id = 1");
     expect(result).not.toContain("@name");
@@ -210,6 +221,7 @@ describe("generateHttpFile", () => {
       },
     };
     const result = generateHttpFile(baseSpec, endpoint);
+
     expect(result).toContain('"id": 42');
     expect(result).toContain('"label": "foo"');
     // No variable declarations for body props when an example is available
@@ -236,6 +248,7 @@ describe("generateHttpFile", () => {
       },
     };
     const result = generateHttpFile(baseSpec, endpoint);
+
     // No @var declarations for body-only fields
     expect(result).not.toContain("@id");
     expect(result).not.toContain("@name");
@@ -260,6 +273,7 @@ describe("generateHttpFile", () => {
       },
     };
     const result = generateHttpFile(baseSpec, endpoint);
+
     // @id declared for path param; @label not declared (body field)
     expect(result).toContain("@id = 1");
     expect(result).not.toContain("@label");
@@ -285,6 +299,7 @@ describe("generateHttpFile", () => {
       },
     };
     const result = generateHttpFile(baseSpec, endpoint);
+
     // No @var for body fields
     expect(result).not.toContain("@firstName");
     expect(result).not.toContain("@age");
@@ -300,6 +315,7 @@ describe("generateHttpFile", () => {
       summary: "List all items",
     };
     const result = generateHttpFile(baseSpec, endpoint);
+
     expect(result).toContain("### List all items");
   });
 
@@ -319,6 +335,7 @@ describe("generateHttpFile", () => {
       },
     };
     const result = generateHttpFile(baseSpec, endpoint);
+
     // No @var for body-only field
     expect(result).not.toContain("@username");
     expect(result).toContain('"username": ""');
@@ -341,6 +358,7 @@ describe("generateHttpFile", () => {
       },
     };
     const result = generateHttpFile(baseSpec, endpoint);
+
     // No @var for body-only field
     expect(result).not.toContain("@title");
     expect(result).toContain('"title": ""');
@@ -384,6 +402,7 @@ describe("generateHttpFile camelCase variable names", () => {
       parameters: [{ name: "UserId", in: "path", schema: { type: "integer" } }],
     };
     const result = generateHttpFile(baseSpec, endpoint);
+
     expect(result).toContain("@userId = 1");
     expect(result).toContain("GET https://api.example.com/users/{{userId}}");
     expect(result).not.toContain("@UserId");
@@ -397,6 +416,7 @@ describe("generateHttpFile camelCase variable names", () => {
       parameters: [{ name: "user_id", in: "path", schema: { type: "integer" } }],
     };
     const result = generateHttpFile(baseSpec, endpoint);
+
     expect(result).toContain("@user_id = 1");
     expect(result).toContain("GET https://api.example.com/users/{{user_id}}");
   });
@@ -408,6 +428,7 @@ describe("generateHttpFile camelCase variable names", () => {
       parameters: [{ name: "item-id", in: "path" }],
     };
     const result = generateHttpFile(baseSpec, endpoint);
+
     expect(result).toContain("@item-id = 1");
     expect(result).toContain("GET https://api.example.com/items/{{item-id}}");
   });
@@ -419,6 +440,7 @@ describe("generateHttpFile camelCase variable names", () => {
       parameters: [{ name: "PageSize", in: "query", schema: { type: "integer" } }],
     };
     const result = generateHttpFile(baseSpec, endpoint);
+
     expect(result).toContain("@pageSize = 1");
     expect(result).toContain("pageSize={{pageSize}}");
     expect(result).not.toContain("@PageSize");
@@ -432,6 +454,7 @@ describe("generateHttpFile camelCase variable names", () => {
       parameters: [{ name: "page_size", in: "query", schema: { type: "integer" } }],
     };
     const result = generateHttpFile(baseSpec, endpoint);
+
     expect(result).toContain("@page_size = 1");
     expect(result).toContain("page_size={{page_size}}");
   });
@@ -443,6 +466,7 @@ describe("generateHttpFile camelCase variable names", () => {
       parameters: [{ name: "max-results", in: "query", schema: { type: "integer" } }],
     };
     const result = generateHttpFile(baseSpec, endpoint);
+
     expect(result).toContain("@max-results = 1");
     expect(result).toContain("max-results={{max-results}}");
   });
@@ -452,6 +476,7 @@ describe("generateHttpFileContent", () => {
   it("includes the spec title header", () => {
     const endpoint: ParsedEndpoint = { method: "GET", path: "/items" };
     const result = generateHttpFileContent(baseSpec, [endpoint]);
+
     expect(result).toContain("# My API");
   });
 
@@ -461,6 +486,7 @@ describe("generateHttpFileContent", () => {
       { method: "POST", path: "/items" },
     ];
     const result = generateHttpFileContent(baseSpec, endpoints);
+
     expect(result).toContain("GET https://api.example.com/items");
     expect(result).toContain("POST https://api.example.com/items");
   });
@@ -468,6 +494,7 @@ describe("generateHttpFileContent", () => {
   it("includes base URL variable declaration", () => {
     const endpoint: ParsedEndpoint = { method: "GET", path: "/items" };
     const result = generateHttpFileContent(baseSpec, [endpoint]);
+
     expect(result).toContain("@baseUrl");
   });
 });

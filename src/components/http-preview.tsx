@@ -23,17 +23,34 @@ const METHOD_TEXT_COLORS: Record<string, string> = {
 type LineType = "section" | "comment" | "variable" | "method" | "header" | "body";
 
 function classifyLine(line: string): LineType {
-  if (line.startsWith("###")) return "section";
-  if (line.startsWith("#")) return "comment";
-  if (line.startsWith("@")) return "variable";
-  if (/^(GET|POST|PUT|DELETE|PATCH|OPTIONS|HEAD|TRACE)\s/.test(line)) return "method";
-  if (/^[A-Za-z][\w-]*:\s*/.test(line)) return "header";
+  if (line.startsWith("###")) {
+    return "section";
+  }
+
+  if (line.startsWith("#")) {
+    return "comment";
+  }
+
+  if (line.startsWith("@")) {
+    return "variable";
+  }
+
+  if (/^(GET|POST|PUT|DELETE|PATCH|OPTIONS|HEAD|TRACE)\s/.test(line)) {
+    return "method";
+  }
+
+  if (/^[A-Za-z][\w-]*:\s*/.test(line)) {
+    return "header";
+  }
+
   return "body";
 }
 
 /** Renders one line with inline syntax colouring (no block layout — used inside a <pre>). */
 function SyntaxLine({ line }: { line: string }) {
-  if (line === "") return null;
+  if (line === "") {
+    return null;
+  }
 
   const type = classifyLine(line);
 
@@ -46,6 +63,7 @@ function SyntaxLine({ line }: { line: string }) {
 
     case "variable": {
       const eqIdx = line.indexOf("=");
+
       if (eqIdx > 0) {
         return (
           <>
@@ -54,6 +72,7 @@ function SyntaxLine({ line }: { line: string }) {
           </>
         );
       }
+
       return <span className="text-cyan-600 dark:text-cyan-400">{line}</span>;
     }
 
@@ -62,6 +81,7 @@ function SyntaxLine({ line }: { line: string }) {
       const method = line.slice(0, spaceIdx);
       const url = line.slice(spaceIdx);
       const methodColor = METHOD_TEXT_COLORS[method] ?? "text-foreground";
+
       return (
         <>
           <span className={cn("font-bold", methodColor)}>{method}</span>
@@ -72,6 +92,7 @@ function SyntaxLine({ line }: { line: string }) {
 
     case "header": {
       const colonIdx = line.indexOf(":");
+
       return (
         <>
           <span className="text-blue-600 dark:text-blue-400">{line.slice(0, colonIdx)}</span>
@@ -99,14 +120,20 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
 
   // Generate the full file content for all selected endpoints in selection order.
   const content = useMemo(() => {
-    if (endpoints.length === 0) return null;
+    if (endpoints.length === 0) {
+      return null;
+    }
+
     return generateHttpFileContent(spec, endpoints);
   }, [spec, endpoints]);
 
   const lines = useMemo(() => (content ? content.split("\n") : []), [content]);
 
   const handleCopy = useCallback(() => {
-    if (!content) return;
+    if (!content) {
+      return;
+    }
+
     navigator.clipboard
       .writeText(content)
       .then(() => {

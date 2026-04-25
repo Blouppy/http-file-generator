@@ -26,9 +26,14 @@ export function FileUploadZone({
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
+
       setIsDragging(false);
+
       const file = e.dataTransfer.files[0];
-      if (file) onFile(file);
+
+      if (file) {
+        onFile(file);
+      }
     },
     [onFile],
   );
@@ -36,7 +41,10 @@ export function FileUploadZone({
   const handleFileInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (file) onFile(file);
+
+      if (file) {
+        onFile(file);
+      }
     },
     [onFile],
   );

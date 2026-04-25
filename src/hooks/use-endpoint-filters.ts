@@ -50,8 +50,13 @@ export function useEndpointFilters(endpoints: ParsedEndpoint[]): UseEndpointFilt
   const handleMethodToggle = (method: string) => {
     setSelectedMethods((prev) => {
       const next = new Set(prev);
-      if (next.has(method)) next.delete(method);
-      else next.add(method);
+
+      if (next.has(method)) {
+        next.delete(method);
+      } else {
+        next.add(method);
+      }
+
       return next;
     });
   };
@@ -59,8 +64,13 @@ export function useEndpointFilters(endpoints: ParsedEndpoint[]): UseEndpointFilt
   const handleTagToggle = (tag: string) => {
     setSelectedTags((prev) => {
       const next = new Set(prev);
-      if (next.has(tag)) next.delete(tag);
-      else next.add(tag);
+
+      if (next.has(tag)) {
+        next.delete(tag);
+      } else {
+        next.add(tag);
+      }
+
       return next;
     });
   };
