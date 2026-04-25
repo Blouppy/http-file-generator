@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageToggle } from "@/components/language-toggle";
+import { GithubLink } from "@/components/github-link";
 
 export function Toolbar() {
   return (
@@ -23,6 +24,7 @@ export function Toolbar() {
         <div className="flex items-center gap-1">
           <LanguageToggle />
           <ThemeToggle />
+          <GithubLink />
         </div>
       </div>
     </header>
