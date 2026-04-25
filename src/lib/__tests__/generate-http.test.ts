@@ -117,7 +117,7 @@ describe("generateHttpFile", () => {
     expect(result).not.toContain("@age");
     // Body uses literal values, NOT {{var}} references; strings use the property name.
     expect(result).toContain('"name": "name"');
-    expect(result).toContain('"age": 0');
+    expect(result).toContain('"age": 1');
     expect(result).not.toContain('"name": {{name}}');
     expect(result).not.toContain('"age": {{age}}');
   });
@@ -143,7 +143,7 @@ describe("generateHttpFile", () => {
     const result = generateHttpFile(baseSpec, endpoint);
 
     expect(result).toContain('"priority": "Low"');
-    expect(result).toContain('"count": 0');
+    expect(result).toContain('"count": 1');
     // No @var declarations for body fields
     expect(result).not.toContain("@priority");
     expect(result).not.toContain("@count");
@@ -204,7 +204,7 @@ describe("generateHttpFile", () => {
     expect(result).toContain("@id = 1");
     expect(result).not.toContain("@name");
     // Body uses literal values; strings use the property name.
-    expect(result).toContain('"id": 0');
+    expect(result).toContain('"id": 1');
     expect(result).toContain('"name": "name"');
   });
 
@@ -253,7 +253,7 @@ describe("generateHttpFile", () => {
     expect(result).not.toContain("@id");
     expect(result).not.toContain("@name");
     // Body uses literal values; strings use the property name.
-    expect(result).toContain('"id": 0');
+    expect(result).toContain('"id": 1');
     expect(result).toContain('"name": "name"');
   });
 
@@ -305,7 +305,7 @@ describe("generateHttpFile", () => {
     expect(result).not.toContain("@age");
     // Body uses literal values; strings use the property name.
     expect(result).toContain('"firstName": "firstName"');
-    expect(result).toContain('"age": 0');
+    expect(result).toContain('"age": 1');
   });
 
   it("includes the summary as label", () => {
@@ -587,7 +587,7 @@ describe("generateHttpFile multi-type schemas", () => {
     };
     const result = generateHttpFile(baseSpec, endpoint);
 
-    expect(result).toContain('"organizationId": 0');
+    expect(result).toContain('"organizationId": 1');
   });
 
   it("treats type=[number,null] as number", () => {

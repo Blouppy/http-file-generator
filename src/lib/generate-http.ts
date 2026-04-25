@@ -136,7 +136,7 @@ function getBodyLiteralDefault(
     switch (effectiveSchemaType(schema)) {
       case "integer":
       case "number":
-        return "0";
+        return "1";
       case "boolean":
         return "true";
       case "array":
