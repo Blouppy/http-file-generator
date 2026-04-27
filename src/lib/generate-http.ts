@@ -213,9 +213,13 @@ function buildBodyObject(
 
 /**
  * Extracts a flat properties map from a JSON Schema object, handling:
- *  - direct `properties`
- *  - `allOf` (merges all sub-schema properties)
+ *  - direct `properties` merged with `allOf` sub-schema properties
+ *  - `allOf` alone (merges all sub-schema properties)
  *  - `anyOf` / `oneOf` (uses the first sub-schema that has properties)
+ *
+ * When both `properties` and `allOf` are present (e.g. a schema that extends a
+ * base model via `allOf` and adds its own `properties`), both sources are merged
+ * so the generated body template includes fields from all of them.
  */
 function extractProperties(
   schema: Record<string, unknown> | undefined,
@@ -224,16 +228,23 @@ function extractProperties(
     return undefined;
   }
 
-  if (schema.properties) {
-    return schema.properties as Record<string, Record<string, unknown>>;
-  }
+  // Collect direct `properties` and `allOf` together so that a schema which has
+  // both (e.g. extends a base via allOf and adds its own properties) is fully merged.
+  const hasDirectProperties = schema.properties && typeof schema.properties === "object";
+  const hasAllOf = Array.isArray(schema.allOf);
 
-  if (Array.isArray(schema.allOf)) {
+  if (hasDirectProperties || hasAllOf) {
     const merged: Record<string, Record<string, unknown>> = {};
 
-    for (const sub of schema.allOf as Record<string, unknown>[]) {
-      const subProps = extractProperties(sub);
-      if (subProps) Object.assign(merged, subProps);
+    if (hasDirectProperties) {
+      Object.assign(merged, schema.properties as Record<string, Record<string, unknown>>);
+    }
+
+    if (hasAllOf) {
+      for (const sub of schema.allOf as Record<string, unknown>[]) {
+        const subProps = extractProperties(sub);
+        if (subProps) Object.assign(merged, subProps);
+      }
     }
 
     return Object.keys(merged).length > 0 ? merged : undefined;

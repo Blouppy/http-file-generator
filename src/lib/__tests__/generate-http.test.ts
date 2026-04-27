@@ -1021,4 +1021,94 @@ describe("generateHttpFile nested object body generation", () => {
 
     expect(result).toMatch(/\[\s*\{\s*\}\s*\]/s);
   });
+
+  it("merges properties from both direct properties and allOf", () => {
+    // Schema has its own `properties` AND extends a base model via `allOf`.
+    // Both sources must appear in the generated body.
+    const endpoint: ParsedEndpoint = {
+      method: "POST",
+      path: "/api/expenses",
+      requestBody: {
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              allOf: [
+                {
+                  // Simulates a dereferenced $ref to InputBaseModel
+                  type: "object",
+                  properties: {
+                    createdAt: { type: "string" },
+                    updatedAt: { type: "string" },
+                  },
+                },
+              ],
+              properties: {
+                ownerId: { type: "integer" },
+                description: { type: "string" },
+              },
+              additionalProperties: false,
+            },
+          },
+        },
+      },
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+
+    // Own properties must be present
+    expect(result).toContain('"ownerId": 1');
+    expect(result).toContain('"description": "description"');
+    // Inherited properties from allOf (InputBaseModel) must also be present
+    expect(result).toContain('"createdAt": "createdAt"');
+    expect(result).toContain('"updatedAt": "updatedAt"');
+  });
+
+  it("merges properties from allOf with nested objects that also have both properties and allOf", () => {
+    const endpoint: ParsedEndpoint = {
+      method: "POST",
+      path: "/api/items",
+      requestBody: {
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              allOf: [
+                {
+                  type: "object",
+                  properties: {
+                    baseField: { type: "string" },
+                  },
+                },
+              ],
+              properties: {
+                ownerId: { type: "integer" },
+                address: {
+                  type: "object",
+                  allOf: [
+                    {
+                      type: "object",
+                      properties: {
+                        street: { type: "string" },
+                        city: { type: "string" },
+                      },
+                    },
+                  ],
+                  properties: {
+                    zip: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+
+    expect(result).toContain('"baseField": "baseField"');
+    expect(result).toContain('"ownerId": 1');
+    expect(result).toContain('"street": "street"');
+    expect(result).toContain('"city": "city"');
+    expect(result).toContain('"zip": "zip"');
+  });
 });
