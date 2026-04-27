@@ -944,4 +944,81 @@ describe("generateHttpFile nested object body generation", () => {
     // Example: used as the single item
     expect(result).toMatch(/"ids":\s*\[\s*42\s*\]/s);
   });
+
+  it("uses [{}] for an array property whose object items have no properties", () => {
+    const endpoint: ParsedEndpoint = {
+      method: "POST",
+      path: "/items",
+      requestBody: {
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                attachments: { type: "array", items: { type: "object" } },
+              },
+            },
+          },
+        },
+      },
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+
+    expect(result).toMatch(/"attachments":\s*\[\s*\{\s*\}\s*\]/s);
+  });
+
+  it("generates a top-level array body as a single template item", () => {
+    const endpoint: ParsedEndpoint = {
+      method: "POST",
+      path: "/api/expenses/bulk",
+      requestBody: {
+        content: {
+          "application/json": {
+            schema: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  description: { type: "string" },
+                  amount: { type: "number" },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+
+    // Body should be an array with a template item
+    expect(result).toContain('"description": "description"');
+    expect(result).toContain('"amount": 1');
+    // Should be wrapped in an array
+    const bodyMatch = result.match(/\n(\[[\s\S]*\])\n/);
+    expect(bodyMatch).toBeTruthy();
+    const body = JSON.parse(bodyMatch![1]);
+    expect(Array.isArray(body)).toBe(true);
+    expect(body).toHaveLength(1);
+    expect(body[0]).toEqual({ description: "description", amount: 1 });
+  });
+
+  it("generates [{}] for a top-level array body whose items have no properties", () => {
+    const endpoint: ParsedEndpoint = {
+      method: "POST",
+      path: "/bulk",
+      requestBody: {
+        content: {
+          "application/json": {
+            schema: {
+              type: "array",
+              items: { type: "object" },
+            },
+          },
+        },
+      },
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+
+    expect(result).toMatch(/\[\s*\{\s*\}\s*\]/s);
+  });
 });

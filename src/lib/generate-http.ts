@@ -160,12 +160,14 @@ function buildBodyLiteralValue(
       case "array": {
         const items = schema.items as Record<string, unknown> | undefined;
         if (items) {
-          // Object items: recursively build a template object
-          const nestedItem = buildBodyObject(items, depth + 1);
-          if (nestedItem !== undefined) {
-            return [nestedItem];
+          const itemType = effectiveSchemaType(items);
+          if (itemType === "object" || itemType === undefined) {
+            // Object (or untyped) items: recursively build a template object.
+            // Fall back to [{}] when no properties can be resolved (e.g. free-form object).
+            const nestedItem = buildBodyObject(items, depth + 1);
+            return [nestedItem ?? {}];
           }
-          // Primitive items with spec values: honour example / default / enum
+          // Primitive items — honour spec values first
           const itemSpecValue = firstNonNullish(items.example, items.default);
           if (itemSpecValue !== undefined) {
             return [itemSpecValue];
@@ -363,7 +365,14 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
     );
 
     if (resolvedBodyExample === undefined) {
-      resolvedBodyObject = buildBodyObject(schema);
+      if (schema && effectiveSchemaType(schema) === "array") {
+        // Top-level body is an array — build a single template item from the items schema.
+        const items = schema.items as Record<string, unknown> | undefined;
+        const itemObj = items ? buildBodyObject(items, 1) : undefined;
+        resolvedBodyExample = [itemObj ?? {}];
+      } else {
+        resolvedBodyObject = buildBodyObject(schema);
+      }
     }
   }
 
