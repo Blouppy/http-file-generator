@@ -5,6 +5,13 @@ interface VarEntry {
   value: string;
 }
 
+/**
+ * Maximum nesting depth for recursive body object generation.
+ * Guards against runaway recursion on circular or deeply-nested schemas.
+ * Properties beyond this depth fall back to the property name as a string value.
+ */
+const MAX_NESTING_DEPTH = 10;
+
 /** Converts a PascalCase string to camelCase by lowercasing the first character. */
 export function toCamelCase(str: string): string {
   if (!str) {
@@ -110,45 +117,96 @@ function getVariableDefault(
 }
 
 /**
- * Returns the literal JSON value for a body field, respecting the schema type
- * and any enum / example / default values defined. Used to populate the body
- * template directly (no {{var}}).
+ * Recursively builds the body value for a given schema property.
  *
- * Priority mirrors {@link getVariableDefault}: schema example → schema default
- * → enum → typed fallback. The property name is used as the placeholder value
- * for string/array fallbacks (e.g. `"name": "name"`).
+ * - `object` schemas → nested plain object built from their properties (via {@link buildBodyObject}).
+ * - `array` schemas whose `items` resolve to an object → single-element array `[{ … }]`.
+ * - `array` schemas with primitive items → `["name1", "name2"]` fallback.
+ * - Primitive types → typed literal (number `1`, boolean `true`, string uses property name).
+ *
+ * Priority: schema `example` → schema `default` → first enum value → type-based fallback.
+ *
+ * The `depth` parameter guards against circular/infinitely-nested schemas (cap: {@link MAX_NESTING_DEPTH} levels).
  */
-function getBodyLiteralDefault(
+function buildBodyLiteralValue(
   schema: Record<string, unknown> | undefined,
   propertyName: string,
-): string {
+  depth: number,
+): unknown {
+  if (depth > MAX_NESTING_DEPTH) {
+    return propertyName;
+  }
+
   const specValue = firstNonNullish(schema?.example, schema?.default);
   if (specValue !== undefined) {
-    return JSON.stringify(specValue);
+    return specValue;
   }
 
   if (schema) {
     if (Array.isArray(schema.enum) && schema.enum.length > 0) {
-      const first = schema.enum[0];
-      return typeof first === "string" ? JSON.stringify(first) : String(first);
+      return schema.enum[0];
     }
 
     switch (effectiveSchemaType(schema)) {
       case "integer":
       case "number":
-        return "1";
+        return 1;
       case "boolean":
-        return "true";
-      case "array":
-        return JSON.stringify([`${propertyName}1`, `${propertyName}2`]);
-      case "object":
-        return "{}";
+        return true;
+      case "object": {
+        const nested = buildBodyObject(schema, depth + 1);
+        return nested ?? {};
+      }
+      case "array": {
+        const items = schema.items as Record<string, unknown> | undefined;
+        if (items) {
+          // Object items: recursively build a template object
+          const nestedItem = buildBodyObject(items, depth + 1);
+          if (nestedItem !== undefined) {
+            return [nestedItem];
+          }
+          // Primitive items with spec values: honour example / default / enum
+          const itemSpecValue = firstNonNullish(items.example, items.default);
+          if (itemSpecValue !== undefined) {
+            return [itemSpecValue];
+          }
+          if (Array.isArray(items.enum) && items.enum.length > 0) {
+            return [items.enum[0]];
+          }
+        }
+        // Plain primitive array without spec values: use name-based placeholders
+        // to signal that multiple values are expected.
+        return [`${propertyName}1`, `${propertyName}2`];
+      }
       case "string":
-        return JSON.stringify(propertyName);
+        return propertyName;
     }
   }
 
-  return JSON.stringify(propertyName);
+  return propertyName;
+}
+
+/**
+ * Recursively builds a plain JS object that acts as the body template for a given
+ * JSON Schema object schema. Each property value is produced by {@link buildBodyLiteralValue},
+ * which handles nesting for `object` and `array` properties.
+ *
+ * Returns `undefined` when no properties can be extracted (e.g. schema is missing or
+ * has no resolvable `properties` / `allOf` / `anyOf` / `oneOf`).
+ */
+function buildBodyObject(
+  schema: Record<string, unknown> | undefined,
+  depth: number = 0,
+): Record<string, unknown> | undefined {
+  const properties = extractProperties(schema);
+  if (!properties) return undefined;
+
+  const result: Record<string, unknown> = {};
+  for (const [key, propSchema] of Object.entries(properties)) {
+    result[key] = buildBodyLiteralValue(propSchema as Record<string, unknown>, key, depth);
+  }
+
+  return result;
 }
 
 /**
@@ -290,19 +348,10 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
     ? (requestBodyContent[jsonContentKey] as Record<string, unknown>)
     : undefined;
 
-  // Body field entries: { name, literal }
-  // literal → literal value used directly in the JSON body template (no @var declarations)
-  interface BodyField {
-    name: string;
-    literal: string;
-  }
-
-  const bodyFields: BodyField[] = [];
-  let hasBodyFields = false;
-
   // Resolve a body example from the spec, in order of precedence:
   //   media `example` → media `examples` (first) → schema `example`
   let resolvedBodyExample: unknown = undefined;
+  let resolvedBodyObject: Record<string, unknown> | undefined = undefined;
 
   if (jsonContent) {
     const schema = jsonContent.schema as Record<string, unknown> | undefined;
@@ -314,19 +363,7 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
     );
 
     if (resolvedBodyExample === undefined) {
-      const properties = extractProperties(schema);
-      if (properties) {
-        for (const [key, propSchema] of Object.entries(properties)) {
-          const ps = propSchema as Record<string, unknown>;
-
-          bodyFields.push({
-            name: key,
-            literal: getBodyLiteralDefault(ps, key),
-          });
-        }
-
-        hasBodyFields = bodyFields.length > 0;
-      }
+      resolvedBodyObject = buildBodyObject(schema);
     }
   }
 
@@ -368,20 +405,10 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
     if (jsonContent) {
       if (resolvedBodyExample !== undefined) {
         lines.push(JSON.stringify(resolvedBodyExample, null, 2));
-      } else if (hasBodyFields) {
-        // Emit body with literal typed values — no {{var}} substitutions
-        const bodyLines = ["{"];
-
-        bodyFields.forEach((f, i) => {
-          const comma = i < bodyFields.length - 1 ? "," : "";
-          bodyLines.push(`  "${f.name}": ${f.literal}${comma}`);
-        });
-
-        bodyLines.push("}");
-
-        lines.push(bodyLines.join("\n"));
       } else {
-        lines.push("{}");
+        // Emit body with literal typed values — no {{var}} substitutions.
+        // buildBodyObject recursively handles nested objects and arrays of objects.
+        lines.push(JSON.stringify(resolvedBodyObject ?? {}, null, 2));
       }
     } else {
       lines.push("{}");

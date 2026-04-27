@@ -532,7 +532,8 @@ describe("generateHttpFile name-based default values", () => {
     };
     const result = generateHttpFile(baseSpec, endpoint);
 
-    expect(result).toContain('"tags": ["tags1","tags2"]');
+    // Array of primitives: multi-line JSON.stringify format with proper nesting
+    expect(result).toMatch(/"tags":\s*\[\s*"tags1",\s*"tags2"\s*\]/s);
   });
 
   it("uses the parameter name as default for string query params (no schema)", () => {
@@ -738,5 +739,209 @@ describe("generateHttpFileContent", () => {
     const result = generateHttpFileContent(baseSpec, [endpoint]);
 
     expect(result).toContain("@baseUrl");
+  });
+});
+
+describe("generateHttpFile nested object body generation", () => {
+  it("expands a nested object property recursively", () => {
+    const endpoint: ParsedEndpoint = {
+      method: "POST",
+      path: "/expenses",
+      requestBody: {
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                description: { type: "string" },
+                amount: { type: "number" },
+                category: {
+                  type: "object",
+                  properties: {
+                    id: { type: "integer" },
+                    name: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+
+    expect(result).toContain('"description": "description"');
+    expect(result).toContain('"amount": 1');
+    // Nested object category is expanded, not collapsed to {}
+    expect(result).toContain('"category"');
+    expect(result).toContain('"id": 1');
+    expect(result).toContain('"name": "name"');
+    expect(result).not.toContain('"category": {}');
+  });
+
+  it("expands an array-of-objects property to a single template item", () => {
+    const endpoint: ParsedEndpoint = {
+      method: "POST",
+      path: "/expenses",
+      requestBody: {
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                title: { type: "string" },
+                items: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      quantity: { type: "integer" },
+                      unitPrice: { type: "number" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+
+    expect(result).toContain('"title": "title"');
+    // items is an array of objects — should expand to [{…}]
+    expect(result).toContain('"items"');
+    expect(result).toContain('"quantity": 1');
+    expect(result).toContain('"unitPrice": 1');
+    // Should NOT collapse to an empty array or raw string array
+    expect(result).not.toContain('"items": []');
+    expect(result).not.toContain('"items1"');
+  });
+
+  it("handles multi-level nesting (expense → expenseItems → attendees)", () => {
+    const endpoint: ParsedEndpoint = {
+      method: "POST",
+      path: "/api/expenses",
+      requestBody: {
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                description: { type: "string" },
+                expenseItems: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      label: { type: "string" },
+                      amount: { type: "number" },
+                      attendees: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            name: { type: "string" },
+                            email: { type: "string" },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+
+    expect(result).toContain('"description": "description"');
+    expect(result).toContain('"expenseItems"');
+    expect(result).toContain('"label": "label"');
+    expect(result).toContain('"amount": 1');
+    expect(result).toContain('"attendees"');
+    expect(result).toContain('"name": "name"');
+    expect(result).toContain('"email": "email"');
+  });
+
+  it("falls back to {} for an object property without nested properties", () => {
+    const endpoint: ParsedEndpoint = {
+      method: "POST",
+      path: "/items",
+      requestBody: {
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                metadata: { type: "object" },
+              },
+            },
+          },
+        },
+      },
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+
+    expect(result).toContain('"metadata": {}');
+  });
+
+  it("falls back to primitive-name array for an array property without object items", () => {
+    const endpoint: ParsedEndpoint = {
+      method: "POST",
+      path: "/items",
+      requestBody: {
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                tags: { type: "array", items: { type: "string" } },
+              },
+            },
+          },
+        },
+      },
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+
+    expect(result).toMatch(/"tags":\s*\[\s*"tags1",\s*"tags2"\s*\]/s);
+  });
+
+  it("uses item example/enum for a primitive-item array property", () => {
+    const endpoint: ParsedEndpoint = {
+      method: "POST",
+      path: "/items",
+      requestBody: {
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                statuses: {
+                  type: "array",
+                  items: { type: "string", enum: ["active", "inactive"] } as Record<
+                    string,
+                    unknown
+                  >,
+                },
+                ids: {
+                  type: "array",
+                  items: { type: "integer", example: 42 } as Record<string, unknown>,
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    const result = generateHttpFile(baseSpec, endpoint);
+
+    // Enum: first value used as the single item
+    expect(result).toMatch(/"statuses":\s*\[\s*"active"\s*\]/s);
+    // Example: used as the single item
+    expect(result).toMatch(/"ids":\s*\[\s*42\s*\]/s);
   });
 });
