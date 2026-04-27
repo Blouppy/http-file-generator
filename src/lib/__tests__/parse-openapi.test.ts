@@ -19,9 +19,11 @@ describe("parseOpenAPISpec", () => {
     const spec = makeSpec();
     const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
 
-    expect(result.title).toBe("Test API");
-    expect(result.version).toBe("1.0.0");
-    expect(result.baseUrl).toBe("https://api.example.com");
+    expect(result).toMatchObject({
+      title: "Test API",
+      version: "1.0.0",
+      baseUrl: "https://api.example.com",
+    });
   });
 
   it("parses YAML content", async () => {
@@ -35,9 +37,11 @@ paths: {}
 `;
     const result = await parseOpenAPISpec(yaml, "spec.yaml");
 
-    expect(result.title).toBe("YAML API");
-    expect(result.version).toBe("2.0");
-    expect(result.baseUrl).toBe("https://yaml.example.com");
+    expect(result).toMatchObject({
+      title: "YAML API",
+      version: "2.0",
+      baseUrl: "https://yaml.example.com",
+    });
   });
 
   it("parses .yml extension as YAML", async () => {
@@ -58,9 +62,11 @@ paths: {}
     const spec = { paths: {} };
     const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
 
-    expect(result.title).toBe("API");
-    expect(result.version).toBe("1.0.0");
-    expect(result.baseUrl).toBe("{{baseUrl}}");
+    expect(result).toMatchObject({
+      title: "API",
+      version: "1.0.0",
+      baseUrl: "{{baseUrl}}",
+    });
   });
 
   it("extracts endpoints from paths", async () => {
@@ -97,8 +103,10 @@ paths: {}
     });
     const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
 
-    expect(result.endpoints[0].path).toBe("/items");
-    expect(result.endpoints[0].method).toBe("GET");
-    expect(result.endpoints[0].summary).toBe("List items");
+    expect(result.endpoints[0]).toMatchObject({
+      path: "/items",
+      method: "GET",
+      summary: "List items",
+    });
   });
 });

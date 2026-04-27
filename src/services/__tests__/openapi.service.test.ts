@@ -125,8 +125,7 @@ describe("filterEndpoints", () => {
     });
 
     expect(result).toHaveLength(1);
-    expect(result[0].method).toBe("POST");
-    expect(result[0].path).toBe("/users");
+    expect(result[0]).toMatchObject({ method: "POST", path: "/users" });
   });
 
   it("returns empty array when no endpoints match", () => {
@@ -143,6 +142,6 @@ describe("filterEndpoints", () => {
     const result = filterEndpoints(untagged, { ...noFilters, tags: new Set(["Other"]) });
 
     expect(result).toHaveLength(1);
-    expect(result[0].path).toBe("/misc");
+    expect(result[0]).toMatchObject({ path: "/misc" });
   });
 });

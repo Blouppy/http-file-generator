@@ -8,6 +8,32 @@ const baseSpec: ParsedSpec = {
   endpoints: [],
 };
 
+// ── Test helpers ──────────────────────────────────────────────────────────────
+
+/** Creates a `{ type: "object", properties }` schema. */
+const makeObjectSchema = (properties: Record<string, unknown>): Record<string, unknown> => ({
+  type: "object",
+  properties,
+});
+
+/**
+ * Creates an endpoint whose request body uses `application/json` with the
+ * given schema. Optional `parameters` are forwarded as-is.
+ */
+const makeJsonBodyEndpoint = (
+  method: string,
+  path: string,
+  schema: Record<string, unknown>,
+  parameters?: ParsedEndpoint["parameters"],
+): ParsedEndpoint => ({
+  method,
+  path,
+  ...(parameters ? { parameters } : {}),
+  requestBody: {
+    content: { "application/json": { schema } },
+  },
+});
+
 describe("generateHttpFile", () => {
   it("generates a GET request with correct method and path", () => {
     const endpoint: ParsedEndpoint = { method: "GET", path: "/items" };
@@ -17,17 +43,11 @@ describe("generateHttpFile", () => {
   });
 
   it("generates a POST request with Content-Type header", () => {
-    const endpoint: ParsedEndpoint = {
-      method: "POST",
-      path: "/items",
-      requestBody: {
-        content: {
-          "application/json": {
-            schema: { type: "object", properties: { name: { type: "string" } } },
-          },
-        },
-      },
-    };
+    const endpoint = makeJsonBodyEndpoint(
+      "POST",
+      "/items",
+      makeObjectSchema({ name: { type: "string" } }),
+    );
     const result = generateHttpFile(baseSpec, endpoint);
 
     expect(result).toContain("POST https://api.example.com/items");
@@ -94,23 +114,11 @@ describe("generateHttpFile", () => {
   });
 
   it("emits literal values in the body (no @var declarations for body fields)", () => {
-    const endpoint: ParsedEndpoint = {
-      method: "POST",
-      path: "/users",
-      requestBody: {
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                name: { type: "string" },
-                age: { type: "integer" },
-              },
-            },
-          },
-        },
-      },
-    };
+    const endpoint = makeJsonBodyEndpoint(
+      "POST",
+      "/users",
+      makeObjectSchema({ name: { type: "string" }, age: { type: "integer" } }),
+    );
     const result = generateHttpFile(baseSpec, endpoint);
     // No @var declarations for body-only fields
     expect(result).not.toContain("@name");
@@ -123,23 +131,14 @@ describe("generateHttpFile", () => {
   });
 
   it("uses enum first value as literal in the body", () => {
-    const endpoint: ParsedEndpoint = {
-      method: "POST",
-      path: "/issues",
-      requestBody: {
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                priority: { type: "string", enum: ["Low", "Medium", "High"] },
-                count: { type: "integer" },
-              } as Record<string, unknown>,
-            } as Record<string, unknown>,
-          },
-        },
-      },
-    };
+    const endpoint = makeJsonBodyEndpoint(
+      "POST",
+      "/issues",
+      makeObjectSchema({
+        priority: { type: "string", enum: ["Low", "Medium", "High"] },
+        count: { type: "integer" },
+      }),
+    );
     const result = generateHttpFile(baseSpec, endpoint);
 
     expect(result).toContain('"priority": "Low"');
@@ -180,24 +179,12 @@ describe("generateHttpFile", () => {
   });
 
   it("does not emit @var for body fields; only path/query params get @var declarations", () => {
-    const endpoint: ParsedEndpoint = {
-      method: "PUT",
-      path: "/projects/{id}",
-      parameters: [{ name: "id", in: "path", schema: { type: "integer" } }],
-      requestBody: {
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                id: { type: "integer" },
-                name: { type: "string" },
-              },
-            },
-          },
-        },
-      },
-    };
+    const endpoint = makeJsonBodyEndpoint(
+      "PUT",
+      "/projects/{id}",
+      makeObjectSchema({ id: { type: "integer" }, name: { type: "string" } }),
+      [{ name: "id", in: "path", schema: { type: "integer" } }],
+    );
     const result = generateHttpFile(baseSpec, endpoint);
 
     // Only path param @id = 1; no @name for body field
@@ -229,24 +216,9 @@ describe("generateHttpFile", () => {
   });
 
   it("generates body from allOf schema when no direct properties exist", () => {
-    const endpoint: ParsedEndpoint = {
-      method: "POST",
-      path: "/projects",
-      requestBody: {
-        content: {
-          "application/json": {
-            schema: {
-              allOf: [
-                {
-                  type: "object",
-                  properties: { id: { type: "integer" }, name: { type: "string" } },
-                },
-              ],
-            } as Record<string, unknown>,
-          },
-        },
-      },
-    };
+    const endpoint = makeJsonBodyEndpoint("POST", "/projects", {
+      allOf: [makeObjectSchema({ id: { type: "integer" }, name: { type: "string" } })],
+    });
     const result = generateHttpFile(baseSpec, endpoint);
 
     // No @var declarations for body-only fields
@@ -258,20 +230,12 @@ describe("generateHttpFile", () => {
   });
 
   it("generates body from anyOf schema using the first entry with properties", () => {
-    const endpoint: ParsedEndpoint = {
-      method: "PUT",
-      path: "/items/{id}",
-      parameters: [{ name: "id", in: "path", schema: { type: "integer" } }],
-      requestBody: {
-        content: {
-          "application/json": {
-            schema: {
-              anyOf: [{ type: "object", properties: { label: { type: "string" } } }],
-            } as Record<string, unknown>,
-          },
-        },
-      },
-    };
+    const endpoint = makeJsonBodyEndpoint(
+      "PUT",
+      "/items/{id}",
+      { anyOf: [makeObjectSchema({ label: { type: "string" } })] },
+      [{ name: "id", in: "path", schema: { type: "integer" } }],
+    );
     const result = generateHttpFile(baseSpec, endpoint);
 
     // @id declared for path param; @label not declared (body field)
@@ -282,22 +246,12 @@ describe("generateHttpFile", () => {
   });
 
   it("merges properties from multiple allOf entries", () => {
-    const endpoint: ParsedEndpoint = {
-      method: "POST",
-      path: "/users",
-      requestBody: {
-        content: {
-          "application/json": {
-            schema: {
-              allOf: [
-                { type: "object", properties: { firstName: { type: "string" } } },
-                { type: "object", properties: { age: { type: "integer" } } },
-              ],
-            } as Record<string, unknown>,
-          },
-        },
-      },
-    };
+    const endpoint = makeJsonBodyEndpoint("POST", "/users", {
+      allOf: [
+        makeObjectSchema({ firstName: { type: "string" } }),
+        makeObjectSchema({ age: { type: "integer" } }),
+      ],
+    });
     const result = generateHttpFile(baseSpec, endpoint);
 
     // No @var for body fields
@@ -326,10 +280,7 @@ describe("generateHttpFile", () => {
       requestBody: {
         content: {
           "application/json; charset=utf-8": {
-            schema: {
-              type: "object",
-              properties: { username: { type: "string" } },
-            },
+            schema: makeObjectSchema({ username: { type: "string" } }),
           },
         },
       },
@@ -349,10 +300,7 @@ describe("generateHttpFile", () => {
       requestBody: {
         content: {
           "application/vnd.api+json": {
-            schema: {
-              type: "object",
-              properties: { title: { type: "string" } },
-            },
+            schema: makeObjectSchema({ title: { type: "string" } }),
           },
         },
       },
@@ -436,23 +384,14 @@ describe("generateHttpFile spec-provided values (examples & defaults)", () => {
   });
 
   it("uses property-level example for body field literals", () => {
-    const endpoint: ParsedEndpoint = {
-      method: "POST",
-      path: "/pets",
-      requestBody: {
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                name: { type: "string", example: "Rex" },
-                age: { type: "integer", default: 3 },
-              } as Record<string, unknown>,
-            } as Record<string, unknown>,
-          },
-        },
-      },
-    };
+    const endpoint = makeJsonBodyEndpoint(
+      "POST",
+      "/pets",
+      makeObjectSchema({
+        name: { type: "string", example: "Rex" },
+        age: { type: "integer", default: 3 },
+      }),
+    );
     const result = generateHttpFile(baseSpec, endpoint);
 
     expect(result).toContain('"name": "Rex"');
@@ -482,21 +421,11 @@ describe("generateHttpFile spec-provided values (examples & defaults)", () => {
 
 describe("generateHttpFile name-based default values", () => {
   it("uses the property name as default for string body fields", () => {
-    const endpoint: ParsedEndpoint = {
-      method: "POST",
-      path: "/api/v1/items",
-      tags: ["Pets"],
-      requestBody: {
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: { name: { type: "string" } },
-            },
-          },
-        },
-      },
-    };
+    const endpoint = makeJsonBodyEndpoint(
+      "POST",
+      "/api/v1/items",
+      makeObjectSchema({ name: { type: "string" } }),
+    );
     const result = generateHttpFile(baseSpec, endpoint);
 
     expect(result).toContain('"name": "name"');
@@ -506,7 +435,6 @@ describe("generateHttpFile name-based default values", () => {
     const endpoint: ParsedEndpoint = {
       method: "GET",
       path: "/api/v1/items",
-      tags: ["Cats"],
       parameters: [{ name: "names", in: "query", schema: { type: "array" } }],
     };
     const result = generateHttpFile(baseSpec, endpoint);
@@ -515,21 +443,11 @@ describe("generateHttpFile name-based default values", () => {
   });
 
   it("uses the property name as default for array body fields", () => {
-    const endpoint: ParsedEndpoint = {
-      method: "POST",
-      path: "/store",
-      tags: ["Dogs"],
-      requestBody: {
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: { tags: { type: "array" } },
-            },
-          },
-        },
-      },
-    };
+    const endpoint = makeJsonBodyEndpoint(
+      "POST",
+      "/store",
+      makeObjectSchema({ tags: { type: "array" } }),
+    );
     const result = generateHttpFile(baseSpec, endpoint);
 
     // Array of primitives: multi-line JSON.stringify format with proper nesting
@@ -570,22 +488,13 @@ describe("generateHttpFile multi-type schemas", () => {
   });
 
   it("treats type=[integer,string] as integer for body fields", () => {
-    const endpoint: ParsedEndpoint = {
-      method: "POST",
-      path: "/api/v1/workspaces",
-      requestBody: {
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                organizationId: { type: ["integer", "string"], format: "int32" },
-              } as Record<string, unknown>,
-            } as Record<string, unknown>,
-          },
-        },
-      },
-    };
+    const endpoint = makeJsonBodyEndpoint(
+      "POST",
+      "/api/v1/workspaces",
+      makeObjectSchema({
+        organizationId: { type: ["integer", "string"], format: "int32" },
+      }),
+    );
     const result = generateHttpFile(baseSpec, endpoint);
 
     expect(result).toContain('"organizationId": 1');
@@ -744,30 +653,15 @@ describe("generateHttpFileContent", () => {
 
 describe("generateHttpFile nested object body generation", () => {
   it("expands a nested object property recursively", () => {
-    const endpoint: ParsedEndpoint = {
-      method: "POST",
-      path: "/items",
-      requestBody: {
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                name: { type: "string" },
-                count: { type: "number" },
-                nested: {
-                  type: "object",
-                  properties: {
-                    id: { type: "integer" },
-                    label: { type: "string" },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    };
+    const endpoint = makeJsonBodyEndpoint(
+      "POST",
+      "/items",
+      makeObjectSchema({
+        name: { type: "string" },
+        count: { type: "number" },
+        nested: makeObjectSchema({ id: { type: "integer" }, label: { type: "string" } }),
+      }),
+    );
     const result = generateHttpFile(baseSpec, endpoint);
 
     expect(result).toContain('"name": "name"');
@@ -780,32 +674,17 @@ describe("generateHttpFile nested object body generation", () => {
   });
 
   it("expands an array-of-objects property to a single template item", () => {
-    const endpoint: ParsedEndpoint = {
-      method: "POST",
-      path: "/items",
-      requestBody: {
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                name: { type: "string" },
-                children: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      count: { type: "integer" },
-                      value: { type: "number" },
-                    },
-                  },
-                },
-              },
-            },
-          },
+    const endpoint = makeJsonBodyEndpoint(
+      "POST",
+      "/items",
+      makeObjectSchema({
+        name: { type: "string" },
+        children: {
+          type: "array",
+          items: makeObjectSchema({ count: { type: "integer" }, value: { type: "number" } }),
         },
-      },
-    };
+      }),
+    );
     const result = generateHttpFile(baseSpec, endpoint);
 
     expect(result).toContain('"name": "name"');
@@ -819,42 +698,24 @@ describe("generateHttpFile nested object body generation", () => {
   });
 
   it("handles three-level nesting", () => {
-    const endpoint: ParsedEndpoint = {
-      method: "POST",
-      path: "/items",
-      requestBody: {
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                name: { type: "string" },
-                children: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      label: { type: "string" },
-                      count: { type: "number" },
-                      subItems: {
-                        type: "array",
-                        items: {
-                          type: "object",
-                          properties: {
-                            id: { type: "integer" },
-                            value: { type: "string" },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
+    const endpoint = makeJsonBodyEndpoint(
+      "POST",
+      "/items",
+      makeObjectSchema({
+        name: { type: "string" },
+        children: {
+          type: "array",
+          items: makeObjectSchema({
+            label: { type: "string" },
+            count: { type: "number" },
+            subItems: {
+              type: "array",
+              items: makeObjectSchema({ id: { type: "integer" }, value: { type: "string" } }),
             },
-          },
+          }),
         },
-      },
-    };
+      }),
+    );
     const result = generateHttpFile(baseSpec, endpoint);
 
     expect(result).toContain('"name": "name"');
@@ -867,76 +728,36 @@ describe("generateHttpFile nested object body generation", () => {
   });
 
   it("falls back to {} for an object property without nested properties", () => {
-    const endpoint: ParsedEndpoint = {
-      method: "POST",
-      path: "/items",
-      requestBody: {
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                metadata: { type: "object" },
-              },
-            },
-          },
-        },
-      },
-    };
+    const endpoint = makeJsonBodyEndpoint(
+      "POST",
+      "/items",
+      makeObjectSchema({ metadata: { type: "object" } }),
+    );
     const result = generateHttpFile(baseSpec, endpoint);
 
     expect(result).toContain('"metadata": {}');
   });
 
   it("falls back to primitive-name array for an array property without object items", () => {
-    const endpoint: ParsedEndpoint = {
-      method: "POST",
-      path: "/items",
-      requestBody: {
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                tags: { type: "array", items: { type: "string" } },
-              },
-            },
-          },
-        },
-      },
-    };
+    const endpoint = makeJsonBodyEndpoint(
+      "POST",
+      "/items",
+      makeObjectSchema({ tags: { type: "array", items: { type: "string" } } }),
+    );
     const result = generateHttpFile(baseSpec, endpoint);
 
     expect(result).toMatch(/"tags":\s*\[\s*"tags1",\s*"tags2"\s*\]/s);
   });
 
   it("uses item example/enum for a primitive-item array property", () => {
-    const endpoint: ParsedEndpoint = {
-      method: "POST",
-      path: "/items",
-      requestBody: {
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                statuses: {
-                  type: "array",
-                  items: { type: "string", enum: ["active", "inactive"] } as Record<
-                    string,
-                    unknown
-                  >,
-                },
-                ids: {
-                  type: "array",
-                  items: { type: "integer", example: 42 } as Record<string, unknown>,
-                },
-              },
-            },
-          },
-        },
-      },
-    };
+    const endpoint = makeJsonBodyEndpoint(
+      "POST",
+      "/items",
+      makeObjectSchema({
+        statuses: { type: "array", items: { type: "string", enum: ["active", "inactive"] } },
+        ids: { type: "array", items: { type: "integer", example: 42 } },
+      }),
+    );
     const result = generateHttpFile(baseSpec, endpoint);
 
     // Enum: first value used as the single item
@@ -946,48 +767,21 @@ describe("generateHttpFile nested object body generation", () => {
   });
 
   it("uses [{}] for an array property whose object items have no properties", () => {
-    const endpoint: ParsedEndpoint = {
-      method: "POST",
-      path: "/items",
-      requestBody: {
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                attachments: { type: "array", items: { type: "object" } },
-              },
-            },
-          },
-        },
-      },
-    };
+    const endpoint = makeJsonBodyEndpoint(
+      "POST",
+      "/items",
+      makeObjectSchema({ attachments: { type: "array", items: { type: "object" } } }),
+    );
     const result = generateHttpFile(baseSpec, endpoint);
 
     expect(result).toMatch(/"attachments":\s*\[\s*\{\s*\}\s*\]/s);
   });
 
   it("generates a top-level array body as a single template item", () => {
-    const endpoint: ParsedEndpoint = {
-      method: "POST",
-      path: "/api/items/bulk",
-      requestBody: {
-        content: {
-          "application/json": {
-            schema: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  name: { type: "string" },
-                  count: { type: "number" },
-                },
-              },
-            },
-          },
-        },
-      },
-    };
+    const endpoint = makeJsonBodyEndpoint("POST", "/api/items/bulk", {
+      type: "array",
+      items: makeObjectSchema({ name: { type: "string" }, count: { type: "number" } }),
+    });
     const result = generateHttpFile(baseSpec, endpoint);
 
     // Body should be an array with a template item
@@ -1003,20 +797,10 @@ describe("generateHttpFile nested object body generation", () => {
   });
 
   it("generates [{}] for a top-level array body whose items have no properties", () => {
-    const endpoint: ParsedEndpoint = {
-      method: "POST",
-      path: "/bulk",
-      requestBody: {
-        content: {
-          "application/json": {
-            schema: {
-              type: "array",
-              items: { type: "object" },
-            },
-          },
-        },
-      },
-    };
+    const endpoint = makeJsonBodyEndpoint("POST", "/bulk", {
+      type: "array",
+      items: { type: "object" },
+    });
     const result = generateHttpFile(baseSpec, endpoint);
 
     expect(result).toMatch(/\[\s*\{\s*\}\s*\]/s);
@@ -1025,34 +809,13 @@ describe("generateHttpFile nested object body generation", () => {
   it("merges properties from both direct properties and allOf", () => {
     // Schema has its own `properties` AND inherits from a base schema via `allOf`.
     // Both sources must appear in the generated body.
-    const endpoint: ParsedEndpoint = {
-      method: "POST",
-      path: "/api/items",
-      requestBody: {
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              allOf: [
-                {
-                  // Simulates a dereferenced $ref to a base schema
-                  type: "object",
-                  properties: {
-                    baseFieldA: { type: "string" },
-                    baseFieldB: { type: "string" },
-                  },
-                },
-              ],
-              properties: {
-                count: { type: "integer" },
-                name: { type: "string" },
-              },
-              additionalProperties: false,
-            },
-          },
-        },
-      },
-    };
+    const endpoint = makeJsonBodyEndpoint("POST", "/api/items", {
+      type: "object",
+      // Simulates a dereferenced $ref to a base schema
+      allOf: [makeObjectSchema({ baseFieldA: { type: "string" }, baseFieldB: { type: "string" } })],
+      properties: { count: { type: "integer" }, name: { type: "string" } },
+      additionalProperties: false,
+    });
     const result = generateHttpFile(baseSpec, endpoint);
 
     // Own properties must be present
@@ -1064,45 +827,20 @@ describe("generateHttpFile nested object body generation", () => {
   });
 
   it("merges properties from allOf with nested objects that also have both properties and allOf", () => {
-    const endpoint: ParsedEndpoint = {
-      method: "POST",
-      path: "/api/items",
-      requestBody: {
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              allOf: [
-                {
-                  type: "object",
-                  properties: {
-                    baseField: { type: "string" },
-                  },
-                },
-              ],
-              properties: {
-                count: { type: "integer" },
-                nested: {
-                  type: "object",
-                  allOf: [
-                    {
-                      type: "object",
-                      properties: {
-                        baseNested: { type: "string" },
-                        nestedField: { type: "string" },
-                      },
-                    },
-                  ],
-                  properties: {
-                    ownNested: { type: "string" },
-                  },
-                },
-              },
-            },
-          },
+    const endpoint = makeJsonBodyEndpoint("POST", "/api/items", {
+      type: "object",
+      allOf: [makeObjectSchema({ baseField: { type: "string" } })],
+      properties: {
+        count: { type: "integer" },
+        nested: {
+          type: "object",
+          allOf: [
+            makeObjectSchema({ baseNested: { type: "string" }, nestedField: { type: "string" } }),
+          ],
+          properties: { ownNested: { type: "string" } },
         },
       },
-    };
+    });
     const result = generateHttpFile(baseSpec, endpoint);
 
     expect(result).toContain('"baseField": "baseField"');
