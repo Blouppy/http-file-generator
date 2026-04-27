@@ -746,20 +746,20 @@ describe("generateHttpFile nested object body generation", () => {
   it("expands a nested object property recursively", () => {
     const endpoint: ParsedEndpoint = {
       method: "POST",
-      path: "/expenses",
+      path: "/items",
       requestBody: {
         content: {
           "application/json": {
             schema: {
               type: "object",
               properties: {
-                description: { type: "string" },
-                amount: { type: "number" },
-                category: {
+                name: { type: "string" },
+                count: { type: "number" },
+                nested: {
                   type: "object",
                   properties: {
                     id: { type: "integer" },
-                    name: { type: "string" },
+                    label: { type: "string" },
                   },
                 },
               },
@@ -770,33 +770,33 @@ describe("generateHttpFile nested object body generation", () => {
     };
     const result = generateHttpFile(baseSpec, endpoint);
 
-    expect(result).toContain('"description": "description"');
-    expect(result).toContain('"amount": 1');
-    // Nested object category is expanded, not collapsed to {}
-    expect(result).toContain('"category"');
-    expect(result).toContain('"id": 1');
     expect(result).toContain('"name": "name"');
-    expect(result).not.toContain('"category": {}');
+    expect(result).toContain('"count": 1');
+    // Nested object is expanded, not collapsed to {}
+    expect(result).toContain('"nested"');
+    expect(result).toContain('"id": 1');
+    expect(result).toContain('"label": "label"');
+    expect(result).not.toContain('"nested": {}');
   });
 
   it("expands an array-of-objects property to a single template item", () => {
     const endpoint: ParsedEndpoint = {
       method: "POST",
-      path: "/expenses",
+      path: "/items",
       requestBody: {
         content: {
           "application/json": {
             schema: {
               type: "object",
               properties: {
-                title: { type: "string" },
-                items: {
+                name: { type: "string" },
+                children: {
                   type: "array",
                   items: {
                     type: "object",
                     properties: {
-                      quantity: { type: "integer" },
-                      unitPrice: { type: "number" },
+                      count: { type: "integer" },
+                      value: { type: "number" },
                     },
                   },
                 },
@@ -808,41 +808,41 @@ describe("generateHttpFile nested object body generation", () => {
     };
     const result = generateHttpFile(baseSpec, endpoint);
 
-    expect(result).toContain('"title": "title"');
-    // items is an array of objects — should expand to [{…}]
-    expect(result).toContain('"items"');
-    expect(result).toContain('"quantity": 1');
-    expect(result).toContain('"unitPrice": 1');
+    expect(result).toContain('"name": "name"');
+    // children is an array of objects — should expand to [{…}]
+    expect(result).toContain('"children"');
+    expect(result).toContain('"count": 1');
+    expect(result).toContain('"value": 1');
     // Should NOT collapse to an empty array or raw string array
-    expect(result).not.toContain('"items": []');
-    expect(result).not.toContain('"items1"');
+    expect(result).not.toContain('"children": []');
+    expect(result).not.toContain('"children1"');
   });
 
-  it("handles multi-level nesting (expense → expenseItems → attendees)", () => {
+  it("handles three-level nesting", () => {
     const endpoint: ParsedEndpoint = {
       method: "POST",
-      path: "/api/expenses",
+      path: "/items",
       requestBody: {
         content: {
           "application/json": {
             schema: {
               type: "object",
               properties: {
-                description: { type: "string" },
-                expenseItems: {
+                name: { type: "string" },
+                children: {
                   type: "array",
                   items: {
                     type: "object",
                     properties: {
                       label: { type: "string" },
-                      amount: { type: "number" },
-                      attendees: {
+                      count: { type: "number" },
+                      subItems: {
                         type: "array",
                         items: {
                           type: "object",
                           properties: {
-                            name: { type: "string" },
-                            email: { type: "string" },
+                            id: { type: "integer" },
+                            value: { type: "string" },
                           },
                         },
                       },
@@ -857,13 +857,13 @@ describe("generateHttpFile nested object body generation", () => {
     };
     const result = generateHttpFile(baseSpec, endpoint);
 
-    expect(result).toContain('"description": "description"');
-    expect(result).toContain('"expenseItems"');
-    expect(result).toContain('"label": "label"');
-    expect(result).toContain('"amount": 1');
-    expect(result).toContain('"attendees"');
     expect(result).toContain('"name": "name"');
-    expect(result).toContain('"email": "email"');
+    expect(result).toContain('"children"');
+    expect(result).toContain('"label": "label"');
+    expect(result).toContain('"count": 1');
+    expect(result).toContain('"subItems"');
+    expect(result).toContain('"id": 1');
+    expect(result).toContain('"value": "value"');
   });
 
   it("falls back to {} for an object property without nested properties", () => {
@@ -970,7 +970,7 @@ describe("generateHttpFile nested object body generation", () => {
   it("generates a top-level array body as a single template item", () => {
     const endpoint: ParsedEndpoint = {
       method: "POST",
-      path: "/api/expenses/bulk",
+      path: "/api/items/bulk",
       requestBody: {
         content: {
           "application/json": {
@@ -979,8 +979,8 @@ describe("generateHttpFile nested object body generation", () => {
               items: {
                 type: "object",
                 properties: {
-                  description: { type: "string" },
-                  amount: { type: "number" },
+                  name: { type: "string" },
+                  count: { type: "number" },
                 },
               },
             },
@@ -991,15 +991,15 @@ describe("generateHttpFile nested object body generation", () => {
     const result = generateHttpFile(baseSpec, endpoint);
 
     // Body should be an array with a template item
-    expect(result).toContain('"description": "description"');
-    expect(result).toContain('"amount": 1');
+    expect(result).toContain('"name": "name"');
+    expect(result).toContain('"count": 1');
     // Should be wrapped in an array
     const bodyMatch = result.match(/\n(\[[\s\S]*\])\n/);
     expect(bodyMatch).toBeTruthy();
     const body = JSON.parse(bodyMatch![1]);
     expect(Array.isArray(body)).toBe(true);
     expect(body).toHaveLength(1);
-    expect(body[0]).toEqual({ description: "description", amount: 1 });
+    expect(body[0]).toEqual({ name: "name", count: 1 });
   });
 
   it("generates [{}] for a top-level array body whose items have no properties", () => {
@@ -1023,11 +1023,11 @@ describe("generateHttpFile nested object body generation", () => {
   });
 
   it("merges properties from both direct properties and allOf", () => {
-    // Schema has its own `properties` AND extends a base model via `allOf`.
+    // Schema has its own `properties` AND inherits from a base schema via `allOf`.
     // Both sources must appear in the generated body.
     const endpoint: ParsedEndpoint = {
       method: "POST",
-      path: "/api/expenses",
+      path: "/api/items",
       requestBody: {
         content: {
           "application/json": {
@@ -1035,17 +1035,17 @@ describe("generateHttpFile nested object body generation", () => {
               type: "object",
               allOf: [
                 {
-                  // Simulates a dereferenced $ref to InputBaseModel
+                  // Simulates a dereferenced $ref to a base schema
                   type: "object",
                   properties: {
-                    createdAt: { type: "string" },
-                    updatedAt: { type: "string" },
+                    baseFieldA: { type: "string" },
+                    baseFieldB: { type: "string" },
                   },
                 },
               ],
               properties: {
-                ownerId: { type: "integer" },
-                description: { type: "string" },
+                count: { type: "integer" },
+                name: { type: "string" },
               },
               additionalProperties: false,
             },
@@ -1056,11 +1056,11 @@ describe("generateHttpFile nested object body generation", () => {
     const result = generateHttpFile(baseSpec, endpoint);
 
     // Own properties must be present
-    expect(result).toContain('"ownerId": 1');
-    expect(result).toContain('"description": "description"');
-    // Inherited properties from allOf (InputBaseModel) must also be present
-    expect(result).toContain('"createdAt": "createdAt"');
-    expect(result).toContain('"updatedAt": "updatedAt"');
+    expect(result).toContain('"count": 1');
+    expect(result).toContain('"name": "name"');
+    // Inherited properties from allOf must also be present
+    expect(result).toContain('"baseFieldA": "baseFieldA"');
+    expect(result).toContain('"baseFieldB": "baseFieldB"');
   });
 
   it("merges properties from allOf with nested objects that also have both properties and allOf", () => {
@@ -1081,20 +1081,20 @@ describe("generateHttpFile nested object body generation", () => {
                 },
               ],
               properties: {
-                ownerId: { type: "integer" },
-                address: {
+                count: { type: "integer" },
+                nested: {
                   type: "object",
                   allOf: [
                     {
                       type: "object",
                       properties: {
-                        street: { type: "string" },
-                        city: { type: "string" },
+                        baseNested: { type: "string" },
+                        nestedField: { type: "string" },
                       },
                     },
                   ],
                   properties: {
-                    zip: { type: "string" },
+                    ownNested: { type: "string" },
                   },
                 },
               },
@@ -1106,9 +1106,9 @@ describe("generateHttpFile nested object body generation", () => {
     const result = generateHttpFile(baseSpec, endpoint);
 
     expect(result).toContain('"baseField": "baseField"');
-    expect(result).toContain('"ownerId": 1');
-    expect(result).toContain('"street": "street"');
-    expect(result).toContain('"city": "city"');
-    expect(result).toContain('"zip": "zip"');
+    expect(result).toContain('"count": 1');
+    expect(result).toContain('"baseNested": "baseNested"');
+    expect(result).toContain('"nestedField": "nestedField"');
+    expect(result).toContain('"ownNested": "ownNested"');
   });
 });
