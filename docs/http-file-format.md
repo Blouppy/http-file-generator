@@ -104,16 +104,20 @@ Bodies are only emitted when the endpoint declares a `requestBody` with a JSON c
 2. `content["application/json"].schema.example` — used verbatim (JSON-serialized).
 3. Schema `properties` — a template object with **literal typed defaults** (no `{{var}}` references):
 
-| Schema type          | Default value                               |
-| -------------------- | ------------------------------------------- |
-| `integer` / `number` | `0`                                         |
-| `boolean`            | `true`                                      |
-| `array`              | `[]`                                        |
-| `object`             | `{}`                                        |
-| `string`             | `""`                                        |
-| enum                 | first declared enum value (JSON-serialized) |
+| Schema type                   | Default value                                                 |
+| ----------------------------- | ------------------------------------------------------------- |
+| top-level `array`             | `[{ … }]` — single template item built from the item's schema |
+| `integer` / `number`          | `1`                                                           |
+| `boolean`                     | `true`                                                        |
+| `array` of objects            | `[{ … }]` — single template item built from the item's schema |
+| `array` of objects (no props) | `[{}]`                                                        |
+| `array` of primitives         | `["name1", "name2"]`                                          |
+| `object` with props           | `{ … }` — recursively expanded from the nested schema         |
+| `object` (no props)           | `{}`                                                          |
+| `string`                      | `"propertyName"` (the property name itself)                   |
+| enum                          | first declared enum value (JSON-serialized)                   |
 
-Body fields support `allOf` (merged), `anyOf` / `oneOf` (first sub-schema with properties wins).
+Body fields support `allOf` (merged), `anyOf` / `oneOf` (first sub-schema with properties wins). Nesting is resolved recursively up to 10 levels deep; properties beyond that depth fall back to the property name as a string value to guard against circular schemas.
 
 If no properties can be resolved, an empty `{}` is emitted.
 
