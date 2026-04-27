@@ -295,147 +295,175 @@ function firstExampleFromMap(examples: unknown): unknown {
   return first;
 }
 
-export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): string {
-  const lines: string[] = [];
+// ── generateHttpFile helpers ────────────────────────────────────────────────
+
+/** Derives the display label for the `###` block. */
+function buildLabel(endpoint: ParsedEndpoint): string {
+  return endpoint.summary ?? endpoint.operationId ?? `${endpoint.method} ${endpoint.path}`;
+}
+
+/**
+ * Builds `@var = value` declaration entries for all path and query parameters.
+ * Path params are declared first, then query params. Duplicate variable names are skipped.
+ */
+function buildVarDeclarations(endpoint: ParsedEndpoint): VarEntry[] {
+  const pathParams = (endpoint.parameters ?? []).filter((p) => p.in === "path");
+  const queryParams = (endpoint.parameters ?? []).filter((p) => p.in === "query");
+  const declarations: VarEntry[] = [];
+  const declared = new Set<string>();
+
+  const addParam = (
+    param: NonNullable<ParsedEndpoint["parameters"]>[number],
+    context: "path" | "query",
+  ) => {
+    const varName = toCamelCase(param.name);
+    if (declared.has(varName)) return;
+    declared.add(varName);
+    declarations.push({
+      name: varName,
+      value: getVariableDefault(
+        param.schema as Record<string, unknown> | undefined,
+        context,
+        varName,
+        param.example,
+      ),
+    });
+  };
+
+  for (const p of pathParams) addParam(p, "path");
+  for (const p of queryParams) addParam(p, "query");
+
+  return declarations;
+}
+
+/**
+ * Builds the full request URL from the base URL, path (with param substitutions)
+ * and query string.
+ */
+function buildRequestUrl(spec: ParsedSpec, endpoint: ParsedEndpoint): string {
   const baseUrl =
     spec.baseUrl.startsWith("http") || spec.baseUrl.startsWith("{{")
       ? spec.baseUrl
       : `https://${spec.baseUrl}`;
 
-  const label = endpoint.summary || endpoint.operationId || `${endpoint.method} ${endpoint.path}`;
-  lines.push(`### ${label}`);
+  const pathParams = (endpoint.parameters ?? []).filter((p) => p.in === "path");
+  const queryParams = (endpoint.parameters ?? []).filter((p) => p.in === "query");
 
-  const pathParams = (endpoint.parameters || []).filter((p) => p.in === "path");
-  const queryParams = (endpoint.parameters || []).filter((p) => p.in === "query");
-
-  // Collect @var declarations — path params first, then query params.
-  const varDeclarations: VarEntry[] = [];
-  const declaredNames = new Set<string>();
-
+  let urlPath = endpoint.path;
   for (const param of pathParams) {
-    const varName = toCamelCase(param.name);
-
-    if (!declaredNames.has(varName)) {
-      declaredNames.add(varName);
-      varDeclarations.push({
-        name: varName,
-        value: getVariableDefault(
-          param.schema as Record<string, unknown> | undefined,
-          "path",
-          varName,
-          param.example,
-        ),
-      });
-    }
+    urlPath = urlPath.replace(`{${param.name}}`, `{{${toCamelCase(param.name)}}}`);
   }
 
-  for (const param of queryParams) {
-    const varName = toCamelCase(param.name);
+  const queryString =
+    queryParams.length > 0
+      ? "?" +
+        queryParams
+          .map((p) => {
+            const name = toCamelCase(p.name);
+            return `${name}={{${name}}}`;
+          })
+          .join("&")
+      : "";
 
-    if (!declaredNames.has(varName)) {
-      declaredNames.add(varName);
-      varDeclarations.push({
-        name: varName,
-        value: getVariableDefault(
-          param.schema as Record<string, unknown> | undefined,
-          "query",
-          varName,
-          param.example,
-        ),
-      });
-    }
-  }
+  return `${baseUrl}${urlPath}${queryString}`;
+}
 
-  // Resolve the JSON content entry using a fuzzy match on the content-type key so that
-  // variants like "application/json; charset=utf-8" or "application/vnd.api+json" are handled.
-  const requestBodyContent = endpoint.requestBody?.content ?? {};
-  const jsonContentKey = Object.keys(requestBodyContent).find((k) => {
+/**
+ * Finds the JSON content entry from the request body using a fuzzy content-type match.
+ * Handles variants like `application/json; charset=utf-8` and `application/vnd.api+json`.
+ */
+function resolveJsonContent(endpoint: ParsedEndpoint): Record<string, unknown> | undefined {
+  const content = endpoint.requestBody?.content ?? {};
+  const key = Object.keys(content).find((k) => {
     const lower = k.toLowerCase();
-
     return (
       lower.startsWith("application/json") ||
       (lower.startsWith("application/") && lower.includes("+json"))
     );
   });
-  const jsonContent = jsonContentKey
-    ? (requestBodyContent[jsonContentKey] as Record<string, unknown>)
-    : undefined;
+  return key ? (content[key] as Record<string, unknown>) : undefined;
+}
 
-  // Resolve a body example from the spec, in order of precedence:
-  //   media `example` → media `examples` (first) → schema `example`
-  let resolvedBodyExample: unknown = undefined;
-  let resolvedBodyObject: Record<string, unknown> | undefined = undefined;
+/**
+ * Resolves the body value to emit. Returns a spec-provided example when one is
+ * available (media `example` → `examples` map → schema `example`), or builds a
+ * typed template object from the schema otherwise.
+ */
+function resolveBodyValue(jsonContent: Record<string, unknown>): unknown {
+  const schema = jsonContent.schema as Record<string, unknown> | undefined;
 
-  if (jsonContent) {
-    const schema = jsonContent.schema as Record<string, unknown> | undefined;
+  const specExample = firstNonNullish(
+    jsonContent.example,
+    firstExampleFromMap(jsonContent.examples),
+    schema?.example,
+  );
+  if (specExample !== undefined) return specExample;
 
-    resolvedBodyExample = firstNonNullish(
-      jsonContent.example,
-      firstExampleFromMap(jsonContent.examples),
-      schema?.example,
-    );
-
-    if (resolvedBodyExample === undefined) {
-      if (schema && effectiveSchemaType(schema) === "array") {
-        // Top-level body is an array — build a single template item from the items schema.
-        const items = schema.items as Record<string, unknown> | undefined;
-        const itemObj = items ? buildBodyObject(items, 1) : undefined;
-        resolvedBodyExample = [itemObj ?? {}];
-      } else {
-        resolvedBodyObject = buildBodyObject(schema);
-      }
-    }
+  if (schema && effectiveSchemaType(schema) === "array") {
+    // Top-level body is an array — build a single template item from the items schema.
+    const items = schema.items as Record<string, unknown> | undefined;
+    const itemObj = items ? buildBodyObject(items, 1) : undefined;
+    return [itemObj ?? {}];
   }
 
-  // Emit all variable declarations right after the ### label (path + query params only)
-  for (const v of varDeclarations) {
-    lines.push(`@${v.name} = ${v.value}`);
-  }
+  return buildBodyObject(schema) ?? {};
+}
 
-  // Build URL with path param substitutions
-  let urlPath = endpoint.path;
-
-  for (const param of pathParams) {
-    urlPath = urlPath.replace(`{${param.name}}`, `{{${toCamelCase(param.name)}}}`);
-  }
-
-  // Build query string using variable references (apply camelCase to both key and var reference)
-  let queryString = "";
-  if (queryParams.length > 0) {
-    queryString =
-      "?" + queryParams.map((p) => `${toCamelCase(p.name)}={{${toCamelCase(p.name)}}}`).join("&");
-  }
-
-  lines.push(`${endpoint.method} ${baseUrl}${urlPath}${queryString}`);
-  lines.push("Authorization: Bearer {{token}}");
+/**
+ * Builds the header lines for a request: Authorization, optional Content-Type,
+ * and any custom `header` parameters defined on the endpoint.
+ */
+function buildHttpHeaders(endpoint: ParsedEndpoint): string[] {
+  const headers: string[] = ["Authorization: Bearer {{token}}"];
 
   // Only add Content-Type for methods that typically carry a request body
   const methodsWithBody = ["POST", "PUT", "PATCH"];
   if (methodsWithBody.includes(endpoint.method) || endpoint.requestBody) {
-    lines.push("Content-Type: application/json");
+    headers.push("Content-Type: application/json");
   }
 
-  for (const param of (endpoint.parameters || []).filter((p) => p.in === "header")) {
-    lines.push(`${param.name}: {{${param.name}}}`);
+  for (const param of (endpoint.parameters ?? []).filter((p) => p.in === "header")) {
+    headers.push(`${param.name}: {{${param.name}}}`);
   }
 
-  if (endpoint.requestBody) {
-    lines.push("");
+  return headers;
+}
 
-    if (jsonContent) {
-      if (resolvedBodyExample !== undefined) {
-        lines.push(JSON.stringify(resolvedBodyExample, null, 2));
-      } else {
-        // Emit body with literal typed values — no {{var}} substitutions.
-        // buildBodyObject recursively handles nested objects and arrays of objects.
-        lines.push(JSON.stringify(resolvedBodyObject ?? {}, null, 2));
-      }
-    } else {
-      lines.push("{}");
-    }
+/**
+ * Builds the body section lines (blank separator + serialised body) for a request.
+ * Returns an empty array when there is no request body.
+ */
+function buildBodyLines(
+  endpoint: ParsedEndpoint,
+  jsonContent: Record<string, unknown> | undefined,
+): string[] {
+  if (!endpoint.requestBody) return [];
+
+  if (jsonContent) {
+    // Emit body with literal typed values — no {{var}} substitutions.
+    return ["", JSON.stringify(resolveBodyValue(jsonContent), null, 2)];
   }
 
-  lines.push("");
+  return ["", "{}"];
+}
+
+// ── Public API ────────────────────────────────────────────────────────────────
+
+export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): string {
+  const varDeclarations = buildVarDeclarations(endpoint);
+  const url = buildRequestUrl(spec, endpoint);
+  const jsonContent = resolveJsonContent(endpoint);
+  const headers = buildHttpHeaders(endpoint);
+  const bodyLines = buildBodyLines(endpoint, jsonContent);
+
+  const lines: string[] = [
+    `### ${buildLabel(endpoint)}`,
+    ...varDeclarations.map((v) => `@${v.name} = ${v.value}`),
+    `${endpoint.method} ${url}`,
+    ...headers,
+    ...bodyLines,
+    "",
+  ];
 
   return lines.join("\n");
 }

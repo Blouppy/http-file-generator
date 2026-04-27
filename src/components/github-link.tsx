@@ -25,7 +25,12 @@ export function GithubLink() {
 
   return (
     <Button variant="ghost" size="icon" asChild>
-      <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer" aria-label={t.githubRepository}>
+      <a
+        href={GITHUB_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={t.githubRepository}
+      >
         <GithubIcon className="size-[1.2rem]" />
       </a>
     </Button>
