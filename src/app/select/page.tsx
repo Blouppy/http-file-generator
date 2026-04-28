@@ -231,6 +231,7 @@ export default function SelectPage() {
           </Card>
 
           {/* Right panel — tabbed: HTTP preview | Specification viewer */}
+
           <Tabs defaultValue="http-file" className="flex min-h-0 flex-col overflow-hidden">
             <TabsList className="mx-auto mb-1 h-9 shrink-0">
               <TabsTrigger value="http-file">{t.tabHttpFile}</TabsTrigger>
