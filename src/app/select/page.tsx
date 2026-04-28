@@ -24,8 +24,6 @@ export default function SelectPage() {
     selectedIds,
     setSelectedIds,
     toggleEndpoint,
-    selectAll,
-    deselectAll,
     selectedEndpoints,
   } = useSpec();
   const { t } = useLanguage();
@@ -85,15 +83,36 @@ export default function SelectPage() {
   };
 
   const handleGlobalSelectAll = () => {
-    selectAll();
+    const filteredEndpoints = Object.values(filteredEndpointsByTag).flat();
+    const next = new Set(selectedIds);
+    const newIds: string[] = [];
 
-    setSelectionOrder(spec.endpoints.map(getEndpointId));
+    filteredEndpoints.forEach((e) => {
+      const id = getEndpointId(e);
+
+      if (!next.has(id)) {
+        next.add(id);
+        newIds.push(id);
+      }
+    });
+
+    setSelectedIds(next);
+
+    if (newIds.length > 0) {
+      setSelectionOrder((prev) => [...prev, ...newIds]);
+    }
   };
 
   const handleGlobalDeselectAll = () => {
-    deselectAll();
+    const filteredEndpoints = Object.values(filteredEndpointsByTag).flat();
+    const filteredIds = new Set(filteredEndpoints.map(getEndpointId));
+    const next = new Set(selectedIds);
 
-    setSelectionOrder([]);
+    filteredEndpoints.forEach((e) => next.delete(getEndpointId(e)));
+
+    setSelectedIds(next);
+
+    setSelectionOrder((prev) => prev.filter((id) => !filteredIds.has(id)));
   };
 
   const handleSelectAllInTag = (tagEndpoints: ParsedEndpoint[]) => {
