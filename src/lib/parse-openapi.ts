@@ -1,6 +1,12 @@
 import SwaggerParser from "@apidevtools/swagger-parser";
 import YAML from "yaml";
-import type { ParsedSpec, ParsedEndpoint, Parameter, RequestBody } from "@/types/openapi";
+import type {
+  ParsedSpec,
+  ParsedEndpoint,
+  Parameter,
+  RequestBody,
+  SchemaObject,
+} from "@/types/openapi";
 import type { OpenAPI } from "openapi-types";
 
 const HTTP_METHODS = ["get", "post", "put", "patch", "delete", "head", "options", "trace"] as const;
@@ -9,6 +15,9 @@ type RawSpec = Record<string, unknown> & {
   info?: { title?: string; version?: string };
   servers?: Array<{ url: string }>;
   paths?: Record<string, Record<string, unknown>>;
+  components?: {
+    schemas?: Record<string, unknown>;
+  };
 };
 
 /** Parses raw file content as JSON or YAML based on the file extension. */
@@ -76,6 +85,7 @@ export async function parseOpenAPISpec(content: string, filename: string): Promi
 
   const { title, version, baseUrl } = extractSpecMetadata(spec);
   const endpoints = extractEndpoints(spec.paths ?? {});
+  const schemas = (spec.components?.schemas ?? {}) as Record<string, SchemaObject>;
 
-  return { title, version, baseUrl, endpoints };
+  return { title, version, baseUrl, endpoints, schemas };
 }

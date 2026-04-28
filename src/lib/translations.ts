@@ -67,6 +67,23 @@ export const translations = {
     previewCopy: "Copy",
     previewCopied: "Copied!",
 
+    // Right-panel tabs
+    tabHttpFile: "HTTP File",
+    tabSpecification: "Specification",
+
+    // Spec viewer
+    specViewerEndpointsTitle: "Endpoints",
+    specViewerModelsTitle: "Models",
+    specViewerNoEndpoints: "No endpoints match your filters.",
+    specViewerNoModels: "No models found in this specification.",
+    specViewerParametersTitle: "Parameters",
+    specViewerRequestBodyTitle: "Request Body",
+    specViewerResponsesTitle: "Responses",
+    specViewerRequired: "required",
+    specViewerOptional: "optional",
+    specViewerProperties: "Properties",
+    specViewerNoProperties: "No properties defined.",
+
     // Home page
     homeTitle: "HTTP File Generator",
     homeSubtitle: "Transform your OpenAPI specifications into ready-to-use .http files in seconds",
@@ -157,6 +174,23 @@ export const translations = {
     previewSelectEndpoint: "Cochez des endpoints pour prévisualiser leur fichier .http",
     previewCopy: "Copier",
     previewCopied: "Copié !",
+
+    // Right-panel tabs
+    tabHttpFile: "Fichier HTTP",
+    tabSpecification: "Spécification",
+
+    // Spec viewer
+    specViewerEndpointsTitle: "Endpoints",
+    specViewerModelsTitle: "Modèles",
+    specViewerNoEndpoints: "Aucun endpoint ne correspond à vos filtres.",
+    specViewerNoModels: "Aucun modèle trouvé dans cette spécification.",
+    specViewerParametersTitle: "Paramètres",
+    specViewerRequestBodyTitle: "Corps de la requête",
+    specViewerResponsesTitle: "Réponses",
+    specViewerRequired: "requis",
+    specViewerOptional: "optionnel",
+    specViewerProperties: "Propriétés",
+    specViewerNoProperties: "Aucune propriété définie.",
 
     // Home page
     homeTitle: "HTTP File Generator",

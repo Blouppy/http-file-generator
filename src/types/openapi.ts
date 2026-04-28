@@ -39,9 +39,31 @@ export interface MediaType {
   examples?: Record<string, unknown>;
 }
 
+export interface SchemaProperty {
+  type?: string;
+  description?: string;
+  format?: string;
+  enum?: unknown[];
+  items?: SchemaProperty;
+  properties?: Record<string, SchemaProperty>;
+  required?: string[];
+  nullable?: boolean;
+}
+
+export interface SchemaObject {
+  type?: string;
+  description?: string;
+  properties?: Record<string, SchemaProperty>;
+  required?: string[];
+  enum?: unknown[];
+  format?: string;
+  items?: SchemaProperty;
+}
+
 export interface ParsedSpec {
   title: string;
   version: string;
   baseUrl: string;
   endpoints: ParsedEndpoint[];
+  schemas?: Record<string, SchemaObject>;
 }
