@@ -26,7 +26,9 @@ export function toCamelCase(str: string): string {
  */
 function firstNonNullish(...candidates: unknown[]): unknown {
   for (const c of candidates) {
-    if (c !== undefined && c !== null) return c;
+    if (c !== undefined && c !== null) {
+      return c;
+    }
   }
   return undefined;
 }
@@ -38,13 +40,19 @@ function firstNonNullish(...candidates: unknown[]): unknown {
  * for IDs that may serialize as either) is treated as numeric.
  */
 function effectiveSchemaType(schema: Record<string, unknown> | undefined): string | undefined {
-  if (!schema) return undefined;
+  if (!schema) {
+    return undefined;
+  }
   const t = schema.type;
-  if (typeof t === "string") return t;
+  if (typeof t === "string") {
+    return t;
+  }
   if (Array.isArray(t)) {
     const preference = ["integer", "number", "boolean", "array", "object", "string"];
     for (const candidate of preference) {
-      if (t.includes(candidate)) return candidate;
+      if (t.includes(candidate)) {
+        return candidate;
+      }
     }
     const first = t.find((entry) => typeof entry === "string");
     return typeof first === "string" ? first : undefined;
@@ -57,8 +65,12 @@ function effectiveSchemaType(schema: Record<string, unknown> | undefined): strin
  * Objects/arrays are JSON-stringified.
  */
 function toUrlString(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
   try {
     return JSON.stringify(value);
   } catch {
@@ -201,7 +213,9 @@ function buildBodyObject(
   depth: number = 0,
 ): Record<string, unknown> | undefined {
   const properties = extractProperties(schema);
-  if (!properties) return undefined;
+  if (!properties) {
+    return undefined;
+  }
 
   const result: Record<string, unknown> = {};
   for (const [key, propSchema] of Object.entries(properties)) {
@@ -243,7 +257,9 @@ function extractProperties(
     if (hasAllOf) {
       for (const sub of schema.allOf as Record<string, unknown>[]) {
         const subProps = extractProperties(sub);
-        if (subProps) Object.assign(merged, subProps);
+        if (subProps) {
+          Object.assign(merged, subProps);
+        }
       }
     }
 
@@ -279,9 +295,13 @@ function extractProperties(
  * arrays) are accepted defensively as a fall-through.
  */
 function firstExampleFromMap(examples: unknown): unknown {
-  if (!examples || typeof examples !== "object") return undefined;
+  if (!examples || typeof examples !== "object") {
+    return undefined;
+  }
   const values = Object.values(examples as Record<string, unknown>);
-  if (values.length === 0) return undefined;
+  if (values.length === 0) {
+    return undefined;
+  }
 
   const first = values[0];
   if (
@@ -317,7 +337,9 @@ function buildVarDeclarations(endpoint: ParsedEndpoint): VarEntry[] {
     context: "path" | "query",
   ) => {
     const varName = toCamelCase(param.name);
-    if (declared.has(varName)) return;
+    if (declared.has(varName)) {
+      return;
+    }
     declared.add(varName);
     declarations.push({
       name: varName,
@@ -330,8 +352,12 @@ function buildVarDeclarations(endpoint: ParsedEndpoint): VarEntry[] {
     });
   };
 
-  for (const p of pathParams) addParam(p, "path");
-  for (const p of queryParams) addParam(p, "query");
+  for (const p of pathParams) {
+    addParam(p, "path");
+  }
+  for (const p of queryParams) {
+    addParam(p, "query");
+  }
 
   return declarations;
 }
@@ -397,7 +423,9 @@ function resolveBodyValue(jsonContent: Record<string, unknown>): unknown {
     firstExampleFromMap(jsonContent.examples),
     schema?.example,
   );
-  if (specExample !== undefined) return specExample;
+  if (specExample !== undefined) {
+    return specExample;
+  }
 
   if (schema && effectiveSchemaType(schema) === "array") {
     // Top-level body is an array — build a single template item from the items schema.
@@ -437,7 +465,9 @@ function buildBodyLines(
   endpoint: ParsedEndpoint,
   jsonContent: Record<string, unknown> | undefined,
 ): string[] {
-  if (!endpoint.requestBody) return [];
+  if (!endpoint.requestBody) {
+    return [];
+  }
 
   if (jsonContent) {
     // Emit body with literal typed values — no {{var}} substitutions.
