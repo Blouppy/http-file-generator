@@ -47,6 +47,38 @@ src/
 - **Styling**: Always use the `cn()` utility (from `@/lib/utils`) when composing Tailwind class names.
 - **Components**: Prefer extending existing shadcn/ui primitives over writing custom ones from scratch.
 
+## Code style
+
+- **Control flow braces**: Always use block braces `{ }` for `if`, `else`, `for`, `while`, and `do` bodies — never single-line braceless forms.
+- **Blank lines between control flow blocks**: Always add one blank line between consecutive `if`, `else if`, `for`, `while`, or `do` blocks at the same nesting level. This improves readability and makes each logical unit visually distinct.
+
+```typescript
+// ✅ correct
+if (a) {
+  doA();
+}
+
+if (b) {
+  doB();
+}
+
+for (const x of xs) {
+  process(x);
+}
+
+for (const y of ys) {
+  process(y);
+}
+
+// ❌ incorrect — missing blank line
+if (a) {
+  doA();
+}
+if (b) {
+  doB();
+}
+```
+
 ## Development commands
 
 ```bash

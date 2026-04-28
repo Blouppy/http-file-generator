@@ -47,6 +47,7 @@ function effectiveSchemaType(schema: Record<string, unknown> | undefined): strin
   if (typeof t === "string") {
     return t;
   }
+
   if (Array.isArray(t)) {
     const preference = ["integer", "number", "boolean", "array", "object", "string"];
     for (const candidate of preference) {
@@ -68,6 +69,7 @@ function toUrlString(value: unknown): string {
   if (typeof value === "string") {
     return value;
   }
+
   if (typeof value === "number" || typeof value === "boolean") {
     return String(value);
   }
@@ -184,6 +186,7 @@ function buildBodyLiteralValue(
           if (itemSpecValue !== undefined) {
             return [itemSpecValue];
           }
+
           if (Array.isArray(items.enum) && items.enum.length > 0) {
             return [items.enum[0]];
           }
@@ -355,6 +358,7 @@ function buildVarDeclarations(endpoint: ParsedEndpoint): VarEntry[] {
   for (const p of pathParams) {
     addParam(p, "path");
   }
+
   for (const p of queryParams) {
     addParam(p, "query");
   }
