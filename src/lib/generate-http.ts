@@ -26,7 +26,9 @@ export function toCamelCase(str: string): string {
  */
 function firstNonNullish(...candidates: unknown[]): unknown {
   for (const c of candidates) {
-    if (c !== undefined && c !== null) return c;
+    if (c !== undefined && c !== null) {
+      return c;
+    }
   }
   return undefined;
 }
@@ -38,13 +40,20 @@ function firstNonNullish(...candidates: unknown[]): unknown {
  * for IDs that may serialize as either) is treated as numeric.
  */
 function effectiveSchemaType(schema: Record<string, unknown> | undefined): string | undefined {
-  if (!schema) return undefined;
+  if (!schema) {
+    return undefined;
+  }
   const t = schema.type;
-  if (typeof t === "string") return t;
+  if (typeof t === "string") {
+    return t;
+  }
+
   if (Array.isArray(t)) {
     const preference = ["integer", "number", "boolean", "array", "object", "string"];
     for (const candidate of preference) {
-      if (t.includes(candidate)) return candidate;
+      if (t.includes(candidate)) {
+        return candidate;
+      }
     }
     const first = t.find((entry) => typeof entry === "string");
     return typeof first === "string" ? first : undefined;
@@ -57,8 +66,13 @@ function effectiveSchemaType(schema: Record<string, unknown> | undefined): strin
  * Objects/arrays are JSON-stringified.
  */
 function toUrlString(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
   try {
     return JSON.stringify(value);
   } catch {
@@ -172,6 +186,7 @@ function buildBodyLiteralValue(
           if (itemSpecValue !== undefined) {
             return [itemSpecValue];
           }
+
           if (Array.isArray(items.enum) && items.enum.length > 0) {
             return [items.enum[0]];
           }
@@ -201,7 +216,9 @@ function buildBodyObject(
   depth: number = 0,
 ): Record<string, unknown> | undefined {
   const properties = extractProperties(schema);
-  if (!properties) return undefined;
+  if (!properties) {
+    return undefined;
+  }
 
   const result: Record<string, unknown> = {};
   for (const [key, propSchema] of Object.entries(properties)) {
@@ -243,7 +260,9 @@ function extractProperties(
     if (hasAllOf) {
       for (const sub of schema.allOf as Record<string, unknown>[]) {
         const subProps = extractProperties(sub);
-        if (subProps) Object.assign(merged, subProps);
+        if (subProps) {
+          Object.assign(merged, subProps);
+        }
       }
     }
 
@@ -279,9 +298,13 @@ function extractProperties(
  * arrays) are accepted defensively as a fall-through.
  */
 function firstExampleFromMap(examples: unknown): unknown {
-  if (!examples || typeof examples !== "object") return undefined;
+  if (!examples || typeof examples !== "object") {
+    return undefined;
+  }
   const values = Object.values(examples as Record<string, unknown>);
-  if (values.length === 0) return undefined;
+  if (values.length === 0) {
+    return undefined;
+  }
 
   const first = values[0];
   if (
@@ -295,147 +318,186 @@ function firstExampleFromMap(examples: unknown): unknown {
   return first;
 }
 
-export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): string {
-  const lines: string[] = [];
+// ── generateHttpFile helpers ────────────────────────────────────────────────
+
+/** Derives the display label for the `###` block. */
+function buildLabel(endpoint: ParsedEndpoint): string {
+  return endpoint.summary ?? endpoint.operationId ?? `${endpoint.method} ${endpoint.path}`;
+}
+
+/**
+ * Builds `@var = value` declaration entries for all path and query parameters.
+ * Path params are declared first, then query params. Duplicate variable names are skipped.
+ */
+function buildVarDeclarations(endpoint: ParsedEndpoint): VarEntry[] {
+  const pathParams = (endpoint.parameters ?? []).filter((p) => p.in === "path");
+  const queryParams = (endpoint.parameters ?? []).filter((p) => p.in === "query");
+  const declarations: VarEntry[] = [];
+  const declared = new Set<string>();
+
+  const addParam = (
+    param: NonNullable<ParsedEndpoint["parameters"]>[number],
+    context: "path" | "query",
+  ) => {
+    const varName = toCamelCase(param.name);
+    if (declared.has(varName)) {
+      return;
+    }
+    declared.add(varName);
+    declarations.push({
+      name: varName,
+      value: getVariableDefault(
+        param.schema as Record<string, unknown> | undefined,
+        context,
+        varName,
+        param.example,
+      ),
+    });
+  };
+
+  for (const p of pathParams) {
+    addParam(p, "path");
+  }
+
+  for (const p of queryParams) {
+    addParam(p, "query");
+  }
+
+  return declarations;
+}
+
+/**
+ * Builds the full request URL from the base URL, path (with param substitutions)
+ * and query string.
+ */
+function buildRequestUrl(spec: ParsedSpec, endpoint: ParsedEndpoint): string {
   const baseUrl =
     spec.baseUrl.startsWith("http") || spec.baseUrl.startsWith("{{")
       ? spec.baseUrl
       : `https://${spec.baseUrl}`;
 
-  const label = endpoint.summary || endpoint.operationId || `${endpoint.method} ${endpoint.path}`;
-  lines.push(`### ${label}`);
+  const pathParams = (endpoint.parameters ?? []).filter((p) => p.in === "path");
+  const queryParams = (endpoint.parameters ?? []).filter((p) => p.in === "query");
 
-  const pathParams = (endpoint.parameters || []).filter((p) => p.in === "path");
-  const queryParams = (endpoint.parameters || []).filter((p) => p.in === "query");
-
-  // Collect @var declarations — path params first, then query params.
-  const varDeclarations: VarEntry[] = [];
-  const declaredNames = new Set<string>();
-
+  let urlPath = endpoint.path;
   for (const param of pathParams) {
-    const varName = toCamelCase(param.name);
-
-    if (!declaredNames.has(varName)) {
-      declaredNames.add(varName);
-      varDeclarations.push({
-        name: varName,
-        value: getVariableDefault(
-          param.schema as Record<string, unknown> | undefined,
-          "path",
-          varName,
-          param.example,
-        ),
-      });
-    }
+    urlPath = urlPath.replace(`{${param.name}}`, `{{${toCamelCase(param.name)}}}`);
   }
 
-  for (const param of queryParams) {
-    const varName = toCamelCase(param.name);
+  const queryString =
+    queryParams.length > 0
+      ? "?" +
+        queryParams
+          .map((p) => {
+            const name = toCamelCase(p.name);
+            return `${name}={{${name}}}`;
+          })
+          .join("&")
+      : "";
 
-    if (!declaredNames.has(varName)) {
-      declaredNames.add(varName);
-      varDeclarations.push({
-        name: varName,
-        value: getVariableDefault(
-          param.schema as Record<string, unknown> | undefined,
-          "query",
-          varName,
-          param.example,
-        ),
-      });
-    }
-  }
+  return `${baseUrl}${urlPath}${queryString}`;
+}
 
-  // Resolve the JSON content entry using a fuzzy match on the content-type key so that
-  // variants like "application/json; charset=utf-8" or "application/vnd.api+json" are handled.
-  const requestBodyContent = endpoint.requestBody?.content ?? {};
-  const jsonContentKey = Object.keys(requestBodyContent).find((k) => {
+/**
+ * Finds the JSON content entry from the request body using a fuzzy content-type match.
+ * Handles variants like `application/json; charset=utf-8` and `application/vnd.api+json`.
+ */
+function resolveJsonContent(endpoint: ParsedEndpoint): Record<string, unknown> | undefined {
+  const content = endpoint.requestBody?.content ?? {};
+  const key = Object.keys(content).find((k) => {
     const lower = k.toLowerCase();
-
     return (
       lower.startsWith("application/json") ||
       (lower.startsWith("application/") && lower.includes("+json"))
     );
   });
-  const jsonContent = jsonContentKey
-    ? (requestBodyContent[jsonContentKey] as Record<string, unknown>)
-    : undefined;
+  return key ? (content[key] as Record<string, unknown>) : undefined;
+}
 
-  // Resolve a body example from the spec, in order of precedence:
-  //   media `example` → media `examples` (first) → schema `example`
-  let resolvedBodyExample: unknown = undefined;
-  let resolvedBodyObject: Record<string, unknown> | undefined = undefined;
+/**
+ * Resolves the body value to emit. Returns a spec-provided example when one is
+ * available (media `example` → `examples` map → schema `example`), or builds a
+ * typed template object from the schema otherwise.
+ */
+function resolveBodyValue(jsonContent: Record<string, unknown>): unknown {
+  const schema = jsonContent.schema as Record<string, unknown> | undefined;
 
-  if (jsonContent) {
-    const schema = jsonContent.schema as Record<string, unknown> | undefined;
-
-    resolvedBodyExample = firstNonNullish(
-      jsonContent.example,
-      firstExampleFromMap(jsonContent.examples),
-      schema?.example,
-    );
-
-    if (resolvedBodyExample === undefined) {
-      if (schema && effectiveSchemaType(schema) === "array") {
-        // Top-level body is an array — build a single template item from the items schema.
-        const items = schema.items as Record<string, unknown> | undefined;
-        const itemObj = items ? buildBodyObject(items, 1) : undefined;
-        resolvedBodyExample = [itemObj ?? {}];
-      } else {
-        resolvedBodyObject = buildBodyObject(schema);
-      }
-    }
+  const specExample = firstNonNullish(
+    jsonContent.example,
+    firstExampleFromMap(jsonContent.examples),
+    schema?.example,
+  );
+  if (specExample !== undefined) {
+    return specExample;
   }
 
-  // Emit all variable declarations right after the ### label (path + query params only)
-  for (const v of varDeclarations) {
-    lines.push(`@${v.name} = ${v.value}`);
+  if (schema && effectiveSchemaType(schema) === "array") {
+    // Top-level body is an array — build a single template item from the items schema.
+    const items = schema.items as Record<string, unknown> | undefined;
+    const itemObj = items ? buildBodyObject(items, 1) : undefined;
+    return [itemObj ?? {}];
   }
 
-  // Build URL with path param substitutions
-  let urlPath = endpoint.path;
+  return buildBodyObject(schema) ?? {};
+}
 
-  for (const param of pathParams) {
-    urlPath = urlPath.replace(`{${param.name}}`, `{{${toCamelCase(param.name)}}}`);
-  }
-
-  // Build query string using variable references (apply camelCase to both key and var reference)
-  let queryString = "";
-  if (queryParams.length > 0) {
-    queryString =
-      "?" + queryParams.map((p) => `${toCamelCase(p.name)}={{${toCamelCase(p.name)}}}`).join("&");
-  }
-
-  lines.push(`${endpoint.method} ${baseUrl}${urlPath}${queryString}`);
-  lines.push("Authorization: Bearer {{token}}");
+/**
+ * Builds the header lines for a request: Authorization, optional Content-Type,
+ * and any custom `header` parameters defined on the endpoint.
+ */
+function buildHttpHeaders(endpoint: ParsedEndpoint): string[] {
+  const headers: string[] = ["Authorization: Bearer {{token}}"];
 
   // Only add Content-Type for methods that typically carry a request body
   const methodsWithBody = ["POST", "PUT", "PATCH"];
   if (methodsWithBody.includes(endpoint.method) || endpoint.requestBody) {
-    lines.push("Content-Type: application/json");
+    headers.push("Content-Type: application/json");
   }
 
-  for (const param of (endpoint.parameters || []).filter((p) => p.in === "header")) {
-    lines.push(`${param.name}: {{${param.name}}}`);
+  for (const param of (endpoint.parameters ?? []).filter((p) => p.in === "header")) {
+    headers.push(`${param.name}: {{${param.name}}}`);
   }
 
-  if (endpoint.requestBody) {
-    lines.push("");
+  return headers;
+}
 
-    if (jsonContent) {
-      if (resolvedBodyExample !== undefined) {
-        lines.push(JSON.stringify(resolvedBodyExample, null, 2));
-      } else {
-        // Emit body with literal typed values — no {{var}} substitutions.
-        // buildBodyObject recursively handles nested objects and arrays of objects.
-        lines.push(JSON.stringify(resolvedBodyObject ?? {}, null, 2));
-      }
-    } else {
-      lines.push("{}");
-    }
+/**
+ * Builds the body section lines (blank separator + serialised body) for a request.
+ * Returns an empty array when there is no request body.
+ */
+function buildBodyLines(
+  endpoint: ParsedEndpoint,
+  jsonContent: Record<string, unknown> | undefined,
+): string[] {
+  if (!endpoint.requestBody) {
+    return [];
   }
 
-  lines.push("");
+  if (jsonContent) {
+    // Emit body with literal typed values — no {{var}} substitutions.
+    return ["", JSON.stringify(resolveBodyValue(jsonContent), null, 2)];
+  }
+
+  return ["", "{}"];
+}
+
+// ── Public API ────────────────────────────────────────────────────────────────
+
+export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): string {
+  const varDeclarations = buildVarDeclarations(endpoint);
+  const url = buildRequestUrl(spec, endpoint);
+  const jsonContent = resolveJsonContent(endpoint);
+  const headers = buildHttpHeaders(endpoint);
+  const bodyLines = buildBodyLines(endpoint, jsonContent);
+
+  const lines: string[] = [
+    `### ${buildLabel(endpoint)}`,
+    ...varDeclarations.map((v) => `@${v.name} = ${v.value}`),
+    `${endpoint.method} ${url}`,
+    ...headers,
+    ...bodyLines,
+    "",
+  ];
 
   return lines.join("\n");
 }
