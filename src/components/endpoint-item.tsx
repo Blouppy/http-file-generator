@@ -1,5 +1,6 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { MethodBadge } from "@/components/method-badge";
+import { EndpointSpecSheet } from "@/components/endpoint-spec-sheet";
 import { cn } from "@/lib/utils";
 import type { ParsedEndpoint } from "@/types/openapi";
 
@@ -26,13 +27,14 @@ export function EndpointItem({ endpoint, isSelected, onToggle }: EndpointItemPro
       />
       <div className="flex min-w-0 flex-1 items-start gap-3">
         <MethodBadge method={endpoint.method} />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <code className="font-mono text-sm break-all">{endpoint.path}</code>
           {endpoint.summary && (
             <p className="text-muted-foreground mt-0.5 text-xs">{endpoint.summary}</p>
           )}
         </div>
       </div>
+      <EndpointSpecSheet endpoint={endpoint} />
     </div>
   );
 }

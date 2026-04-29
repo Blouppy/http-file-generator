@@ -4,11 +4,9 @@ import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { EndpointGroup } from "@/components/endpoint-group";
 import { EndpointFilters } from "@/components/endpoint-filters";
 import { HttpPreview } from "@/components/http-preview";
-import { SpecViewer } from "@/components/spec-viewer";
 import { SelectPageHeader } from "@/components/select-page-header";
 import { useSpec } from "@/contexts/spec-context";
 import { useLanguage } from "@/contexts/language-context";
@@ -230,32 +228,8 @@ export default function SelectPage() {
             </CardContent>
           </Card>
 
-          {/* Right panel — tabbed: HTTP preview | Specification viewer */}
-
-          <Tabs defaultValue="http-file" className="flex min-h-0 flex-col overflow-hidden">
-            <TabsList className="mx-auto mb-1 h-9 shrink-0">
-              <TabsTrigger value="http-file">{t.tabHttpFile}</TabsTrigger>
-              <TabsTrigger value="specification">{t.tabSpecification}</TabsTrigger>
-            </TabsList>
-            <TabsContent value="http-file" className="min-h-0 flex-1 overflow-hidden">
-              <HttpPreview spec={spec} endpoints={orderedPreviewEndpoints} />
-            </TabsContent>
-            <TabsContent value="specification" className="min-h-0 flex-1 overflow-hidden">
-              <SpecViewer
-                spec={spec}
-                filteredEndpointsByTag={filteredEndpointsByTag}
-                searchText={searchText}
-                onSearchChange={setSearchText}
-                availableMethods={availableMethods}
-                selectedMethods={selectedMethods}
-                onMethodToggle={handleMethodToggle}
-                availableTags={availableTags}
-                selectedTags={selectedTags}
-                onTagToggle={handleTagToggle}
-                onClearFilters={handleClearFilters}
-              />
-            </TabsContent>
-          </Tabs>
+          {/* Right panel — HTTP file preview */}
+          <HttpPreview spec={spec} endpoints={orderedPreviewEndpoints} />
         </div>
       </div>
     </div>
