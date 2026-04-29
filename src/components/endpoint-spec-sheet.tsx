@@ -3,16 +3,16 @@
 import { useState } from "react";
 import { Info, ChevronDown, ChevronRight } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { MethodBadge } from "@/components/method-badge";
 import { useLanguage } from "@/contexts/language-context";
 import { useSpec } from "@/contexts/spec-context";
 import { cn } from "@/lib/utils";
 import type { ParsedEndpoint, SchemaObject, SchemaProperty } from "@/types/openapi";
 
-// ── Schema property tree ──────────────────────────────────────────────────────
+// ── Schema property row (expandable, used in model cards) ─────────────────────
 
 interface SchemaPropertyRowProps {
   name: string;
@@ -34,7 +34,12 @@ function SchemaPropertyRow({ name, schema, required = false, depth = 0 }: Schema
     <div className={cn("border-l pl-3", depth > 0 ? "ml-3" : "ml-0")}>
       <div
         className={cn("flex items-start gap-2 py-1.5", hasChildren && "cursor-pointer")}
-        onClick={() => hasChildren && setOpen((v) => !v)}
+        onClick={(e) => {
+          if (hasChildren) {
+            e.stopPropagation();
+            setOpen((v) => !v);
+          }
+        }}
       >
         {hasChildren ? (
           open ? (
@@ -93,7 +98,42 @@ function SchemaPropertyRow({ name, schema, required = false, depth = 0 }: Schema
   );
 }
 
-// ── Model card ────────────────────────────────────────────────────────────────
+// ── Compact property row (flat, no nesting — used in Request Body section) ────
+
+interface CompactPropertyRowProps {
+  name: string;
+  schema: SchemaProperty;
+  required?: boolean;
+}
+
+function CompactPropertyRow({ name, schema, required = false }: CompactPropertyRowProps) {
+  const { t } = useLanguage();
+
+  const typeLabel = schema.type
+    ? `${schema.type}${schema.format ? `<${schema.format}>` : ""}${schema.type === "array" && schema.items?.type ? `[${schema.items.type}]` : ""}`
+    : "";
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 border-b px-3 py-2 last:border-0">
+      <code className="text-foreground text-xs font-semibold">{name}</code>
+
+      {typeLabel && <span className="text-muted-foreground text-xs">{typeLabel}</span>}
+
+      {schema.enum && schema.enum.length > 0 && (
+        <span className="text-muted-foreground text-xs">
+          {"enum: "}
+          {schema.enum.map(String).join(" | ")}
+        </span>
+      )}
+
+      <Badge variant={required ? "default" : "secondary"} className="h-4 px-1 text-[10px]">
+        {required ? t.specViewerRequired : t.specViewerOptional}
+      </Badge>
+    </div>
+  );
+}
+
+// ── Model card (full expandable detail — used in Schemas section) ─────────────
 
 interface ModelCardProps {
   name: string;
@@ -112,7 +152,10 @@ function ModelCard({ name, schema }: ModelCardProps) {
     <div className="rounded-md border">
       <div
         className="flex cursor-pointer items-center gap-2 px-3 py-2.5"
-        onClick={() => setOpen((v) => !v)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((v) => !v);
+        }}
       >
         {open ? (
           <ChevronDown className="text-muted-foreground size-3.5 shrink-0" />
@@ -177,25 +220,50 @@ function ModelCard({ name, schema }: ModelCardProps) {
   );
 }
 
-// ── Overview tab content ──────────────────────────────────────────────────────
+// ── Section heading ───────────────────────────────────────────────────────────
 
-interface OverviewContentProps {
-  endpoint: ParsedEndpoint;
-  selectedContentType: string;
-  onContentTypeChange: (ct: string) => void;
-  contentTypes: string[];
+function SectionHeading({ title }: { title: string }) {
+  return (
+    <p className="text-muted-foreground mb-2 text-[11px] font-semibold tracking-wider uppercase">
+      {title}
+    </p>
+  );
 }
 
-function OverviewContent({
-  endpoint,
-  selectedContentType,
-  onContentTypeChange,
-  contentTypes,
-}: OverviewContentProps) {
+// ── Sheet ─────────────────────────────────────────────────────────────────────
+
+interface EndpointSpecSheetProps {
+  endpoint: ParsedEndpoint;
+}
+
+export function EndpointSpecSheet({ endpoint }: EndpointSpecSheetProps) {
+  const [open, setOpen] = useState(false);
   const { t } = useLanguage();
+  const { spec } = useSpec();
+
+  const contentTypes = endpoint.requestBody?.content
+    ? Object.keys(endpoint.requestBody.content)
+    : [];
+  const defaultContentType =
+    contentTypes.find((ct) => ct.startsWith("application/json")) ?? contentTypes[0] ?? "";
+  const [selectedContentType, setSelectedContentType] = useState(defaultContentType);
+
+  const relatedSchemas: Array<{ name: string; schema: SchemaObject }> =
+    endpoint.schemaRefs && spec?.schemas
+      ? endpoint.schemaRefs
+          .filter((name) => spec.schemas![name] !== undefined)
+          .map((name) => ({ name, schema: spec.schemas![name] }))
+      : [];
 
   const hasParameters = endpoint.parameters && endpoint.parameters.length > 0;
   const hasRequestBody = !!endpoint.requestBody && contentTypes.length > 0;
+  const hasSchemas = relatedSchemas.length > 0;
+  const hasDetails =
+    !!endpoint.description || hasParameters || hasRequestBody || hasSchemas;
+
+  if (!hasDetails) {
+    return null;
+  }
 
   const selectedMedia =
     hasRequestBody && endpoint.requestBody!.content
@@ -209,134 +277,8 @@ function OverviewContent({
       : null;
   const bodyRequiredFields = (bodySchema as SchemaProperty | undefined)?.required ?? [];
 
-  return (
-    <>
-      {endpoint.description && (
-        <p className="text-muted-foreground pt-4 text-sm">{endpoint.description}</p>
-      )}
-
-      {hasParameters && (
-        <div className={cn("mt-4", !endpoint.description && "pt-4")}>
-          <p className="mb-2 text-xs font-semibold tracking-wide uppercase">
-            {t.specViewerParametersTitle}
-          </p>
-          <div className="rounded-md border">
-            {endpoint.parameters!.map((param, idx) => (
-              <div key={idx} className={cn("px-3 py-2.5", idx > 0 && "border-t")}>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <code className="text-xs font-semibold">{param.name}</code>
-                  <Badge variant="outline" className="h-4 px-1 text-[10px]">
-                    {param.in}
-                  </Badge>
-                  {param.schema?.type && (
-                    <span className="text-muted-foreground text-xs">{param.schema.type}</span>
-                  )}
-                  <Badge
-                    variant={param.required ? "default" : "secondary"}
-                    className="h-4 px-1 text-[10px]"
-                  >
-                    {param.required ? t.specViewerRequired : t.specViewerOptional}
-                  </Badge>
-                </div>
-                {param.description && (
-                  <p className="text-muted-foreground mt-0.5 text-xs">{param.description}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {hasRequestBody && (
-        <div className={cn("mt-4", !hasParameters && !endpoint.description && "pt-4")}>
-          <div className="mb-2 flex items-center gap-2">
-            <p className="text-xs font-semibold tracking-wide uppercase">
-              {t.specViewerRequestBodyTitle}
-            </p>
-            {contentTypes.length > 1 && (
-              <select
-                value={selectedContentType}
-                onChange={(e) => onContentTypeChange(e.target.value)}
-                className="border-input bg-background text-foreground ml-auto rounded border px-2 py-0.5 text-xs focus:outline-none focus:ring-1"
-              >
-                {contentTypes.map((ct) => (
-                  <option key={ct} value={ct}>
-                    {ct}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-          {endpoint.requestBody!.description && (
-            <p className="text-muted-foreground mb-2 text-xs">
-              {endpoint.requestBody!.description}
-            </p>
-          )}
-          <div className="rounded-md border">
-            <div className="bg-muted/40 border-b px-3 py-1.5">
-              <code className="text-muted-foreground text-xs">{selectedContentType}</code>
-            </div>
-            {bodyProperties && Object.keys(bodyProperties).length > 0 ? (
-              <div className="px-3 py-2">
-                {Object.entries(bodyProperties).map(([propName, propSchema]) => (
-                  <SchemaPropertyRow
-                    key={propName}
-                    name={propName}
-                    schema={propSchema}
-                    required={bodyRequiredFields.includes(propName)}
-                  />
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground px-3 py-2 text-xs">
-                {t.specViewerNoProperties}
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
-// ── Sheet content ─────────────────────────────────────────────────────────────
-
-interface EndpointSpecSheetProps {
-  endpoint: ParsedEndpoint;
-}
-
-export function EndpointSpecSheet({ endpoint }: EndpointSpecSheetProps) {
-  const [open, setOpen] = useState(false);
-  const { t } = useLanguage();
-  const { spec } = useSpec();
-
-  const contentTypes = endpoint.requestBody?.content ? Object.keys(endpoint.requestBody.content) : [];
-  const defaultContentType =
-    contentTypes.find((ct) => ct.startsWith("application/json")) ?? contentTypes[0] ?? "";
-  const [selectedContentType, setSelectedContentType] = useState(defaultContentType);
-
-  const relatedSchemas: Array<{ name: string; schema: SchemaObject }> =
-    endpoint.schemaRefs && spec?.schemas
-      ? endpoint.schemaRefs
-          .filter((name) => spec.schemas![name] !== undefined)
-          .map((name) => ({ name, schema: spec.schemas![name] }))
-      : [];
-
-  const hasModels = relatedSchemas.length > 0;
-  const hasParameters = endpoint.parameters && endpoint.parameters.length > 0;
-  const hasRequestBody = !!endpoint.requestBody && contentTypes.length > 0;
-  const hasDetails = !!endpoint.description || hasParameters || hasRequestBody || hasModels;
-
-  if (!hasDetails) {
-    return null;
-  }
-
-  const overviewProps: OverviewContentProps = {
-    endpoint,
-    selectedContentType,
-    onContentTypeChange: setSelectedContentType,
-    contentTypes,
-  };
+  // Track whether there's something before Schemas to decide top padding
+  const hasSomethingBeforeSchemas = !!endpoint.description || hasParameters || hasRequestBody;
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -353,10 +295,21 @@ export function EndpointSpecSheet({ endpoint }: EndpointSpecSheetProps) {
         <Info className="size-4" />
       </Button>
 
-      <SheetContent side="right">
-        <SheetHeader className="border-b pb-4">
+      {/*
+       * stopPropagation on SheetContent prevents React's synthetic event
+       * bubbling (which crosses Portal boundaries through the React tree)
+       * from triggering EndpointItem's onClick (checkbox toggle).
+       * sm:max-w-xl overrides SheetContent's default max-w-[520px].
+       */}
+      <SheetContent
+        side="right"
+        className="flex flex-col overflow-hidden p-0 sm:max-w-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* ── Fixed header ─────────────────────────────────────────────── */}
+        <SheetHeader className="shrink-0 border-b px-6 pt-6 pb-4">
           <SheetTitle className="text-sm">{t.specViewerTitle}</SheetTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <MethodBadge method={endpoint.method} />
             <code className="text-foreground font-mono text-sm break-all">{endpoint.path}</code>
           </div>
@@ -365,30 +318,119 @@ export function EndpointSpecSheet({ endpoint }: EndpointSpecSheetProps) {
           )}
         </SheetHeader>
 
-        {hasModels ? (
-          <Tabs defaultValue="overview" className="flex flex-1 flex-col overflow-hidden">
-            <TabsList className="mx-6 mt-3 shrink-0 self-start">
-              <TabsTrigger value="overview">{t.specViewerOverviewTab}</TabsTrigger>
-              <TabsTrigger value="models">{t.specViewerModelsTab}</TabsTrigger>
-            </TabsList>
+        {/* ── Scrollable body ───────────────────────────────────────────── */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="space-y-6 px-6 py-5">
+            {/* Description */}
+            {endpoint.description && (
+              <p className="text-muted-foreground text-sm">{endpoint.description}</p>
+            )}
 
-            <TabsContent value="overview" className="overflow-y-auto px-6 pb-6">
-              <OverviewContent {...overviewProps} />
-            </TabsContent>
-
-            <TabsContent value="models" className="overflow-y-auto px-6 pt-4 pb-6">
-              <div className="flex flex-col gap-2">
-                {relatedSchemas.map(({ name, schema }) => (
-                  <ModelCard key={name} name={name} schema={schema} />
-                ))}
+            {/* Parameters */}
+            {hasParameters && (
+              <div>
+                <SectionHeading title={t.specViewerParametersTitle} />
+                <div className="rounded-md border">
+                  {endpoint.parameters!.map((param, idx) => (
+                    <div key={idx} className={cn("px-3 py-2.5", idx > 0 && "border-t")}>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <code className="text-foreground text-xs font-semibold">{param.name}</code>
+                        <Badge variant="outline" className="h-4 px-1 text-[10px]">
+                          {param.in}
+                        </Badge>
+                        {param.schema?.type && (
+                          <span className="text-muted-foreground text-xs">
+                            {param.schema.type}
+                          </span>
+                        )}
+                        <Badge
+                          variant={param.required ? "default" : "secondary"}
+                          className="h-4 px-1 text-[10px]"
+                        >
+                          {param.required ? t.specViewerRequired : t.specViewerOptional}
+                        </Badge>
+                      </div>
+                      {param.description && (
+                        <p className="text-muted-foreground mt-0.5 text-xs">{param.description}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </TabsContent>
-          </Tabs>
-        ) : (
-          <div className="flex-1 overflow-y-auto px-6 pb-6">
-            <OverviewContent {...overviewProps} />
+            )}
+
+            {/* Request Body — compact flat property list */}
+            {hasRequestBody && (
+              <div>
+
+                <div className="mb-2 flex items-center gap-2">
+                  <SectionHeading title={t.specViewerRequestBodyTitle} />
+                  {contentTypes.length > 1 && (
+                    <select
+                      value={selectedContentType}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        setSelectedContentType(e.target.value);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="border-input bg-background text-foreground ml-auto rounded border px-2 py-0.5 text-xs focus:outline-none focus:ring-1"
+                    >
+                      {contentTypes.map((ct) => (
+                        <option key={ct} value={ct}>
+                          {ct}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                {endpoint.requestBody!.description && (
+                  <p className="text-muted-foreground mb-2 text-xs">
+                    {endpoint.requestBody!.description}
+                  </p>
+                )}
+
+                <div className="rounded-md border">
+                  {contentTypes.length === 1 && (
+                    <div className="bg-muted/40 border-b px-3 py-1.5">
+                      <code className="text-muted-foreground text-xs">{selectedContentType}</code>
+                    </div>
+                  )}
+                  {bodyProperties && Object.keys(bodyProperties).length > 0 ? (
+                    <>
+                      {Object.entries(bodyProperties).map(([propName, propSchema]) => (
+                        <CompactPropertyRow
+                          key={propName}
+                          name={propName}
+                          schema={propSchema}
+                          required={bodyRequiredFields.includes(propName)}
+                        />
+                      ))}
+                    </>
+                  ) : (
+                    <p className="text-muted-foreground px-3 py-2 text-xs">
+                      {t.specViewerNoProperties}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Schemas — full expandable model cards */}
+            {hasSchemas && (
+              <div>
+
+                {hasSomethingBeforeSchemas && <Separator className="mb-6" />}
+                <SectionHeading title={t.specViewerModelsTitle} />
+                <div className="flex flex-col gap-2">
+                  {relatedSchemas.map(({ name, schema }) => (
+                    <ModelCard key={name} name={name} schema={schema} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </SheetContent>
     </Sheet>
   );
