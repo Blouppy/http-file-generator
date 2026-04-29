@@ -70,6 +70,8 @@ export const translations = {
     // Spec viewer sheet
     specViewerTitle: "Endpoint Details",
     specViewerOpenButton: "View endpoint specification",
+    specViewerOverviewTab: "Overview",
+    specViewerModelsTab: "Models",
     specViewerParametersTitle: "Parameters",
     specViewerRequestBodyTitle: "Request Body",
     specViewerModelsTitle: "Models",
@@ -173,6 +175,8 @@ export const translations = {
     // Spec viewer sheet
     specViewerTitle: "Détails de l'endpoint",
     specViewerOpenButton: "Voir la spécification de l'endpoint",
+    specViewerOverviewTab: "Vue d'ensemble",
+    specViewerModelsTab: "Modèles",
     specViewerParametersTitle: "Paramètres",
     specViewerRequestBodyTitle: "Corps de la requête",
     specViewerModelsTitle: "Modèles",

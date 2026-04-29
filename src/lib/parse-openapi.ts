@@ -40,7 +40,7 @@ function extractSpecMetadata(spec: RawSpec): Pick<ParsedSpec, "title" | "version
 
 /**
  * Recursively collects every schema name referenced via `$ref: #/components/schemas/<name>`
- * in a raw (non-dereferenced) operation object. Returns a deduplicated array.
+ * in a raw (non-dereferenced) value. Returns the shared refs Set.
  */
 function collectSchemaRefs(obj: unknown, refs: Set<string> = new Set()): Set<string> {
   if (!obj || typeof obj !== "object") {
@@ -73,6 +73,36 @@ function collectSchemaRefs(obj: unknown, refs: Set<string> = new Set()): Set<str
   }
 
   return refs;
+}
+
+/**
+ * Expands a set of directly referenced schema names to include all transitively
+ * referenced schemas by walking the raw (pre-deref) component schemas.
+ */
+function expandTransitiveRefs(
+  directRefs: string[],
+  rawSchemas: Record<string, unknown>,
+): string[] {
+  const all = new Set(directRefs);
+  const queue = [...directRefs];
+
+  while (queue.length > 0) {
+    const name = queue.shift()!;
+    const rawSchema = rawSchemas[name];
+
+    if (!rawSchema) {
+      continue;
+    }
+
+    for (const nested of collectSchemaRefs(rawSchema)) {
+      if (!all.has(nested)) {
+        all.add(nested);
+        queue.push(nested);
+      }
+    }
+  }
+
+  return [...all];
 }
 
 /** Builds a single {@link ParsedEndpoint} from a path, HTTP method and operation object. */
@@ -127,6 +157,7 @@ export async function parseOpenAPISpec(content: string, filename: string): Promi
 
   // Collect $ref schema names BEFORE dereferencing — refs are erased by SwaggerParser.dereference.
   const rawPaths = (rawSpec as RawSpec).paths ?? {};
+  const rawSchemas = ((rawSpec as RawSpec).components?.schemas ?? {}) as Record<string, unknown>;
   const rawRefsByKey = new Map<string, string[]>();
 
   for (const [path, pathItem] of Object.entries(rawPaths)) {
@@ -138,10 +169,10 @@ export async function parseOpenAPISpec(content: string, filename: string): Promi
       const rawOp = (pathItem as Record<string, unknown>)[method];
 
       if (rawOp) {
-        const refs = [...collectSchemaRefs(rawOp)];
+        const directRefs = [...collectSchemaRefs(rawOp)];
 
-        if (refs.length > 0) {
-          rawRefsByKey.set(`${method}:${path}`, refs);
+        if (directRefs.length > 0) {
+          rawRefsByKey.set(`${method}:${path}`, expandTransitiveRefs(directRefs, rawSchemas));
         }
       }
     }
