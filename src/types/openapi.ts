@@ -8,6 +8,8 @@ export interface ParsedEndpoint {
   parameters?: Parameter[];
   requestBody?: RequestBody;
   responses?: Record<string, unknown>;
+  /** Schema names from components/schemas referenced by this endpoint (pre-deref). */
+  schemaRefs?: string[];
 }
 
 export interface Parameter {

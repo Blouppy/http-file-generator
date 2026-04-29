@@ -25,6 +25,7 @@ function parseRawContent(content: string, filename: string): unknown {
   if (filename.endsWith(".yaml") || filename.endsWith(".yml")) {
     return YAML.parse(content);
   }
+
   return JSON.parse(content);
 }
 
@@ -37,11 +38,49 @@ function extractSpecMetadata(spec: RawSpec): Pick<ParsedSpec, "title" | "version
   };
 }
 
+/**
+ * Recursively collects every schema name referenced via `$ref: #/components/schemas/<name>`
+ * in a raw (non-dereferenced) operation object. Returns a deduplicated array.
+ */
+function collectSchemaRefs(obj: unknown, refs: Set<string> = new Set()): Set<string> {
+  if (!obj || typeof obj !== "object") {
+    return refs;
+  }
+
+  if (Array.isArray(obj)) {
+    for (const item of obj) {
+      collectSchemaRefs(item, refs);
+    }
+
+    return refs;
+  }
+
+  const record = obj as Record<string, unknown>;
+
+  if (typeof record["$ref"] === "string") {
+    const ref = record["$ref"] as string;
+    const prefix = "#/components/schemas/";
+
+    if (ref.startsWith(prefix)) {
+      refs.add(ref.slice(prefix.length));
+    }
+
+    return refs;
+  }
+
+  for (const value of Object.values(record)) {
+    collectSchemaRefs(value, refs);
+  }
+
+  return refs;
+}
+
 /** Builds a single {@link ParsedEndpoint} from a path, HTTP method and operation object. */
 function buildEndpoint(
   path: string,
   method: string,
   operation: Record<string, unknown>,
+  schemaRefs?: string[],
 ): ParsedEndpoint {
   return {
     path,
@@ -52,11 +91,15 @@ function buildEndpoint(
     tags: operation.tags as string[] | undefined,
     parameters: operation.parameters as Parameter[] | undefined,
     requestBody: operation.requestBody as RequestBody | undefined,
+    schemaRefs: schemaRefs && schemaRefs.length > 0 ? schemaRefs : undefined,
   };
 }
 
 /** Iterates over all paths and HTTP methods, collecting every defined endpoint. */
-function extractEndpoints(paths: Record<string, Record<string, unknown>>): ParsedEndpoint[] {
+function extractEndpoints(
+  paths: Record<string, Record<string, unknown>>,
+  rawRefsByKey: Map<string, string[]>,
+): ParsedEndpoint[] {
   const endpoints: ParsedEndpoint[] = [];
 
   for (const [path, pathItem] of Object.entries(paths)) {
@@ -70,7 +113,8 @@ function extractEndpoints(paths: Record<string, Record<string, unknown>>): Parse
         | undefined;
 
       if (operation) {
-        endpoints.push(buildEndpoint(path, method, operation));
+        const schemaRefs = rawRefsByKey.get(`${method}:${path}`);
+        endpoints.push(buildEndpoint(path, method, operation, schemaRefs));
       }
     }
   }
@@ -80,11 +124,34 @@ function extractEndpoints(paths: Record<string, Record<string, unknown>>): Parse
 
 export async function parseOpenAPISpec(content: string, filename: string): Promise<ParsedSpec> {
   const rawSpec = parseRawContent(content, filename);
+
+  // Collect $ref schema names BEFORE dereferencing — refs are erased by SwaggerParser.dereference.
+  const rawPaths = (rawSpec as RawSpec).paths ?? {};
+  const rawRefsByKey = new Map<string, string[]>();
+
+  for (const [path, pathItem] of Object.entries(rawPaths)) {
+    if (!pathItem || typeof pathItem !== "object") {
+      continue;
+    }
+
+    for (const method of HTTP_METHODS) {
+      const rawOp = (pathItem as Record<string, unknown>)[method];
+
+      if (rawOp) {
+        const refs = [...collectSchemaRefs(rawOp)];
+
+        if (refs.length > 0) {
+          rawRefsByKey.set(`${method}:${path}`, refs);
+        }
+      }
+    }
+  }
+
   const api = await SwaggerParser.dereference(rawSpec as OpenAPI.Document);
   const spec = api as RawSpec;
 
   const { title, version, baseUrl } = extractSpecMetadata(spec);
-  const endpoints = extractEndpoints(spec.paths ?? {});
+  const endpoints = extractEndpoints(spec.paths ?? {}, rawRefsByKey);
   const schemas = (spec.components?.schemas ?? {}) as Record<string, SchemaObject>;
 
   return { title, version, baseUrl, endpoints, schemas };

@@ -8,8 +8,9 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { MethodBadge } from "@/components/method-badge";
 import { useLanguage } from "@/contexts/language-context";
+import { useSpec } from "@/contexts/spec-context";
 import { cn } from "@/lib/utils";
-import type { ParsedEndpoint, SchemaProperty } from "@/types/openapi";
+import type { ParsedEndpoint, SchemaObject, SchemaProperty } from "@/types/openapi";
 
 // ── Schema property tree ──────────────────────────────────────────────────────
 
@@ -92,6 +93,90 @@ function SchemaPropertyRow({ name, schema, required = false, depth = 0 }: Schema
   );
 }
 
+// ── Model card ────────────────────────────────────────────────────────────────
+
+interface ModelCardProps {
+  name: string;
+  schema: SchemaObject;
+}
+
+function ModelCard({ name, schema }: ModelCardProps) {
+  const [open, setOpen] = useState(true);
+  const { t } = useLanguage();
+
+  const properties = schema.properties ?? {};
+  const requiredFields = schema.required ?? [];
+  const hasProperties = Object.keys(properties).length > 0;
+
+  return (
+    <div className="rounded-md border">
+      <div
+        className="flex cursor-pointer items-center gap-2 px-3 py-2.5"
+        onClick={() => setOpen((v) => !v)}
+      >
+        {open ? (
+          <ChevronDown className="text-muted-foreground size-3.5 shrink-0" />
+        ) : (
+          <ChevronRight className="text-muted-foreground size-3.5 shrink-0" />
+        )}
+        <span className="flex-1 text-xs font-semibold">{name}</span>
+        {schema.type && (
+          <Badge variant="secondary" className="text-[10px]">
+            {schema.type}
+          </Badge>
+        )}
+      </div>
+
+      {open && (
+        <div className="border-t px-3 pt-2 pb-3">
+          {schema.description && (
+            <p className="text-muted-foreground mb-2 text-xs">{schema.description}</p>
+          )}
+
+          {schema.enum && schema.enum.length > 0 && (
+            <div className="mb-2">
+              <p className="mb-1 text-[10px] font-semibold tracking-wide uppercase">
+                {t.specViewerEnumValues}
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {schema.enum.map((val) => (
+                  <Badge key={String(val)} variant="outline" className="text-xs">
+                    {String(val)}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {hasProperties ? (
+            <>
+              <p className="mb-1 text-[10px] font-semibold tracking-wide uppercase">
+                {t.specViewerProperties}
+              </p>
+              <div className="rounded-sm border">
+                <div className="px-2 py-1">
+                  {Object.entries(properties).map(([propName, propSchema]) => (
+                    <SchemaPropertyRow
+                      key={propName}
+                      name={propName}
+                      schema={propSchema}
+                      required={requiredFields.includes(propName)}
+                    />
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            !schema.enum && (
+              <p className="text-muted-foreground text-xs">{t.specViewerNoProperties}</p>
+            )
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Sheet content ─────────────────────────────────────────────────────────────
 
 interface EndpointSpecSheetProps {
@@ -101,10 +186,20 @@ interface EndpointSpecSheetProps {
 export function EndpointSpecSheet({ endpoint }: EndpointSpecSheetProps) {
   const [open, setOpen] = useState(false);
   const { t } = useLanguage();
+  const { spec } = useSpec();
 
   const hasParameters = endpoint.parameters && endpoint.parameters.length > 0;
   const hasRequestBody = !!endpoint.requestBody;
-  const hasDetails = !!endpoint.description || hasParameters || hasRequestBody;
+
+  const relatedSchemas: Array<{ name: string; schema: SchemaObject }> =
+    endpoint.schemaRefs && spec?.schemas
+      ? endpoint.schemaRefs
+          .filter((name) => spec.schemas![name] !== undefined)
+          .map((name) => ({ name, schema: spec.schemas![name] }))
+      : [];
+
+  const hasModels = relatedSchemas.length > 0;
+  const hasDetails = !!endpoint.description || hasParameters || hasRequestBody || hasModels;
 
   if (!hasDetails) {
     return null;
@@ -218,6 +313,20 @@ export function EndpointSpecSheet({ endpoint }: EndpointSpecSheetProps) {
                     </div>
                   );
                 })}
+            </div>
+          )}
+
+          {hasModels && (
+            <div className="mt-4">
+              <Separator className="mb-4" />
+              <p className="mb-2 text-xs font-semibold tracking-wide uppercase">
+                {t.specViewerModelsTitle}
+              </p>
+              <div className="flex flex-col gap-2">
+                {relatedSchemas.map(({ name, schema }) => (
+                  <ModelCard key={name} name={name} schema={schema} />
+                ))}
+              </div>
             </div>
           )}
         </div>
