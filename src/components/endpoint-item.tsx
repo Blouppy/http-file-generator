@@ -1,6 +1,5 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { MethodBadge } from "@/components/method-badge";
-import { EndpointSpecSheet } from "@/components/endpoint-spec-sheet";
 import { cn } from "@/lib/utils";
 import type { ParsedEndpoint } from "@/types/openapi";
 
@@ -34,7 +33,6 @@ export function EndpointItem({ endpoint, isSelected, onToggle }: EndpointItemPro
           )}
         </div>
       </div>
-      <EndpointSpecSheet endpoint={endpoint} />
     </div>
   );
 }

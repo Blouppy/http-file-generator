@@ -4,6 +4,7 @@ import { Fragment, useMemo, useState, useCallback } from "react";
 import { Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SpecSheet } from "@/components/spec-sheet";
 import { cn } from "@/lib/utils";
 import { generateHttpFileContent } from "@/lib/generate-http";
 import { useLanguage } from "@/contexts/language-context";
@@ -149,8 +150,9 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
     <Card className="flex h-full flex-col overflow-hidden">
       <CardHeader className="shrink-0 flex-row items-center justify-between gap-2 space-y-0 pb-3">
         <CardTitle className="truncate text-base">{t.previewTitle}</CardTitle>
-        {hasEndpoints && (
-          <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
+          <SpecSheet spec={spec} />
+          {hasEndpoints && (
             <Button size="sm" variant="outline" onClick={handleCopy}>
               {copied ? (
                 <Check className="mr-1.5 h-3.5 w-3.5 text-green-500" />
@@ -159,8 +161,8 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
               )}
               {copied ? t.previewCopied : t.previewCopy}
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </CardHeader>
       <CardContent className="flex-1 overflow-y-auto p-0">
         {!hasEndpoints ? (
