@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -237,9 +237,14 @@ export function EndpointSpecPanel({ endpoint }: EndpointSpecPanelProps) {
   const { t } = useLanguage();
   const { spec } = useSpec();
 
-  const contentTypes = endpoint.requestBody?.content ? Object.keys(endpoint.requestBody.content) : [];
-  const defaultContentType =
-    contentTypes.find((ct) => ct.startsWith("application/json")) ?? contentTypes[0] ?? "";
+  const contentTypes = useMemo(
+    () => (endpoint.requestBody?.content ? Object.keys(endpoint.requestBody.content) : []),
+    [endpoint.requestBody?.content],
+  );
+  const defaultContentType = useMemo(
+    () => contentTypes.find((ct) => ct.startsWith("application/json")) ?? contentTypes[0] ?? "",
+    [contentTypes],
+  );
   const [selectedContentType, setSelectedContentType] = useState(defaultContentType);
 
   const relatedSchemas: Array<{ name: string; schema: SchemaObject }> =

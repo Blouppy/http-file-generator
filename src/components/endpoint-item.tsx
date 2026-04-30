@@ -27,8 +27,8 @@ export function EndpointItem({ endpoint, isSelected, onToggle }: EndpointItemPro
   );
   const hasSchemas = !!(
     endpoint.schemaRefs &&
-    endpoint.schemaRefs.length > 0 &&
-    spec?.schemas
+    spec?.schemas &&
+    endpoint.schemaRefs.some((name) => spec.schemas![name] !== undefined)
   );
   const hasDetails = hasParameters || hasRequestBody || hasSchemas || !!endpoint.description;
 
