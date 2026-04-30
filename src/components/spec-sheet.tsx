@@ -335,6 +335,7 @@ function EndpointDetailPanel({ endpoint, schemas }: EndpointDetailPanelProps) {
                       {param.schema?.type && (
                         <span className="text-muted-foreground text-xs">{param.schema.type}</span>
                       )}
+
                       <Badge
                         variant={param.required ? "default" : "secondary"}
                         className="h-4 px-1 text-[10px]"
@@ -408,6 +409,7 @@ function EndpointDetailPanel({ endpoint, schemas }: EndpointDetailPanelProps) {
               {(!!endpoint.description || hasParameters || hasRequestBody) && (
                 <Separator className="mb-4" />
               )}
+
               <SectionHeading title={t.specViewerModelsTitle} />
               <div className="flex flex-col gap-2">
                 {relatedSchemas.map(({ name, schema }) => (
