@@ -66,11 +66,10 @@ export const translations = {
     previewSelectEndpoint: "Check endpoints to preview their .http file",
     previewCopy: "Copy",
     previewCopied: "Copied!",
-    previewViewSpec: "View Spec",
 
-    // Spec viewer sheet
+    // Spec viewer panel
     specViewerTitle: "Specification",
-    specViewerOpenButton: "View endpoint specification",
+    specViewerOpenButton: "Toggle endpoint details",
     specViewerOverviewTab: "Overview",
     specViewerModelsTab: "Models",
     specViewerParametersTitle: "Parameters",
@@ -172,11 +171,10 @@ export const translations = {
     previewSelectEndpoint: "Cochez des endpoints pour prévisualiser leur fichier .http",
     previewCopy: "Copier",
     previewCopied: "Copié !",
-    previewViewSpec: "Voir la spec",
 
-    // Spec viewer sheet
+    // Spec viewer panel
     specViewerTitle: "Spécification",
-    specViewerOpenButton: "Voir la spécification de l'endpoint",
+    specViewerOpenButton: "Afficher/masquer les détails de l'endpoint",
     specViewerOverviewTab: "Vue d'ensemble",
     specViewerModelsTab: "Modèles",
     specViewerParametersTitle: "Paramètres",
