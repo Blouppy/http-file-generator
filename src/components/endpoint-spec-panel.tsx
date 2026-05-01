@@ -9,6 +9,49 @@ import { useSpec } from "@/contexts/spec-context";
 import { cn } from "@/lib/utils";
 import type { ParsedEndpoint, SchemaObject, SchemaProperty } from "@/types/openapi";
 
+// ── Type label helper ───────────────────────────────────────────────────────────
+
+/**
+ * Formats a schema type (which may be a string array in OpenAPI 3.1) into a readable label.
+ * - `["integer", "string"]` + `"int32"` → `"integer | string<int32>"`
+ * - `"object"` with `schemaName` "UserDto" → `"UserDto"`
+ * - `"array"` with items `schemaName` "LabelDto" → `"array[LabelDto]"`
+ */
+function formatTypeLabel(schema: SchemaProperty): string {
+  const { type, format, items, schemaName } = schema;
+
+  if (!type && !schemaName) {
+    return "";
+  }
+
+  // Object type with a known schema name — show the schema name directly.
+  const resolvedTypes = Array.isArray(type) ? type.filter((t) => t !== "null") : type ? [type] : [];
+  const isObjectType = resolvedTypes.length === 1 && resolvedTypes[0] === "object";
+
+  if (isObjectType && schemaName) {
+    return schemaName;
+  }
+
+  // Array type — resolve item type label.
+  const isArrayType = resolvedTypes.length === 1 && resolvedTypes[0] === "array";
+
+  if (isArrayType) {
+    const itemLabel = items?.schemaName ?? items?.type ?? "";
+    return itemLabel ? `array[${itemLabel}]` : "array";
+  }
+
+  // General case: join type(s) with " | ", append format if present.
+  const typeStr = resolvedTypes.join(" | ");
+
+  // Fallback: when no types resolved (e.g. enum-only schemas without an explicit type field),
+  // use the schema name as the label.
+  if (!typeStr && schemaName) {
+    return schemaName;
+  }
+
+  return format ? `${typeStr}<${format}>` : typeStr;
+}
+
 // ── Schema property row (expandable, used in model cards) ─────────────────────
 
 interface SchemaPropertyRowProps {
@@ -22,8 +65,16 @@ function SchemaPropertyRow({ name, schema, required = false, depth = 0 }: Schema
   const [open, setOpen] = useState(false);
   const { t } = useLanguage();
 
+  const effectiveType = Array.isArray(schema.type)
+    ? schema.type.filter((t) => t !== "null")
+    : schema.type
+      ? [schema.type]
+      : [];
   const hasChildren =
-    schema.type === "object" && schema.properties && Object.keys(schema.properties).length > 0;
+    effectiveType.length === 1 &&
+    effectiveType[0] === "object" &&
+    !!schema.properties &&
+    Object.keys(schema.properties).length > 0;
 
   const requiredChildren = schema.required ?? [];
 
@@ -52,11 +103,9 @@ function SchemaPropertyRow({ name, schema, required = false, depth = 0 }: Schema
           <div className="flex flex-wrap items-center gap-1.5">
             <code className="text-foreground text-xs font-semibold">{name}</code>
 
-            {schema.type && (
+            {(schema.type ?? schema.schemaName) && (
               <span className="text-muted-foreground text-xs">
-                {schema.type}
-                {schema.format ? `<${schema.format}>` : ""}
-                {schema.type === "array" && schema.items?.type ? `[${schema.items.type}]` : ""}
+                {formatTypeLabel(schema)}
               </span>
             )}
 
@@ -106,9 +155,7 @@ interface CompactPropertyRowProps {
 function CompactPropertyRow({ name, schema, required = false }: CompactPropertyRowProps) {
   const { t } = useLanguage();
 
-  const typeLabel = schema.type
-    ? `${schema.type}${schema.format ? `<${schema.format}>` : ""}${schema.type === "array" && schema.items?.type ? `[${schema.items.type}]` : ""}`
-    : "";
+  const typeLabel = formatTypeLabel(schema);
 
   return (
     <div className="flex flex-wrap items-center gap-1.5 border-b px-3 py-2 last:border-0">

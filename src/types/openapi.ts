@@ -42,7 +42,7 @@ export interface MediaType {
 }
 
 export interface SchemaProperty {
-  type?: string;
+  type?: string | string[];
   description?: string;
   format?: string;
   enum?: unknown[];
@@ -50,10 +50,12 @@ export interface SchemaProperty {
   properties?: Record<string, SchemaProperty>;
   required?: string[];
   nullable?: boolean;
+  /** Original `$ref` schema name, annotated after dereferencing (OpenAPI 3.1 refs are erased by dereference). */
+  schemaName?: string;
 }
 
 export interface SchemaObject {
-  type?: string;
+  type?: string | string[];
   description?: string;
   properties?: Record<string, SchemaProperty>;
   required?: string[];
