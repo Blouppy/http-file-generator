@@ -352,35 +352,52 @@ export function EndpointSpecPanel({ endpoint }: EndpointSpecPanelProps) {
         )}
 
         {/* Parameters */}
-        {hasParameters && (
-          <div>
-            <SectionHeading title={t.specViewerParametersTitle} />
-            <div className="rounded-md border">
-              {endpoint.parameters!.map((param, idx) => (
-                <div key={idx} className={cn("px-3 py-2.5", idx > 0 && "border-t")}>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <code className="text-foreground text-xs font-semibold">{pascalToCamel(param.name)}</code>
-                    <Badge variant="outline" className="h-4 px-1 text-[10px]">
-                      {param.in}
-                    </Badge>
-                    {param.schema?.type && (
-                      <span className="text-muted-foreground text-xs">{param.schema.type}</span>
-                    )}
-                    <Badge
-                      variant={param.required ? "default" : "secondary"}
-                      className="h-4 px-1 text-[10px]"
-                    >
-                      {param.required ? t.specViewerRequired : t.specViewerOptional}
-                    </Badge>
-                  </div>
-                  {param.description && (
-                    <p className="text-muted-foreground mt-0.5 text-xs">{param.description}</p>
-                  )}
-                </div>
-              ))}
+        {hasParameters && (() => {
+          const pathParams = endpoint.parameters!.filter((p) => p.in === "path");
+          const queryParams = endpoint.parameters!.filter((p) => p.in === "query");
+
+          const renderParamRow = (param: import("@/types/openapi").Parameter, idx: number) => (
+            <div key={idx} className={cn("px-3 py-2.5", idx > 0 && "border-t")}>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <code className="text-foreground text-xs font-semibold">{pascalToCamel(param.name)}</code>
+                {param.schema?.type && (
+                  <span className="text-muted-foreground text-xs">{param.schema.type}</span>
+                )}
+                <Badge
+                  variant={param.required ? "default" : "secondary"}
+                  className="h-4 px-1 text-[10px]"
+                >
+                  {param.required ? t.specViewerRequired : t.specViewerOptional}
+                </Badge>
+              </div>
+              {param.description && (
+                <p className="text-muted-foreground mt-0.5 text-xs">{param.description}</p>
+              )}
             </div>
-          </div>
-        )}
+          );
+
+          return (
+            <div className="flex flex-col gap-3">
+              {pathParams.length > 0 && (
+                <div>
+                  <SectionHeading title={t.specViewerPathParamsTitle} />
+                  <div className="rounded-md border">
+                    {pathParams.map((param, idx) => renderParamRow(param, idx))}
+                  </div>
+                </div>
+              )}
+
+              {queryParams.length > 0 && (
+                <div>
+                  <SectionHeading title={t.specViewerQueryParamsTitle} />
+                  <div className="rounded-md border">
+                    {queryParams.map((param, idx) => renderParamRow(param, idx))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Body */}
         {hasRequestBody && (
