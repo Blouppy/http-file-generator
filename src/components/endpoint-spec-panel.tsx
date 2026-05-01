@@ -361,7 +361,11 @@ export function EndpointSpecPanel({ endpoint }: EndpointSpecPanelProps) {
               <div className="flex flex-wrap items-center gap-1.5">
                 <code className="text-foreground text-xs font-semibold">{pascalToCamel(param.name)}</code>
                 {param.schema?.type && (
-                  <span className="text-muted-foreground text-xs">{param.schema.type}</span>
+                  <span className="text-muted-foreground text-xs">
+                    {param.schema.type === "array" && param.schema.items?.type
+                      ? `array[${Array.isArray(param.schema.items.type) ? param.schema.items.type.join(" | ") : param.schema.items.type}]`
+                      : param.schema.type}
+                  </span>
                 )}
                 <Badge
                   variant={param.required ? "default" : "secondary"}

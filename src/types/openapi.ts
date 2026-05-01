@@ -31,6 +31,7 @@ export interface Parameter {
   required?: boolean;
   schema?: {
     type?: string;
+    items?: { type?: string | string[] };
     example?: unknown;
     default?: unknown;
   };
