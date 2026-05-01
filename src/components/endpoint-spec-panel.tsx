@@ -8,6 +8,21 @@ import { useSpec } from "@/contexts/spec-context";
 import { cn } from "@/lib/utils";
 import type { ParsedEndpoint, SchemaObject, SchemaProperty } from "@/types/openapi";
 
+/**
+ * Converts a PascalCase identifier to camelCase by lowercasing the first character.
+ * Other formats (camelCase, ALL_CAPS, kebab-case, snake_case) are left unchanged.
+ * - "StatusIds" → "statusIds"
+ * - "projectId"  → "projectId"  (already camelCase, unchanged)
+ * - "X-Version"  → "X-Version"  (kebab, second char is not lowercase, unchanged)
+ */
+function pascalToCamel(name: string): string {
+  if (name.length >= 2 && name[0] >= "A" && name[0] <= "Z" && name[1] >= "a" && name[1] <= "z") {
+    return name[0].toLowerCase() + name.slice(1);
+  }
+
+  return name;
+}
+
 // ── Type label helper ───────────────────────────────────────────────────────────
 
 /**
@@ -344,7 +359,7 @@ export function EndpointSpecPanel({ endpoint }: EndpointSpecPanelProps) {
               {endpoint.parameters!.map((param, idx) => (
                 <div key={idx} className={cn("px-3 py-2.5", idx > 0 && "border-t")}>
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <code className="text-foreground text-xs font-semibold">{param.name}</code>
+                    <code className="text-foreground text-xs font-semibold">{pascalToCamel(param.name)}</code>
                     <Badge variant="outline" className="h-4 px-1 text-[10px]">
                       {param.in}
                     </Badge>
@@ -450,10 +465,28 @@ export function EndpointSpecPanel({ endpoint }: EndpointSpecPanelProps) {
             <div className="mb-2 flex items-center gap-2">
               <SectionHeading title={t.specViewerResponseTitle} />
 
-              <span className="text-muted-foreground ml-auto text-xs">
-                {endpoint.primaryResponse.statusCode}
-                {endpoint.primaryResponse.description &&
-                  ` — ${endpoint.primaryResponse.description}`}
+              <span className="ml-auto flex items-center gap-1.5">
+                <span
+                  className={cn(
+                    "inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-semibold tabular-nums",
+                    endpoint.primaryResponse.statusCode.startsWith("2") &&
+                      "bg-green-500/15 text-green-600 dark:text-green-400",
+                    endpoint.primaryResponse.statusCode.startsWith("3") &&
+                      "bg-blue-500/15 text-blue-600 dark:text-blue-400",
+                    endpoint.primaryResponse.statusCode.startsWith("4") &&
+                      "bg-orange-500/15 text-orange-600 dark:text-orange-400",
+                    endpoint.primaryResponse.statusCode.startsWith("5") &&
+                      "bg-red-500/15 text-red-600 dark:text-red-400",
+                  )}
+                >
+                  {endpoint.primaryResponse.statusCode}
+                </span>
+
+                {endpoint.primaryResponse.description && (
+                  <span className="text-muted-foreground text-xs">
+                    {endpoint.primaryResponse.description}
+                  </span>
+                )}
               </span>
             </div>
 
