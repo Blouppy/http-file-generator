@@ -1,4 +1,11 @@
-import { getEndpointId, groupEndpointsByTag, filterEndpoints } from "@/services/openapi.service";
+import {
+  getEndpointId,
+  groupEndpointsByTag,
+  filterEndpoints,
+  parseSpecFromUrl,
+  URL_VALIDATION_ERROR,
+  URL_FETCH_ERROR,
+} from "@/services/openapi.service";
 import type { ParsedEndpoint } from "@/types/openapi";
 
 const makeEndpoint = (method: string, path: string, tags?: string[]): ParsedEndpoint => ({
@@ -143,5 +150,74 @@ describe("filterEndpoints", () => {
 
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({ path: "/misc" });
+  });
+});
+
+const MINIMAL_SPEC = JSON.stringify({
+  openapi: "3.0.0",
+  info: { title: "Test API", version: "2.0.0" },
+  paths: {},
+});
+
+describe("parseSpecFromUrl", () => {
+  const mockFetch = jest.fn();
+
+  beforeEach(() => {
+    global.fetch = mockFetch;
+  });
+
+  afterEach(() => {
+    mockFetch.mockReset();
+  });
+
+  it(`throws ${URL_VALIDATION_ERROR} for a malformed URL`, async () => {
+    await expect(parseSpecFromUrl("not a url")).rejects.toThrow(URL_VALIDATION_ERROR);
+  });
+
+  it(`throws ${URL_VALIDATION_ERROR} for a non-HTTP(S) URL`, async () => {
+    await expect(parseSpecFromUrl("ftp://example.com/spec.json")).rejects.toThrow(
+      URL_VALIDATION_ERROR,
+    );
+  });
+
+  it(`throws ${URL_FETCH_ERROR} when fetch throws`, async () => {
+    mockFetch.mockRejectedValue(new Error("Network error"));
+
+    await expect(parseSpecFromUrl("https://example.com/spec.json")).rejects.toThrow(
+      URL_FETCH_ERROR,
+    );
+  });
+
+  it(`throws ${URL_FETCH_ERROR} when the response status is not OK`, async () => {
+    mockFetch.mockResolvedValue({ ok: false, status: 404 });
+
+    await expect(parseSpecFromUrl("https://example.com/spec.json")).rejects.toThrow(
+      URL_FETCH_ERROR,
+    );
+  });
+
+  it("parses a valid JSON spec fetched from a URL", async () => {
+    mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve(MINIMAL_SPEC) });
+
+    const result = await parseSpecFromUrl("https://example.com/openapi.json");
+
+    expect(result.title).toBe("Test API");
+    expect(result.version).toBe("2.0.0");
+  });
+
+  it("infers JSON format when the URL has no recognised extension", async () => {
+    mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve(MINIMAL_SPEC) });
+
+    const result = await parseSpecFromUrl("https://example.com/api/v3/openapi");
+
+    expect(result.title).toBe("Test API");
+  });
+
+  it("accepts an http:// URL", async () => {
+    mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve(MINIMAL_SPEC) });
+
+    const result = await parseSpecFromUrl("http://example.com/spec.json");
+
+    expect(result.title).toBe("Test API");
   });
 });

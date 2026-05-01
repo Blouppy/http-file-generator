@@ -66,11 +66,7 @@ export function EndpointItem({ endpoint, isSelected, onToggle }: EndpointItemPro
               setSpecOpen((v) => !v);
             }}
           >
-            {specOpen ? (
-              <ChevronDown className="size-4" />
-            ) : (
-              <ChevronRight className="size-4" />
-            )}
+            {specOpen ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
           </button>
         )}
       </div>
@@ -79,4 +75,3 @@ export function EndpointItem({ endpoint, isSelected, onToggle }: EndpointItemPro
     </div>
   );
 }
-

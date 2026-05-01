@@ -126,9 +126,7 @@ function SchemaPropertyRow({ name, schema, required = false, depth = 0 }: Schema
             <code className="text-foreground text-xs font-semibold">{name}</code>
 
             {(schema.type ?? schema.schemaName) && (
-              <span className="text-muted-foreground text-xs">
-                {formatTypeLabel(schema)}
-              </span>
+              <span className="text-muted-foreground text-xs">{formatTypeLabel(schema)}</span>
             )}
 
             {schema.enum && schema.enum.length > 0 && (
@@ -151,10 +149,10 @@ function SchemaPropertyRow({ name, schema, required = false, depth = 0 }: Schema
 
       {hasChildren && open && (
         <div className="mb-1">
-          {isArrayType && (
-            <code className="text-muted-foreground ml-3 block text-xs">[</code>
-          )}
-          <code className={cn("text-muted-foreground block text-xs", isArrayType ? "ml-6" : "ml-3")}>
+          {isArrayType && <code className="text-muted-foreground ml-3 block text-xs">[</code>}
+          <code
+            className={cn("text-muted-foreground block text-xs", isArrayType ? "ml-6" : "ml-3")}
+          >
             {"{"}
           </code>
           {Object.entries(childContainer!.properties!).map(([propName, propSchema]) => (
@@ -166,12 +164,12 @@ function SchemaPropertyRow({ name, schema, required = false, depth = 0 }: Schema
               depth={depth + (isArrayType ? 2 : 1)}
             />
           ))}
-          <code className={cn("text-muted-foreground block text-xs", isArrayType ? "ml-6" : "ml-3")}>
+          <code
+            className={cn("text-muted-foreground block text-xs", isArrayType ? "ml-6" : "ml-3")}
+          >
             {"}"}
           </code>
-          {isArrayType && (
-            <code className="text-muted-foreground ml-3 block text-xs">]</code>
-          )}
+          {isArrayType && <code className="text-muted-foreground ml-3 block text-xs">]</code>}
         </div>
       )}
     </div>
@@ -352,70 +350,79 @@ export function EndpointSpecPanel({ endpoint }: EndpointSpecPanelProps) {
         )}
 
         {/* Parameters */}
-        {hasParameters && (() => {
-          const pathParams = endpoint.parameters!.filter((p) => p.in === "path");
-          const queryParams = endpoint.parameters!.filter((p) => p.in === "query");
+        {hasParameters &&
+          (() => {
+            const pathParams = endpoint.parameters!.filter((p) => p.in === "path");
+            const queryParams = endpoint.parameters!.filter((p) => p.in === "query");
 
-          const renderParamRow = (param: import("@/types/openapi").Parameter, idx: number) => (
-            <div key={idx} className={cn("px-3 py-2.5", idx > 0 && "border-t")}>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <code className="text-foreground text-xs font-semibold">{pascalToCamel(param.name)}</code>
-                {param.schema?.type && (() => {
-                  const rawType = param.schema!.type!;
-                  const types = Array.isArray(rawType) ? rawType.filter((t) => t !== "null") : [rawType];
-                  const isArray = types.length === 1 && types[0] === "array";
-                  const itemsType = param.schema!.items?.type;
-                  const itemsLabel = itemsType
-                    ? Array.isArray(itemsType) ? itemsType.join(" | ") : itemsType
-                    : undefined;
-                  const label = isArray
-                    ? itemsLabel ? `array[${itemsLabel}]` : "array"
-                    : types.join(" | ");
+            const renderParamRow = (param: import("@/types/openapi").Parameter, idx: number) => (
+              <div key={idx} className={cn("px-3 py-2.5", idx > 0 && "border-t")}>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <code className="text-foreground text-xs font-semibold">
+                    {pascalToCamel(param.name)}
+                  </code>
+                  {param.schema?.type &&
+                    (() => {
+                      const rawType = param.schema!.type!;
+                      const types = Array.isArray(rawType)
+                        ? rawType.filter((t) => t !== "null")
+                        : [rawType];
+                      const isArray = types.length === 1 && types[0] === "array";
+                      const itemsType = param.schema!.items?.type;
+                      const itemsLabel = itemsType
+                        ? Array.isArray(itemsType)
+                          ? itemsType.join(" | ")
+                          : itemsType
+                        : undefined;
+                      const label = isArray
+                        ? itemsLabel
+                          ? `array[${itemsLabel}]`
+                          : "array"
+                        : types.join(" | ");
 
-                  return (
-                    <span className="text-muted-foreground text-xs">{label}</span>
-                  );
-                })()}
-                {param.schema?.enum && param.schema.enum.length > 0 && (
-                  <span className="text-muted-foreground text-xs">
-                    {"enum: "}{param.schema.enum.map(String).join(" | ")}
-                  </span>
+                      return <span className="text-muted-foreground text-xs">{label}</span>;
+                    })()}
+                  {param.schema?.enum && param.schema.enum.length > 0 && (
+                    <span className="text-muted-foreground text-xs">
+                      {"enum: "}
+                      {param.schema.enum.map(String).join(" | ")}
+                    </span>
+                  )}
+                  <Badge
+                    variant={param.required ? "default" : "secondary"}
+                    className="h-4 px-1 text-[10px]"
+                  >
+                    {param.required ? t.specViewerRequired : t.specViewerOptional}
+                  </Badge>
+                </div>
+                {param.description && (
+                  <p className="text-muted-foreground mt-0.5 text-xs">{param.description}</p>
                 )}
-                <Badge
-                  variant={param.required ? "default" : "secondary"}
-                  className="h-4 px-1 text-[10px]"
-                >
-                  {param.required ? t.specViewerRequired : t.specViewerOptional}
-                </Badge>
               </div>
-              {param.description && (
-                <p className="text-muted-foreground mt-0.5 text-xs">{param.description}</p>
-              )}
-            </div>
-          );
+            );
 
-          return (
-            <div className="flex flex-col gap-3">
-              {pathParams.length > 0 && (
-                <div>
-                  <SectionHeading title={t.specViewerPathParamsTitle} />
-                  <div className="rounded-md border">
-                    {pathParams.map((param, idx) => renderParamRow(param, idx))}
+            return (
+              <div className="flex flex-col gap-3">
+                {pathParams.length > 0 && (
+                  <div>
+                    <SectionHeading title={t.specViewerPathParamsTitle} />
+                    <div className="rounded-md border">
+                      {pathParams.map((param, idx) => renderParamRow(param, idx))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {queryParams.length > 0 && (
-                <div>
-                  <SectionHeading title={t.specViewerQueryParamsTitle} />
-                  <div className="rounded-md border">
-                    {queryParams.map((param, idx) => renderParamRow(param, idx))}
+                {queryParams.length > 0 && (
+                  <div>
+                    <SectionHeading title={t.specViewerQueryParamsTitle} />
+                    <div className="rounded-md border">
+                      {queryParams.map((param, idx) => renderParamRow(param, idx))}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          );
-        })()}
+                )}
+              </div>
+            );
+          })()}
 
         {/* Body */}
         {hasRequestBody && (
@@ -448,7 +455,7 @@ export function EndpointSpecPanel({ endpoint }: EndpointSpecPanelProps) {
                         setSelectedContentType(e.target.value);
                       }}
                       onClick={(e) => e.stopPropagation()}
-                      className="border-input bg-background text-foreground ml-auto rounded border px-2 py-0.5 text-xs focus:outline-none focus:ring-1"
+                      className="border-input bg-background text-foreground ml-auto rounded border px-2 py-0.5 text-xs focus:ring-1 focus:outline-none"
                     >
                       {contentTypes.map((ct) => (
                         <option key={ct} value={ct}>

@@ -1,8 +1,44 @@
 import { parseOpenAPISpec } from "@/lib/parse-openapi";
 import type { ParsedSpec, ParsedEndpoint } from "@/types/openapi";
 
+export const URL_VALIDATION_ERROR = "INVALID_URL";
+export const URL_FETCH_ERROR = "URL_FETCH_ERROR";
+
 export async function parseSpec(content: string, filename: string): Promise<ParsedSpec> {
   return parseOpenAPISpec(content, filename);
+}
+
+export async function parseSpecFromUrl(url: string): Promise<ParsedSpec> {
+  let parsedUrl: URL;
+
+  try {
+    parsedUrl = new URL(url.trim());
+  } catch {
+    throw new Error(URL_VALIDATION_ERROR);
+  }
+
+  if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+    throw new Error(URL_VALIDATION_ERROR);
+  }
+
+  const lastSegment = parsedUrl.pathname.split("/").filter(Boolean).pop() ?? "spec";
+  const filename = /\.(ya?ml|json)$/i.test(lastSegment) ? lastSegment : "spec.json";
+
+  let response: Response;
+
+  try {
+    response = await fetch(url.trim());
+  } catch {
+    throw new Error(URL_FETCH_ERROR);
+  }
+
+  if (!response.ok) {
+    throw new Error(URL_FETCH_ERROR);
+  }
+
+  const content = await response.text();
+
+  return parseSpec(content, filename);
 }
 
 export function groupEndpointsByTag(endpoints: ParsedEndpoint[]): Record<string, ParsedEndpoint[]> {
