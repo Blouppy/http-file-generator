@@ -43,10 +43,10 @@ function SheetContent({
         className={cn(
           "bg-background fixed z-50 flex flex-col gap-4 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out",
           side === "right" &&
-            "inset-y-0 right-0 h-full w-3/4 max-w-[520px] data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right",
+            "inset-y-0 right-0 h-full w-3/4 max-w-130 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right",
 
           side === "left" &&
-            "inset-y-0 left-0 h-full w-3/4 max-w-[520px] data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left",
+            "inset-y-0 left-0 h-full w-3/4 max-w-130 data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left",
 
           side === "top" &&
             "inset-x-0 top-0 h-auto data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
