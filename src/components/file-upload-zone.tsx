@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState, useCallback } from "react";
-import { CloudUpload } from "lucide-react";
+import { AlertCircle, CloudUpload } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/language-context";
@@ -51,14 +52,15 @@ export function FileUploadZone({
 
   if (error) {
     return (
-      <Card className="border-destructive">
-        <CardContent className="pt-6">
-          <p className="text-destructive text-sm">{error}</p>
-          <Button variant="outline" size="sm" className="mt-3" onClick={onClear}>
-            {t.dropzoneTryAgain}
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col gap-3">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+        <Button variant="outline" size="sm" onClick={onClear}>
+          {t.dropzoneTryAgain}
+        </Button>
+      </div>
     );
   }
 

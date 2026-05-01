@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Globe } from "lucide-react";
+import { AlertCircle, Globe } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -36,19 +37,6 @@ export function UrlUploadForm({
     onClear?.();
   }, [onClear]);
 
-  if (error) {
-    return (
-      <Card className="border-destructive">
-        <CardContent className="pt-6">
-          <p className="text-destructive text-sm">{error}</p>
-          <Button variant="outline" size="sm" className="mt-3" onClick={handleClear}>
-            {t.dropzoneTryAgain}
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card>
       <CardContent className="pt-6">
@@ -70,7 +58,20 @@ export function UrlUploadForm({
               {isLoading ? t.urlInputLoading : t.urlInputButton}
             </Button>
           </div>
-          <p className="text-muted-foreground text-sm">{t.urlInputDescription}</p>
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {error && (
+            <Button variant="outline" size="sm" onClick={handleClear}>
+              {t.dropzoneTryAgain}
+            </Button>
+          )}
+
+          {!error && <p className="text-muted-foreground text-sm">{t.urlInputDescription}</p>}
         </form>
       </CardContent>
     </Card>
