@@ -7,8 +7,12 @@ import { UrlUploadForm } from "@/components/url-upload-form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSpec } from "@/contexts/spec-context";
 import { useLanguage } from "@/contexts/language-context";
-import { parseSpec } from "@/services/openapi.service";
-import type { ParsedSpec } from "@/types/openapi";
+import {
+  parseSpec,
+  parseSpecFromUrl,
+  URL_VALIDATION_ERROR,
+  URL_FETCH_ERROR,
+} from "@/services/openapi.service";
 
 export default function UploadPage() {
   const router = useRouter();
@@ -38,12 +42,34 @@ export default function UploadPage() {
     [setSpec, router, parseErrorMsg],
   );
 
-  const handleSpec = useCallback(
-    (parsed: ParsedSpec) => {
-      setSpec(parsed);
-      router.push("/select");
+  const handleUrl = useCallback(
+    async (url: string) => {
+      setError(null);
+      setIsLoading(true);
+
+      try {
+        const parsed = await parseSpecFromUrl(url);
+
+        setSpec(parsed);
+
+        router.push("/select");
+      } catch (err) {
+        if (err instanceof Error) {
+          if (err.message === URL_VALIDATION_ERROR) {
+            setError(t.urlInputInvalidUrl);
+          } else if (err.message === URL_FETCH_ERROR) {
+            setError(t.urlInputFetchError);
+          } else {
+            setError(err.message);
+          }
+        } else {
+          setError(parseErrorMsg);
+        }
+
+        setIsLoading(false);
+      }
     },
-    [setSpec, router],
+    [setSpec, router, t, parseErrorMsg],
   );
 
   return (
@@ -53,7 +79,7 @@ export default function UploadPage() {
           <h1 className="mb-2 text-3xl font-bold tracking-tight">{t.uploadTitle}</h1>
           <p className="text-muted-foreground">{t.uploadDescription}</p>
         </div>
-        <Tabs defaultValue="file">
+        <Tabs defaultValue="file" onValueChange={() => setError(null)}>
           <TabsList className="mb-4">
             <TabsTrigger value="file">{t.uploadTabFile}</TabsTrigger>
             <TabsTrigger value="url">{t.uploadTabUrl}</TabsTrigger>
@@ -67,7 +93,12 @@ export default function UploadPage() {
             />
           </TabsContent>
           <TabsContent value="url">
-            <UrlUploadForm onSpec={handleSpec} />
+            <UrlUploadForm
+              onUrl={handleUrl}
+              isLoading={isLoading}
+              error={error}
+              onClear={() => setError(null)}
+            />
           </TabsContent>
         </Tabs>
       </div>

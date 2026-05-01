@@ -6,63 +6,35 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/contexts/language-context";
-import {
-  parseSpecFromUrl,
-  URL_VALIDATION_ERROR,
-  URL_FETCH_ERROR,
-} from "@/services/openapi.service";
-import type { ParsedSpec } from "@/types/openapi";
 
 interface UrlUploadFormProps {
-  onSpec: (spec: ParsedSpec) => void;
+  onUrl: (url: string) => void;
+  isLoading?: boolean;
+  error?: string | null;
+  onClear?: () => void;
 }
 
-export function UrlUploadForm({ onSpec }: UrlUploadFormProps) {
+export function UrlUploadForm({
+  onUrl,
+  isLoading = false,
+  error = null,
+  onClear,
+}: UrlUploadFormProps) {
   const [url, setUrl] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const { t } = useLanguage();
 
-  const getErrorMessage = useCallback(
-    (err: unknown): string => {
-      if (err instanceof Error) {
-        if (err.message === URL_VALIDATION_ERROR) {
-          return t.urlInputInvalidUrl;
-        }
-
-        if (err.message === URL_FETCH_ERROR) {
-          return t.urlInputFetchError;
-        }
-
-        return err.message;
-      }
-
-      return t.dropzoneParseError;
-    },
-    [t],
-  );
-
   const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
+    (e: React.FormEvent) => {
       e.preventDefault();
-      setError(null);
-      setIsLoading(true);
-
-      try {
-        const parsed = await parseSpecFromUrl(url);
-        onSpec(parsed);
-      } catch (err) {
-        setError(getErrorMessage(err));
-        setIsLoading(false);
-      }
+      onUrl(url.trim());
     },
-    [url, onSpec, getErrorMessage],
+    [url, onUrl],
   );
 
   const handleClear = useCallback(() => {
-    setError(null);
     setUrl("");
-  }, []);
+    onClear?.();
+  }, [onClear]);
 
   if (error) {
     return (
@@ -85,7 +57,7 @@ export function UrlUploadForm({ onSpec }: UrlUploadFormProps) {
             <div className="relative flex-1">
               <Globe className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
-                type="url"
+                type="text"
                 placeholder={t.urlInputPlaceholder}
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}

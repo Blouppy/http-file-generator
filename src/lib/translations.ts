@@ -31,7 +31,7 @@ export const translations = {
     dropzoneParseError: "Failed to parse OpenAPI spec",
 
     // URL upload form
-    urlInputPlaceholder: "https://petstore3.swagger.io/api/v3/openapi.json",
+    urlInputPlaceholder: "https://api.example.com/openapi.json",
     urlInputButton: "Load spec",
     urlInputLoading: "Loading...",
     urlInputDescription: "Enter the URL of a publicly accessible OpenAPI JSON or YAML spec.",
@@ -152,7 +152,7 @@ export const translations = {
     dropzoneParseError: "Échec de l'analyse de la spec OpenAPI",
 
     // URL upload form
-    urlInputPlaceholder: "https://petstore3.swagger.io/api/v3/openapi.json",
+    urlInputPlaceholder: "https://api.example.com/openapi.json",
     urlInputButton: "Charger la spec",
     urlInputLoading: "Chargement...",
     urlInputDescription: "Entrez l'URL d'une spec OpenAPI JSON ou YAML publiquement accessible.",
