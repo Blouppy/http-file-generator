@@ -9,10 +9,11 @@ export async function parseSpec(content: string, filename: string): Promise<Pars
 }
 
 export async function parseSpecFromUrl(url: string): Promise<ParsedSpec> {
+  const trimmedUrl = url.trim();
   let parsedUrl: URL;
 
   try {
-    parsedUrl = new URL(url.trim());
+    parsedUrl = new URL(trimmedUrl);
   } catch {
     throw new Error(URL_VALIDATION_ERROR);
   }
@@ -21,13 +22,10 @@ export async function parseSpecFromUrl(url: string): Promise<ParsedSpec> {
     throw new Error(URL_VALIDATION_ERROR);
   }
 
-  const lastSegment = parsedUrl.pathname.split("/").filter(Boolean).pop() ?? "spec";
-  const filename = /\.(ya?ml|json)$/i.test(lastSegment) ? lastSegment : "spec.json";
-
   let response: Response;
 
   try {
-    response = await fetch(url.trim());
+    response = await fetch(trimmedUrl);
   } catch {
     throw new Error(URL_FETCH_ERROR);
   }
@@ -35,6 +33,16 @@ export async function parseSpecFromUrl(url: string): Promise<ParsedSpec> {
   if (!response.ok) {
     throw new Error(URL_FETCH_ERROR);
   }
+
+  const lastSegment = parsedUrl.pathname.split("/").filter(Boolean).pop() ?? "";
+  const contentType = response.headers.get("content-type") ?? "";
+  const isYamlByUrl = /\.(ya?ml)$/i.test(lastSegment);
+  const isYamlByContentType =
+    contentType.startsWith("application/yaml") ||
+    contentType.startsWith("application/x-yaml") ||
+    contentType.startsWith("text/yaml") ||
+    contentType.startsWith("text/x-yaml");
+  const filename = isYamlByUrl || isYamlByContentType ? "spec.yaml" : "spec.json";
 
   const content = await response.text();
 

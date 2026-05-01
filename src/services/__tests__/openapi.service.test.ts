@@ -159,6 +159,22 @@ const MINIMAL_SPEC = JSON.stringify({
   paths: {},
 });
 
+const MINIMAL_YAML_SPEC = `
+openapi: "3.0.0"
+info:
+  title: YAML API
+  version: "1.0.0"
+paths: {}
+`.trim();
+
+function makeOkResponse(body: string, contentType = "application/json") {
+  return {
+    ok: true,
+    headers: { get: (name: string) => (name === "content-type" ? contentType : null) },
+    text: () => Promise.resolve(body),
+  };
+}
+
 describe("parseSpecFromUrl", () => {
   const mockFetch = jest.fn();
 
@@ -197,7 +213,7 @@ describe("parseSpecFromUrl", () => {
   });
 
   it("parses a valid JSON spec fetched from a URL", async () => {
-    mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve(MINIMAL_SPEC) });
+    mockFetch.mockResolvedValue(makeOkResponse(MINIMAL_SPEC));
 
     const result = await parseSpecFromUrl("https://example.com/openapi.json");
 
@@ -205,8 +221,8 @@ describe("parseSpecFromUrl", () => {
     expect(result.version).toBe("2.0.0");
   });
 
-  it("infers JSON format when the URL has no recognised extension", async () => {
-    mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve(MINIMAL_SPEC) });
+  it("infers JSON format when the URL has no recognised extension and no YAML content-type", async () => {
+    mockFetch.mockResolvedValue(makeOkResponse(MINIMAL_SPEC));
 
     const result = await parseSpecFromUrl("https://example.com/api/v3/openapi");
 
@@ -214,10 +230,26 @@ describe("parseSpecFromUrl", () => {
   });
 
   it("accepts an http:// URL", async () => {
-    mockFetch.mockResolvedValue({ ok: true, text: () => Promise.resolve(MINIMAL_SPEC) });
+    mockFetch.mockResolvedValue(makeOkResponse(MINIMAL_SPEC));
 
     const result = await parseSpecFromUrl("http://example.com/spec.json");
 
     expect(result.title).toBe("Test API");
+  });
+
+  it("detects YAML format from .yaml URL extension", async () => {
+    mockFetch.mockResolvedValue(makeOkResponse(MINIMAL_YAML_SPEC, "text/plain"));
+
+    const result = await parseSpecFromUrl("https://example.com/spec.yaml");
+
+    expect(result.title).toBe("YAML API");
+  });
+
+  it("detects YAML format from application/yaml content-type when URL has no extension", async () => {
+    mockFetch.mockResolvedValue(makeOkResponse(MINIMAL_YAML_SPEC, "application/yaml"));
+
+    const result = await parseSpecFromUrl("https://example.com/api/v3/openapi");
+
+    expect(result.title).toBe("YAML API");
   });
 });
