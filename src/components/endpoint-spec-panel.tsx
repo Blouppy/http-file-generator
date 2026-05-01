@@ -360,13 +360,22 @@ export function EndpointSpecPanel({ endpoint }: EndpointSpecPanelProps) {
             <div key={idx} className={cn("px-3 py-2.5", idx > 0 && "border-t")}>
               <div className="flex flex-wrap items-center gap-1.5">
                 <code className="text-foreground text-xs font-semibold">{pascalToCamel(param.name)}</code>
-                {param.schema?.type && (
-                  <span className="text-muted-foreground text-xs">
-                    {param.schema.type === "array" && param.schema.items?.type
-                      ? `array[${Array.isArray(param.schema.items.type) ? param.schema.items.type.join(" | ") : param.schema.items.type}]`
-                      : param.schema.type}
-                  </span>
-                )}
+                {param.schema?.type && (() => {
+                  const rawType = param.schema!.type!;
+                  const types = Array.isArray(rawType) ? rawType.filter((t) => t !== "null") : [rawType];
+                  const isArray = types.length === 1 && types[0] === "array";
+                  const itemsType = param.schema!.items?.type;
+                  const itemsLabel = itemsType
+                    ? Array.isArray(itemsType) ? itemsType.join(" | ") : itemsType
+                    : undefined;
+                  const label = isArray
+                    ? itemsLabel ? `array[${itemsLabel}]` : "array"
+                    : types.join(" | ");
+
+                  return (
+                    <span className="text-muted-foreground text-xs">{label}</span>
+                  );
+                })()}
                 <Badge
                   variant={param.required ? "default" : "secondary"}
                   className="h-4 px-1 text-[10px]"

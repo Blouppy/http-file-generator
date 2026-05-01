@@ -30,7 +30,7 @@ export interface Parameter {
   in: "query" | "path" | "header" | "cookie";
   required?: boolean;
   schema?: {
-    type?: string;
+    type?: string | string[];
     items?: { type?: string | string[] };
     example?: unknown;
     default?: unknown;
