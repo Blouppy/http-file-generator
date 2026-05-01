@@ -44,7 +44,7 @@ export function EndpointItem({ endpoint, isSelected, onToggle }: EndpointItemPro
         <Checkbox
           checked={isSelected}
           onCheckedChange={onToggle}
-          className="mt-0.5 shrink-0"
+          className="mt-0.5 shrink-0 cursor-pointer"
           onClick={(e) => e.stopPropagation()}
         />
         <div className="flex min-w-0 flex-1 items-start gap-3">
@@ -59,7 +59,7 @@ export function EndpointItem({ endpoint, isSelected, onToggle }: EndpointItemPro
 
         {hasDetails && (
           <button
-            className="text-muted-foreground hover:text-foreground mt-0.5 shrink-0"
+            className="text-muted-foreground hover:text-foreground mt-0.5 shrink-0 cursor-pointer"
             aria-label={t.specViewerOpenButton}
             onClick={(e) => {
               e.stopPropagation();
