@@ -376,6 +376,11 @@ export function EndpointSpecPanel({ endpoint }: EndpointSpecPanelProps) {
                     <span className="text-muted-foreground text-xs">{label}</span>
                   );
                 })()}
+                {param.schema?.enum && param.schema.enum.length > 0 && (
+                  <span className="text-muted-foreground text-xs">
+                    {"enum: "}{param.schema.enum.map(String).join(" | ")}
+                  </span>
+                )}
                 <Badge
                   variant={param.required ? "default" : "secondary"}
                   className="h-4 px-1 text-[10px]"

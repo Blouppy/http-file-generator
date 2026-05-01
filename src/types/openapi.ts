@@ -32,6 +32,7 @@ export interface Parameter {
   schema?: {
     type?: string | string[];
     items?: { type?: string | string[] };
+    enum?: unknown[];
     example?: unknown;
     default?: unknown;
   };
