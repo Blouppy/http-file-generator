@@ -3,6 +3,7 @@ import YAML from "yaml";
 import type {
   ParsedSpec,
   ParsedEndpoint,
+  ParsedResponseInfo,
   Parameter,
   RequestBody,
   SchemaObject,
@@ -106,12 +107,137 @@ function expandTransitiveRefs(
   return [...all];
 }
 
+/**
+ * Returns the `$ref` schema name from the first JSON-typed content entry of a raw request body,
+ * or `undefined` if the body has no JSON content with a named `$ref`.
+ */
+function extractRequestBodySchemaRef(rawOperation: unknown): string | undefined {
+  if (!rawOperation || typeof rawOperation !== "object") {
+    return undefined;
+  }
+
+  const operation = rawOperation as Record<string, unknown>;
+  const body = operation["requestBody"] as Record<string, unknown> | undefined;
+
+  if (!body) {
+    return undefined;
+  }
+
+  const content = body["content"] as Record<string, unknown> | undefined;
+
+  if (!content) {
+    return undefined;
+  }
+
+  const prefix = "#/components/schemas/";
+
+  for (const [ct, media] of Object.entries(content)) {
+    if (
+      !ct.startsWith("application/json") &&
+      !(ct.startsWith("application/") && ct.includes("+json"))
+    ) {
+      continue;
+    }
+
+    if (!media || typeof media !== "object") {
+      continue;
+    }
+
+    const schema = (media as Record<string, unknown>)["schema"] as
+      | Record<string, unknown>
+      | undefined;
+
+    if (typeof schema?.["$ref"] === "string" && schema["$ref"].startsWith(prefix)) {
+      return schema["$ref"].slice(prefix.length);
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Returns the first 2xx response info from a raw operation's `responses`, including the
+ * schema name when the response body is a direct `$ref` or an `array` of a `$ref`.
+ */
+function extractPrimaryResponse(rawOperation: unknown): ParsedResponseInfo | undefined {
+  if (!rawOperation || typeof rawOperation !== "object") {
+    return undefined;
+  }
+
+  const operation = rawOperation as Record<string, unknown>;
+  const responses = operation["responses"] as Record<string, unknown> | undefined;
+
+  if (!responses) {
+    return undefined;
+  }
+
+  const statusCode = Object.keys(responses).find((code) => /^2/.test(code));
+
+  if (!statusCode) {
+    return undefined;
+  }
+
+  const response = responses[statusCode] as Record<string, unknown> | undefined;
+
+  if (!response) {
+    return undefined;
+  }
+
+  const description = response["description"] as string | undefined;
+  const content = response["content"] as Record<string, unknown> | undefined;
+
+  if (!content) {
+    return { statusCode, description };
+  }
+
+  const prefix = "#/components/schemas/";
+
+  for (const [ct, media] of Object.entries(content)) {
+    if (
+      !ct.startsWith("application/json") &&
+      !(ct.startsWith("application/") && ct.includes("+json"))
+    ) {
+      continue;
+    }
+
+    if (!media || typeof media !== "object") {
+      continue;
+    }
+
+    const schema = (media as Record<string, unknown>)["schema"] as
+      | Record<string, unknown>
+      | undefined;
+
+    if (!schema) {
+      continue;
+    }
+
+    // Direct $ref — object response.
+    if (typeof schema["$ref"] === "string" && schema["$ref"].startsWith(prefix)) {
+      return { statusCode, description, schemaRef: schema["$ref"].slice(prefix.length) };
+    }
+
+    // Array response whose items are a $ref.
+    if (schema["type"] === "array" && schema["items"] && typeof schema["items"] === "object") {
+      const items = schema["items"] as Record<string, unknown>;
+
+      if (typeof items["$ref"] === "string" && items["$ref"].startsWith(prefix)) {
+        return { statusCode, description, itemSchemaRef: items["$ref"].slice(prefix.length) };
+      }
+    }
+  }
+
+  return { statusCode, description };
+}
+
 /** Builds a single {@link ParsedEndpoint} from a path, HTTP method and operation object. */
 function buildEndpoint(
   path: string,
   method: string,
   operation: Record<string, unknown>,
   schemaRefs?: string[],
+  requestBodySchemaRef?: string,
+  primaryResponse?: ParsedResponseInfo,
 ): ParsedEndpoint {
   return {
     path,
@@ -123,6 +249,8 @@ function buildEndpoint(
     parameters: operation.parameters as Parameter[] | undefined,
     requestBody: operation.requestBody as RequestBody | undefined,
     schemaRefs: schemaRefs && schemaRefs.length > 0 ? schemaRefs : undefined,
+    requestBodySchemaRef,
+    primaryResponse,
   };
 }
 
@@ -130,6 +258,8 @@ function buildEndpoint(
 function extractEndpoints(
   paths: Record<string, Record<string, unknown>>,
   rawRefsByKey: Map<string, string[]>,
+  rawBodyRefByKey: Map<string, string>,
+  rawResponseByKey: Map<string, ParsedResponseInfo>,
 ): ParsedEndpoint[] {
   const endpoints: ParsedEndpoint[] = [];
 
@@ -144,8 +274,11 @@ function extractEndpoints(
         | undefined;
 
       if (operation) {
-        const schemaRefs = rawRefsByKey.get(`${method}:${path}`);
-        endpoints.push(buildEndpoint(path, method, operation, schemaRefs));
+        const key = `${method}:${path}`;
+        const schemaRefs = rawRefsByKey.get(key);
+        const requestBodySchemaRef = rawBodyRefByKey.get(key);
+        const primaryResponse = rawResponseByKey.get(key);
+        endpoints.push(buildEndpoint(path, method, operation, schemaRefs, requestBodySchemaRef, primaryResponse));
       }
     }
   }
@@ -320,6 +453,8 @@ export async function parseOpenAPISpec(content: string, filename: string): Promi
   const rawPaths = (rawSpec as RawSpec).paths ?? {};
   const rawSchemas = ((rawSpec as RawSpec).components?.schemas ?? {}) as Record<string, unknown>;
   const rawRefsByKey = new Map<string, string[]>();
+  const rawBodyRefByKey = new Map<string, string>();
+  const rawResponseByKey = new Map<string, ParsedResponseInfo>();
 
   for (const [path, pathItem] of Object.entries(rawPaths)) {
     if (!pathItem || typeof pathItem !== "object") {
@@ -335,6 +470,18 @@ export async function parseOpenAPISpec(content: string, filename: string): Promi
         if (directRefs.length > 0) {
           rawRefsByKey.set(`${method}:${path}`, expandTransitiveRefs(directRefs, rawSchemas));
         }
+
+        const bodyRef = extractRequestBodySchemaRef(rawOp);
+
+        if (bodyRef !== undefined) {
+          rawBodyRefByKey.set(`${method}:${path}`, bodyRef);
+        }
+
+        const primaryResponse = extractPrimaryResponse(rawOp);
+
+        if (primaryResponse !== undefined) {
+          rawResponseByKey.set(`${method}:${path}`, primaryResponse);
+        }
       }
     }
   }
@@ -346,7 +493,7 @@ export async function parseOpenAPISpec(content: string, filename: string): Promi
   const spec = api as RawSpec;
 
   const { title, version, baseUrl } = extractSpecMetadata(spec);
-  const endpoints = extractEndpoints(spec.paths ?? {}, rawRefsByKey);
+  const endpoints = extractEndpoints(spec.paths ?? {}, rawRefsByKey, rawBodyRefByKey, rawResponseByKey);
   const schemas = (spec.components?.schemas ?? {}) as Record<string, SchemaObject>;
 
   // Annotate schema properties with their original $ref names.

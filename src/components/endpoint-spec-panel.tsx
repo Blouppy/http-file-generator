@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { useLanguage } from "@/contexts/language-context";
 import { useSpec } from "@/contexts/spec-context";
 import { cn } from "@/lib/utils";
@@ -314,16 +313,8 @@ export function EndpointSpecPanel({ endpoint }: EndpointSpecPanelProps) {
   );
   const [selectedContentType, setSelectedContentType] = useState(defaultContentType);
 
-  const relatedSchemas: Array<{ name: string; schema: SchemaObject }> =
-    endpoint.schemaRefs && spec?.schemas
-      ? endpoint.schemaRefs
-          .filter((name) => spec.schemas![name] !== undefined)
-          .map((name) => ({ name, schema: spec.schemas![name] }))
-      : [];
-
   const hasParameters = !!(endpoint.parameters && endpoint.parameters.length > 0);
   const hasRequestBody = !!endpoint.requestBody && contentTypes.length > 0;
-  const hasSchemas = relatedSchemas.length > 0;
 
   const selectedMedia =
     hasRequestBody && endpoint.requestBody!.content
@@ -336,8 +327,6 @@ export function EndpointSpecPanel({ endpoint }: EndpointSpecPanelProps) {
       ? (bodySchema.properties as Record<string, SchemaProperty>)
       : null;
   const bodyRequiredFields = (bodySchema as SchemaProperty | undefined)?.required ?? [];
-
-  const hasSomethingBeforeSchemas = !!endpoint.description || hasParameters || hasRequestBody;
 
   return (
     <div className="bg-muted/10 border-t px-6 py-4" onClick={(e) => e.stopPropagation()}>
@@ -378,72 +367,109 @@ export function EndpointSpecPanel({ endpoint }: EndpointSpecPanelProps) {
           </div>
         )}
 
-        {/* Request Body — compact flat property list */}
+        {/* Body */}
         {hasRequestBody && (
           <div>
-            <div className="mb-2 flex items-center gap-2">
-              <SectionHeading title={t.specViewerRequestBodyTitle} />
-              {contentTypes.length > 1 && (
-                <select
-                  value={selectedContentType}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    setSelectedContentType(e.target.value);
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="border-input bg-background text-foreground ml-auto rounded border px-2 py-0.5 text-xs focus:outline-none focus:ring-1"
-                >
-                  {contentTypes.map((ct) => (
-                    <option key={ct} value={ct}>
-                      {ct}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
+            {endpoint.requestBodySchemaRef && spec?.schemas?.[endpoint.requestBodySchemaRef] ? (
+              <>
+                <SectionHeading title={t.specViewerBodyTitle} />
 
-            {endpoint.requestBody!.description && (
-              <p className="text-muted-foreground mb-2 text-xs">
-                {endpoint.requestBody!.description}
-              </p>
-            )}
+                {endpoint.requestBody!.description && (
+                  <p className="text-muted-foreground mb-2 text-xs">
+                    {endpoint.requestBody!.description}
+                  </p>
+                )}
 
-            <div className="rounded-md border">
-              {contentTypes.length === 1 && (
-                <div className="bg-muted/40 border-b px-3 py-1.5">
-                  <code className="text-muted-foreground text-xs">{selectedContentType}</code>
+                <ModelCard
+                  name={endpoint.requestBodySchemaRef}
+                  schema={spec.schemas![endpoint.requestBodySchemaRef]}
+                />
+              </>
+            ) : (
+              <>
+                <div className="mb-2 flex items-center gap-2">
+                  <SectionHeading title={t.specViewerBodyTitle} />
+
+                  {contentTypes.length > 1 && (
+                    <select
+                      value={selectedContentType}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        setSelectedContentType(e.target.value);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="border-input bg-background text-foreground ml-auto rounded border px-2 py-0.5 text-xs focus:outline-none focus:ring-1"
+                    >
+                      {contentTypes.map((ct) => (
+                        <option key={ct} value={ct}>
+                          {ct}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
-              )}
-              {bodyProperties && Object.keys(bodyProperties).length > 0 ? (
-                <>
-                  {Object.entries(bodyProperties).map(([propName, propSchema]) => (
-                    <CompactPropertyRow
-                      key={propName}
-                      name={propName}
-                      schema={propSchema}
-                      required={bodyRequiredFields.includes(propName)}
-                    />
-                  ))}
-                </>
-              ) : (
-                <p className="text-muted-foreground px-3 py-2 text-xs">
-                  {t.specViewerNoProperties}
-                </p>
-              )}
-            </div>
+
+                {endpoint.requestBody!.description && (
+                  <p className="text-muted-foreground mb-2 text-xs">
+                    {endpoint.requestBody!.description}
+                  </p>
+                )}
+
+                <div className="rounded-md border">
+                  {contentTypes.length === 1 && (
+                    <div className="bg-muted/40 border-b px-3 py-1.5">
+                      <code className="text-muted-foreground text-xs">{selectedContentType}</code>
+                    </div>
+                  )}
+
+                  {bodyProperties && Object.keys(bodyProperties).length > 0 ? (
+                    <>
+                      {Object.entries(bodyProperties).map(([propName, propSchema]) => (
+                        <CompactPropertyRow
+                          key={propName}
+                          name={propName}
+                          schema={propSchema}
+                          required={bodyRequiredFields.includes(propName)}
+                        />
+                      ))}
+                    </>
+                  ) : (
+                    <p className="text-muted-foreground px-3 py-2 text-xs">
+                      {t.specViewerNoProperties}
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
 
-        {/* Schemas — full expandable model cards */}
-        {hasSchemas && (
+        {/* Response */}
+        {endpoint.primaryResponse && (
           <div>
-            {hasSomethingBeforeSchemas && <Separator className="mb-4" />}
-            <SectionHeading title={t.specViewerModelsTitle} />
-            <div className="flex flex-col gap-2">
-              {relatedSchemas.map(({ name, schema }) => (
-                <ModelCard key={name} name={name} schema={schema} />
-              ))}
+            <div className="mb-2 flex items-center gap-2">
+              <SectionHeading title={t.specViewerResponseTitle} />
+
+              <span className="text-muted-foreground ml-auto text-xs">
+                {endpoint.primaryResponse.statusCode}
+                {endpoint.primaryResponse.description &&
+                  ` — ${endpoint.primaryResponse.description}`}
+              </span>
             </div>
+
+            {endpoint.primaryResponse.schemaRef &&
+            spec?.schemas?.[endpoint.primaryResponse.schemaRef] ? (
+              <ModelCard
+                name={endpoint.primaryResponse.schemaRef}
+                schema={spec.schemas![endpoint.primaryResponse.schemaRef]}
+              />
+            ) : endpoint.primaryResponse.itemSchemaRef &&
+              spec?.schemas?.[endpoint.primaryResponse.itemSchemaRef] ? (
+              <ModelCard
+                name={`array[${endpoint.primaryResponse.itemSchemaRef}]`}
+                schema={spec.schemas![endpoint.primaryResponse.itemSchemaRef]}
+              />
+            ) : null}
           </div>
         )}
       </div>

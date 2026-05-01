@@ -1,3 +1,12 @@
+export interface ParsedResponseInfo {
+  statusCode: string;
+  description?: string;
+  /** Schema name for a direct object response (`$ref → SchemaName`). */
+  schemaRef?: string;
+  /** Schema name for the item type in an array response (`array[SchemaName]`). */
+  itemSchemaRef?: string;
+}
+
 export interface ParsedEndpoint {
   path: string;
   method: string;
@@ -10,6 +19,10 @@ export interface ParsedEndpoint {
   responses?: Record<string, unknown>;
   /** Schema names from components/schemas referenced by this endpoint (pre-deref). */
   schemaRefs?: string[];
+  /** Schema name from the request body (pre-deref extraction). */
+  requestBodySchemaRef?: string;
+  /** First 2xx response with schema info (pre-deref extraction). */
+  primaryResponse?: ParsedResponseInfo;
 }
 
 export interface Parameter {

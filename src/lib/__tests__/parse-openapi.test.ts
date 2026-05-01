@@ -276,4 +276,128 @@ paths: {}
       expect(labels?.items?.required).toEqual(["name"]);
     });
   });
+
+  describe("requestBodySchemaRef and primaryResponse", () => {
+    it("extracts requestBodySchemaRef from a JSON request body", async () => {
+      const spec = makeSpec({
+        paths: {
+          "/items": {
+            post: {
+              requestBody: {
+                content: {
+                  "application/json": {
+                    schema: { $ref: "#/components/schemas/ItemDto" },
+                  },
+                },
+              },
+              responses: { "204": { description: "No Content" } },
+            },
+          },
+        },
+        components: {
+          schemas: {
+            ItemDto: { type: "object", properties: { name: { type: "string" } } },
+          },
+        },
+      });
+      const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
+      const endpoint = result.endpoints.find((e) => e.method === "POST")!;
+
+      expect(endpoint.requestBodySchemaRef).toBe("ItemDto");
+    });
+
+    it("extracts primaryResponse schemaRef for a direct object response", async () => {
+      const spec = makeSpec({
+        paths: {
+          "/items/{id}": {
+            get: {
+              responses: {
+                "200": {
+                  description: "OK",
+                  content: {
+                    "application/json": {
+                      schema: { $ref: "#/components/schemas/ItemDto" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        components: {
+          schemas: {
+            ItemDto: { type: "object", properties: { name: { type: "string" } } },
+          },
+        },
+      });
+      const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
+      const endpoint = result.endpoints[0];
+
+      expect(endpoint.primaryResponse).toMatchObject({
+        statusCode: "200",
+        description: "OK",
+        schemaRef: "ItemDto",
+      });
+    });
+
+    it("extracts primaryResponse itemSchemaRef for an array response", async () => {
+      const spec = makeSpec({
+        paths: {
+          "/items": {
+            get: {
+              responses: {
+                "200": {
+                  description: "OK",
+                  content: {
+                    "application/json": {
+                      schema: {
+                        type: "array",
+                        items: { $ref: "#/components/schemas/ItemDto" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        components: {
+          schemas: {
+            ItemDto: { type: "object", properties: { name: { type: "string" } } },
+          },
+        },
+      });
+      const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
+      const endpoint = result.endpoints[0];
+
+      expect(endpoint.primaryResponse).toMatchObject({
+        statusCode: "200",
+        description: "OK",
+        itemSchemaRef: "ItemDto",
+      });
+    });
+
+    it("extracts primaryResponse with no schemaRef for a no-content response", async () => {
+      const spec = makeSpec({
+        paths: {
+          "/items/{id}": {
+            delete: {
+              responses: {
+                "204": { description: "No Content" },
+              },
+            },
+          },
+        },
+      });
+      const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
+      const endpoint = result.endpoints[0];
+
+      expect(endpoint.primaryResponse).toMatchObject({
+        statusCode: "204",
+        description: "No Content",
+      });
+      expect(endpoint.primaryResponse?.schemaRef).toBeUndefined();
+      expect(endpoint.primaryResponse?.itemSchemaRef).toBeUndefined();
+    });
+  });
 });
