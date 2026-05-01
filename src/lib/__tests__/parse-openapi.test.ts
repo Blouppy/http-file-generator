@@ -190,5 +190,90 @@ paths: {}
 
       expect(result.schemas?.ActivityDto?.properties?.id?.type).toEqual(["integer", "string"]);
     });
+
+    it("annotates polymorphic oneOf properties with a joined schemaName", async () => {
+      const spec = makeSpec({
+        components: {
+          schemas: {
+            CatDto: { type: "object", properties: { meow: { type: "string" } } },
+            DogDto: { type: "object", properties: { bark: { type: "string" } } },
+            OwnerDto: {
+              type: "object",
+              properties: {
+                pet: {
+                  oneOf: [
+                    { $ref: "#/components/schemas/CatDto" },
+                    { $ref: "#/components/schemas/DogDto" },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      });
+      const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
+
+      expect(result.schemas?.OwnerDto?.properties?.pet?.schemaName).toBe("CatDto | DogDto");
+      // Polymorphic refs are not flattened — only single-ref nullable patterns are.
+      expect(result.schemas?.OwnerDto?.properties?.pet?.properties).toBeUndefined();
+    });
+
+    it("annotates polymorphic array items with a joined schemaName", async () => {
+      const spec = makeSpec({
+        components: {
+          schemas: {
+            CatDto: { type: "object", properties: { meow: { type: "string" } } },
+            DogDto: { type: "object", properties: { bark: { type: "string" } } },
+            ShelterDto: {
+              type: "object",
+              properties: {
+                pets: {
+                  type: "array",
+                  items: {
+                    oneOf: [
+                      { $ref: "#/components/schemas/CatDto" },
+                      { $ref: "#/components/schemas/DogDto" },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+      const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
+
+      expect(result.schemas?.ShelterDto?.properties?.pets?.items?.schemaName).toBe(
+        "CatDto | DogDto",
+      );
+    });
+
+    it("preserves item properties on array[object] for nested expansion", async () => {
+      const spec = makeSpec({
+        components: {
+          schemas: {
+            LabelDto: {
+              type: "object",
+              properties: { name: { type: "string" }, color: { type: "string" } },
+              required: ["name"],
+            },
+            IssueDetailDto: {
+              type: "object",
+              properties: {
+                labels: { type: "array", items: { $ref: "#/components/schemas/LabelDto" } },
+              },
+            },
+          },
+        },
+      });
+      const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
+
+      const labels = result.schemas?.IssueDetailDto?.properties?.labels;
+      expect(labels?.items?.schemaName).toBe("LabelDto");
+      // The renderer expands `array[LabelDto]` by walking `items.properties`.
+      expect(labels?.items?.properties).toBeDefined();
+      expect(Object.keys(labels?.items?.properties ?? {})).toEqual(["name", "color"]);
+      expect(labels?.items?.required).toEqual(["name"]);
+    });
   });
 });

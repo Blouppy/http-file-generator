@@ -154,13 +154,60 @@ function extractEndpoints(
 }
 
 /**
- * Builds a map from `"SchemaName.propName"` → ref schema name for direct `$ref` properties,
- * and `"SchemaName.propName.items"` → ref schema name for array properties whose items are a `$ref`.
- * Must be called on the raw (pre-deref) schemas because `SwaggerParser.dereference` erases `$ref`s.
+ * Collects every `$ref` schema name reachable from a single (raw) schema-shaped value, looking
+ * at the top-level `$ref` and at `oneOf`/`anyOf` entries. Returns an ordered, de-duplicated array
+ * of schema names (without the `#/components/schemas/` prefix). Used to support polymorphism:
+ * a property declared as `oneOf: [{ $ref: A }, { $ref: B }]` yields `["A", "B"]`.
+ */
+function collectDirectRefs(value: unknown): string[] {
+  if (!value || typeof value !== "object") {
+    return [];
+  }
+
+  const prefix = "#/components/schemas/";
+  const refs: string[] = [];
+  const seen = new Set<string>();
+  const record = value as Record<string, unknown>;
+
+  const tryAdd = (raw: unknown): void => {
+    if (typeof raw !== "string" || !raw.startsWith(prefix)) {
+      return;
+    }
+
+    const name = raw.slice(prefix.length);
+
+    if (!seen.has(name)) {
+      seen.add(name);
+      refs.push(name);
+    }
+  };
+
+  tryAdd(record["$ref"]);
+
+  const composedOf = (record["oneOf"] ?? record["anyOf"]) as unknown[] | undefined;
+
+  if (Array.isArray(composedOf)) {
+    for (const entry of composedOf) {
+      if (entry && typeof entry === "object") {
+        tryAdd((entry as Record<string, unknown>)["$ref"]);
+      }
+    }
+  }
+
+  return refs;
+}
+
+/**
+ * Builds a map from `"SchemaName.propName"` → ref schema name(s) for properties that resolve to a
+ * component schema (direct `$ref` or `oneOf`/`anyOf`), and `"SchemaName.propName.items"` → ref
+ * schema name(s) for array properties whose items are a `$ref` or composed of refs.
+ *
+ * When a property is polymorphic (multiple non-null `$ref`s in `oneOf`/`anyOf`), names are joined
+ * with `" | "` — purely a display label. Must be called on the raw (pre-deref) schemas because
+ * `SwaggerParser.dereference` erases `$ref`s.
  */
 function buildPropRefMap(rawSchemas: Record<string, unknown>): Map<string, string> {
   const map = new Map<string, string>();
-  const prefix = "#/components/schemas/";
 
   for (const [schemaName, rawSchema] of Object.entries(rawSchemas)) {
     if (!rawSchema || typeof rawSchema !== "object") {
@@ -180,36 +227,19 @@ function buildPropRefMap(rawSchemas: Record<string, unknown>): Map<string, strin
 
       const prop = rawProp as Record<string, unknown>;
 
-      // Direct $ref → SchemaName.propName
-      if (typeof prop["$ref"] === "string" && (prop["$ref"] as string).startsWith(prefix)) {
-        map.set(`${schemaName}.${propName}`, (prop["$ref"] as string).slice(prefix.length));
-        continue;
+      // Direct refs on the property itself ($ref or oneOf/anyOf with refs).
+      const directRefs = collectDirectRefs(prop);
+
+      if (directRefs.length > 0) {
+        map.set(`${schemaName}.${propName}`, directRefs.join(" | "));
       }
 
-      // Array with items.$ref → SchemaName.propName.items
+      // Refs reachable from array items.
       if (prop["type"] === "array" && prop["items"] && typeof prop["items"] === "object") {
-        const items = prop["items"] as Record<string, unknown>;
+        const itemRefs = collectDirectRefs(prop["items"]);
 
-        if (typeof items["$ref"] === "string" && (items["$ref"] as string).startsWith(prefix)) {
-          map.set(`${schemaName}.${propName}.items`, (items["$ref"] as string).slice(prefix.length));
-        }
-      }
-
-      // oneOf / anyOf nullable pattern: [{ type: "null" }, { "$ref": "..." }]
-      const composedOf = (prop["oneOf"] ?? prop["anyOf"]) as unknown[] | undefined;
-
-      if (Array.isArray(composedOf)) {
-        for (const entry of composedOf) {
-          if (!entry || typeof entry !== "object") {
-            continue;
-          }
-
-          const ref = (entry as Record<string, unknown>)["$ref"];
-
-          if (typeof ref === "string" && ref.startsWith(prefix)) {
-            map.set(`${schemaName}.${propName}`, ref.slice(prefix.length));
-            break;
-          }
+        if (itemRefs.length > 0) {
+          map.set(`${schemaName}.${propName}.items`, itemRefs.join(" | "));
         }
       }
     }
@@ -263,6 +293,21 @@ function annotateSchemaNamesAfterDeref(
 
       if (itemsRef && prop.items) {
         prop.items.schemaName = itemsRef;
+
+        // If items lacks `properties` (e.g. partially-dereferenced specs where the items `$ref`
+        // wasn't resolved, or test mocks), promote the referenced schema's fields. Polymorphic
+        // joined names (e.g. "A | B") naturally skip this lookup since `schemas["A | B"]` is
+        // undefined.
+        if (!prop.items.properties && !prop.items.type) {
+          const referencedSchema = schemas[itemsRef];
+
+          if (referencedSchema) {
+            if (referencedSchema.type !== undefined)       { prop.items.type = referencedSchema.type; }
+            if (referencedSchema.properties !== undefined) { prop.items.properties = referencedSchema.properties; }
+            if (referencedSchema.required !== undefined)   { prop.items.required = referencedSchema.required; }
+            if (referencedSchema.enum !== undefined)       { prop.items.enum = referencedSchema.enum; }
+          }
+        }
       }
     }
   }

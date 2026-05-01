@@ -70,13 +70,21 @@ function SchemaPropertyRow({ name, schema, required = false, depth = 0 }: Schema
     : schema.type
       ? [schema.type]
       : [];
-  const hasChildren =
-    effectiveType.length === 1 &&
-    effectiveType[0] === "object" &&
-    !!schema.properties &&
-    Object.keys(schema.properties).length > 0;
+  const isObjectType = effectiveType.length === 1 && effectiveType[0] === "object";
+  const isArrayType = effectiveType.length === 1 && effectiveType[0] === "array";
 
-  const requiredChildren = schema.required ?? [];
+  // Children come from `schema.properties` for objects, or from `schema.items.properties`
+  // for arrays of objects. This allows expanding `array[LabelDto]` to inspect the item schema.
+  const childContainer: SchemaProperty | undefined = isObjectType
+    ? schema
+    : isArrayType
+      ? schema.items
+      : undefined;
+
+  const hasChildren =
+    !!childContainer?.properties && Object.keys(childContainer.properties).length > 0;
+
+  const requiredChildren = childContainer?.required ?? [];
 
   return (
     <div className={cn("border-l pl-3", depth > 0 ? "ml-3" : "ml-0")}>
@@ -129,15 +137,27 @@ function SchemaPropertyRow({ name, schema, required = false, depth = 0 }: Schema
 
       {hasChildren && open && (
         <div className="mb-1">
-          {Object.entries(schema.properties!).map(([propName, propSchema]) => (
+          {isArrayType && (
+            <code className="text-muted-foreground ml-3 block text-xs">[</code>
+          )}
+          <code className={cn("text-muted-foreground block text-xs", isArrayType ? "ml-6" : "ml-3")}>
+            {"{"}
+          </code>
+          {Object.entries(childContainer!.properties!).map(([propName, propSchema]) => (
             <SchemaPropertyRow
               key={propName}
               name={propName}
               schema={propSchema}
               required={requiredChildren.includes(propName)}
-              depth={depth + 1}
+              depth={depth + (isArrayType ? 2 : 1)}
             />
           ))}
+          <code className={cn("text-muted-foreground block text-xs", isArrayType ? "ml-6" : "ml-3")}>
+            {"}"}
+          </code>
+          {isArrayType && (
+            <code className="text-muted-foreground ml-3 block text-xs">]</code>
+          )}
         </div>
       )}
     </div>
