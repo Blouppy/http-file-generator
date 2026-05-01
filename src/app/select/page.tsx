@@ -18,14 +18,8 @@ import type { ParsedEndpoint } from "@/types/openapi";
 
 export default function SelectPage() {
   const router = useRouter();
-  const {
-    spec,
-    setSpec,
-    selectedIds,
-    setSelectedIds,
-    toggleEndpoint,
-    selectedEndpoints,
-  } = useSpec();
+  const { spec, setSpec, selectedIds, setSelectedIds, toggleEndpoint, selectedEndpoints } =
+    useSpec();
   const { t } = useLanguage();
 
   // Track selection order so the preview shows endpoints in the order they were checked.
@@ -234,7 +228,7 @@ export default function SelectPage() {
             </CardContent>
           </Card>
 
-          {/* Right panel — HTTP preview for all checked endpoints */}
+          {/* Right panel — HTTP file preview */}
           <HttpPreview spec={spec} endpoints={orderedPreviewEndpoints} />
         </div>
       </div>

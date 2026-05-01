@@ -109,4 +109,295 @@ paths: {}
       summary: "List items",
     });
   });
+
+  describe("schema annotation", () => {
+    it("annotates direct $ref properties with schemaName", async () => {
+      const spec = makeSpec({
+        components: {
+          schemas: {
+            UserDto: { type: "object", properties: { id: { type: "string" } } },
+            OrderDto: {
+              type: "object",
+              properties: { user: { $ref: "#/components/schemas/UserDto" } },
+            },
+          },
+        },
+      });
+      const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
+
+      expect(result.schemas?.OrderDto?.properties?.user?.schemaName).toBe("UserDto");
+    });
+
+    it("annotates array items with schemaName", async () => {
+      const spec = makeSpec({
+        components: {
+          schemas: {
+            LabelDto: { type: "object", properties: { name: { type: "string" } } },
+            IssueDto: {
+              type: "object",
+              properties: {
+                labels: { type: "array", items: { $ref: "#/components/schemas/LabelDto" } },
+              },
+            },
+          },
+        },
+      });
+      const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
+
+      expect(result.schemas?.IssueDto?.properties?.labels?.items?.schemaName).toBe("LabelDto");
+    });
+
+    it("annotates oneOf nullable properties with schemaName and flattens the referenced schema", async () => {
+      const spec = makeSpec({
+        components: {
+          schemas: {
+            Priority: { enum: ["Low", "High"] },
+            UserDto: { type: "object", properties: { id: { type: "string" } }, required: ["id"] },
+            IssueDto: {
+              type: "object",
+              properties: {
+                assignee: { oneOf: [{ type: "null" }, { $ref: "#/components/schemas/UserDto" }] },
+                priority: { oneOf: [{ type: "null" }, { $ref: "#/components/schemas/Priority" }] },
+              },
+            },
+          },
+        },
+      });
+      const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
+
+      const assignee = result.schemas?.IssueDto?.properties?.assignee;
+      expect(assignee?.schemaName).toBe("UserDto");
+      expect(assignee?.type).toBe("object");
+      expect(assignee?.properties).toBeDefined();
+
+      const priority = result.schemas?.IssueDto?.properties?.priority;
+      expect(priority?.schemaName).toBe("Priority");
+      expect(priority?.enum).toEqual(["Low", "High"]);
+    });
+
+    it("preserves OpenAPI 3.1 type arrays on schema properties", async () => {
+      const spec = makeSpec({
+        components: {
+          schemas: {
+            ActivityDto: {
+              type: "object",
+              properties: { id: { type: ["integer", "string"], format: "int32" } },
+            },
+          },
+        },
+      });
+      const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
+
+      expect(result.schemas?.ActivityDto?.properties?.id?.type).toEqual(["integer", "string"]);
+    });
+
+    it("annotates polymorphic oneOf properties with a joined schemaName", async () => {
+      const spec = makeSpec({
+        components: {
+          schemas: {
+            CatDto: { type: "object", properties: { meow: { type: "string" } } },
+            DogDto: { type: "object", properties: { bark: { type: "string" } } },
+            OwnerDto: {
+              type: "object",
+              properties: {
+                pet: {
+                  oneOf: [
+                    { $ref: "#/components/schemas/CatDto" },
+                    { $ref: "#/components/schemas/DogDto" },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      });
+      const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
+
+      expect(result.schemas?.OwnerDto?.properties?.pet?.schemaName).toBe("CatDto | DogDto");
+      // Polymorphic refs are not flattened — only single-ref nullable patterns are.
+      expect(result.schemas?.OwnerDto?.properties?.pet?.properties).toBeUndefined();
+    });
+
+    it("annotates polymorphic array items with a joined schemaName", async () => {
+      const spec = makeSpec({
+        components: {
+          schemas: {
+            CatDto: { type: "object", properties: { meow: { type: "string" } } },
+            DogDto: { type: "object", properties: { bark: { type: "string" } } },
+            ShelterDto: {
+              type: "object",
+              properties: {
+                pets: {
+                  type: "array",
+                  items: {
+                    oneOf: [
+                      { $ref: "#/components/schemas/CatDto" },
+                      { $ref: "#/components/schemas/DogDto" },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+      const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
+
+      expect(result.schemas?.ShelterDto?.properties?.pets?.items?.schemaName).toBe(
+        "CatDto | DogDto",
+      );
+    });
+
+    it("preserves item properties on array[object] for nested expansion", async () => {
+      const spec = makeSpec({
+        components: {
+          schemas: {
+            LabelDto: {
+              type: "object",
+              properties: { name: { type: "string" }, color: { type: "string" } },
+              required: ["name"],
+            },
+            IssueDetailDto: {
+              type: "object",
+              properties: {
+                labels: { type: "array", items: { $ref: "#/components/schemas/LabelDto" } },
+              },
+            },
+          },
+        },
+      });
+      const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
+
+      const labels = result.schemas?.IssueDetailDto?.properties?.labels;
+      expect(labels?.items?.schemaName).toBe("LabelDto");
+      // The renderer expands `array[LabelDto]` by walking `items.properties`.
+      expect(labels?.items?.properties).toBeDefined();
+      expect(Object.keys(labels?.items?.properties ?? {})).toEqual(["name", "color"]);
+      expect(labels?.items?.required).toEqual(["name"]);
+    });
+  });
+
+  describe("requestBodySchemaRef and primaryResponse", () => {
+    it("extracts requestBodySchemaRef from a JSON request body", async () => {
+      const spec = makeSpec({
+        paths: {
+          "/items": {
+            post: {
+              requestBody: {
+                content: {
+                  "application/json": {
+                    schema: { $ref: "#/components/schemas/ItemDto" },
+                  },
+                },
+              },
+              responses: { "204": { description: "No Content" } },
+            },
+          },
+        },
+        components: {
+          schemas: {
+            ItemDto: { type: "object", properties: { name: { type: "string" } } },
+          },
+        },
+      });
+      const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
+      const endpoint = result.endpoints.find((e) => e.method === "POST")!;
+
+      expect(endpoint.requestBodySchemaRef).toBe("ItemDto");
+    });
+
+    it("extracts primaryResponse schemaRef for a direct object response", async () => {
+      const spec = makeSpec({
+        paths: {
+          "/items/{id}": {
+            get: {
+              responses: {
+                "200": {
+                  description: "OK",
+                  content: {
+                    "application/json": {
+                      schema: { $ref: "#/components/schemas/ItemDto" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        components: {
+          schemas: {
+            ItemDto: { type: "object", properties: { name: { type: "string" } } },
+          },
+        },
+      });
+      const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
+      const endpoint = result.endpoints[0];
+
+      expect(endpoint.primaryResponse).toMatchObject({
+        statusCode: "200",
+        description: "OK",
+        schemaRef: "ItemDto",
+      });
+    });
+
+    it("extracts primaryResponse itemSchemaRef for an array response", async () => {
+      const spec = makeSpec({
+        paths: {
+          "/items": {
+            get: {
+              responses: {
+                "200": {
+                  description: "OK",
+                  content: {
+                    "application/json": {
+                      schema: {
+                        type: "array",
+                        items: { $ref: "#/components/schemas/ItemDto" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        components: {
+          schemas: {
+            ItemDto: { type: "object", properties: { name: { type: "string" } } },
+          },
+        },
+      });
+      const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
+      const endpoint = result.endpoints[0];
+
+      expect(endpoint.primaryResponse).toMatchObject({
+        statusCode: "200",
+        description: "OK",
+        itemSchemaRef: "ItemDto",
+      });
+    });
+
+    it("extracts primaryResponse with no schemaRef for a no-content response", async () => {
+      const spec = makeSpec({
+        paths: {
+          "/items/{id}": {
+            delete: {
+              responses: {
+                "204": { description: "No Content" },
+              },
+            },
+          },
+        },
+      });
+      const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
+      const endpoint = result.endpoints[0];
+
+      expect(endpoint.primaryResponse).toMatchObject({
+        statusCode: "204",
+        description: "No Content",
+      });
+      expect(endpoint.primaryResponse?.schemaRef).toBeUndefined();
+      expect(endpoint.primaryResponse?.itemSchemaRef).toBeUndefined();
+    });
+  });
 });

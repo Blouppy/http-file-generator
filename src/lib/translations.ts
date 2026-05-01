@@ -67,6 +67,24 @@ export const translations = {
     previewCopy: "Copy",
     previewCopied: "Copied!",
 
+    // Spec viewer panel
+    specViewerTitle: "Specification",
+    specViewerOpenButton: "Toggle endpoint details",
+    specViewerOverviewTab: "Overview",
+    specViewerModelsTab: "Models",
+    specViewerParametersTitle: "Parameters",
+    specViewerPathParamsTitle: "Path",
+    specViewerQueryParamsTitle: "Query",
+    specViewerRequestBodyTitle: "Request Body",
+    specViewerBodyTitle: "Body",
+    specViewerResponseTitle: "Response",
+    specViewerModelsTitle: "Models",
+    specViewerProperties: "Properties",
+    specViewerEnumValues: "Enum values",
+    specViewerRequired: "required",
+    specViewerOptional: "optional",
+    specViewerNoProperties: "No properties defined.",
+
     // Home page
     homeTitle: "HTTP File Generator",
     homeSubtitle: "Transform your OpenAPI specifications into ready-to-use .http files in seconds",
@@ -157,6 +175,24 @@ export const translations = {
     previewSelectEndpoint: "Cochez des endpoints pour prévisualiser leur fichier .http",
     previewCopy: "Copier",
     previewCopied: "Copié !",
+
+    // Spec viewer panel
+    specViewerTitle: "Spécification",
+    specViewerOpenButton: "Afficher/masquer les détails de l'endpoint",
+    specViewerOverviewTab: "Vue d'ensemble",
+    specViewerModelsTab: "Modèles",
+    specViewerParametersTitle: "Paramètres",
+    specViewerPathParamsTitle: "Chemin",
+    specViewerQueryParamsTitle: "Requête",
+    specViewerRequestBodyTitle: "Corps de la requête",
+    specViewerBodyTitle: "Corps",
+    specViewerResponseTitle: "Réponse",
+    specViewerModelsTitle: "Modèles",
+    specViewerProperties: "Propriétés",
+    specViewerEnumValues: "Valeurs d'énumération",
+    specViewerRequired: "requis",
+    specViewerOptional: "optionnel",
+    specViewerNoProperties: "Aucune propriété définie.",
 
     // Home page
     homeTitle: "HTTP File Generator",

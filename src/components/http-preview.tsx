@@ -150,16 +150,14 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
       <CardHeader className="shrink-0 flex-row items-center justify-between gap-2 space-y-0 pb-3">
         <CardTitle className="truncate text-base">{t.previewTitle}</CardTitle>
         {hasEndpoints && (
-          <div className="flex shrink-0 items-center gap-2">
-            <Button size="sm" variant="outline" onClick={handleCopy}>
-              {copied ? (
-                <Check className="mr-1.5 h-3.5 w-3.5 text-green-500" />
-              ) : (
-                <Copy className="mr-1.5 h-3.5 w-3.5" />
-              )}
-              {copied ? t.previewCopied : t.previewCopy}
-            </Button>
-          </div>
+          <Button size="sm" variant="outline" onClick={handleCopy}>
+            {copied ? (
+              <Check className="mr-1.5 h-3.5 w-3.5 text-green-500" />
+            ) : (
+              <Copy className="mr-1.5 h-3.5 w-3.5" />
+            )}
+            {copied ? t.previewCopied : t.previewCopy}
+          </Button>
         )}
       </CardHeader>
       <CardContent className="flex-1 overflow-y-auto p-0">
