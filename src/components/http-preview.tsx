@@ -181,10 +181,10 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
 
   return (
     <Card className="flex h-full flex-col overflow-hidden">
-      <CardHeader className="shrink-0 flex-row items-center justify-between gap-2 space-y-0 pb-3">
+      <CardHeader className="shrink-0 flex-row flex-wrap items-center justify-between gap-2 space-y-0 pb-3">
         <CardTitle className="truncate text-base">{t.previewTitle}</CardTitle>
         {hasEndpoints && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {sending ? (
               <Button
                 size="sm"

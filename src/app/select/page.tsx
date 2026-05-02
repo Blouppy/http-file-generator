@@ -158,8 +158,8 @@ export default function SelectPage() {
   };
 
   return (
-    <div className="bg-background flex h-[calc(100vh-3.75rem)] flex-col overflow-hidden">
-      <div className="mx-auto flex h-full w-full max-w-7xl flex-col gap-4 overflow-hidden px-4 py-4">
+    <div className="bg-background flex min-h-[calc(100vh-3.75rem)] flex-col lg:h-[calc(100vh-3.75rem)] lg:overflow-hidden">
+      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 px-4 py-4 lg:overflow-hidden">
         <SelectPageHeader
           spec={spec}
           selectedCount={selectedEndpoints.length}
@@ -167,11 +167,13 @@ export default function SelectPage() {
           onDownload={handleDownloadZip}
         />
 
-        {/* Two-column grid — fills remaining viewport height, no body scroll */}
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Two-column grid on lg+ (fills remaining viewport height, no body scroll).
+            On smaller screens, columns stack and each pane gets a usable height
+            (~70vh) while the page scrolls naturally. */}
+        <div className="grid flex-1 grid-cols-1 gap-6 lg:min-h-0 lg:grid-cols-2">
           {/* Left panel — endpoint tree with filters */}
-          <Card className="flex flex-col overflow-hidden">
-            <CardHeader className="shrink-0 flex-row items-center justify-between gap-2 space-y-0 pb-3">
+          <Card className="flex h-[70vh] flex-col overflow-hidden lg:h-auto">
+            <CardHeader className="shrink-0 flex-row flex-wrap items-center justify-between gap-2 space-y-0 pb-3">
               <CardTitle className="text-base">{t.endpointsTitle}</CardTitle>
               <div className="flex items-center gap-1">
                 <Button
@@ -231,7 +233,9 @@ export default function SelectPage() {
 
           {/* Right panel — HTTP file preview */}
           <HttpVarsProvider>
-            <HttpPreview spec={spec} endpoints={orderedPreviewEndpoints} />
+            <div className="h-[70vh] lg:h-auto">
+              <HttpPreview spec={spec} endpoints={orderedPreviewEndpoints} />
+            </div>
           </HttpVarsProvider>
         </div>
       </div>
