@@ -146,7 +146,7 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
   }, [content]);
 
   return (
-    <Card className="flex h-full flex-col overflow-hidden">
+    <Card className="flex min-h-[40vh] flex-col overflow-hidden lg:h-full lg:min-h-0">
       <CardHeader className="shrink-0 flex-row items-center justify-between gap-2 space-y-0 pb-3">
         <CardTitle className="truncate text-base">{t.previewTitle}</CardTitle>
         {hasEndpoints && (

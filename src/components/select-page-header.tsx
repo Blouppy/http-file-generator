@@ -27,9 +27,9 @@ export function SelectPageHeader({
   const isDownloadDisabled = selectedCount === 0;
 
   return (
-    <div className="bg-card flex shrink-0 items-start justify-between gap-4 rounded-lg border px-4 py-3">
-      <div className="min-w-0 flex-1">
-        <h2 className="truncate text-base font-semibold">{spec.title}</h2>
+    <div className="bg-card flex shrink-0 flex-col gap-3 rounded-lg border px-4 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+      <div className="min-w-0 sm:flex-1">
+        <h2 className="text-base font-semibold sm:truncate">{spec.title}</h2>
         <p className="text-muted-foreground mt-0.5 text-xs">
           {t.specVersion} {spec.version} &bull; {t.specBaseUrl}:{" "}
           <code className="bg-muted rounded px-1 py-0.5 text-xs">{spec.baseUrl}</code>
