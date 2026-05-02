@@ -9,6 +9,7 @@ import { EndpointFilters } from "@/components/endpoint-filters";
 import { HttpPreview } from "@/components/http-preview";
 import { SelectPageHeader } from "@/components/select-page-header";
 import { useSpec } from "@/contexts/spec-context";
+import { HttpVarsProvider } from "@/contexts/http-vars-context";
 import { useLanguage } from "@/contexts/language-context";
 import { useEndpointFilters } from "@/hooks/use-endpoint-filters";
 import { getEndpointId } from "@/services/openapi.service";
@@ -229,7 +230,9 @@ export default function SelectPage() {
           </Card>
 
           {/* Right panel — HTTP file preview */}
-          <HttpPreview spec={spec} endpoints={orderedPreviewEndpoints} />
+          <HttpVarsProvider>
+            <HttpPreview spec={spec} endpoints={orderedPreviewEndpoints} />
+          </HttpVarsProvider>
         </div>
       </div>
     </div>

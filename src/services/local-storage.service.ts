@@ -6,6 +6,8 @@
 export const STORAGE_KEYS = {
   LANGUAGE: "language",
   THEME: "theme", // managed by next-themes; exposed here for discoverability
+  /** Stores the active environment + per-environment variable overrides for the request runner. */
+  HTTP_VARS: "http-vars",
 } as const;
 
 /**

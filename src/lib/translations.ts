@@ -79,6 +79,9 @@ export const translations = {
     previewCopied: "Copied!",
     previewSend: "Send",
     previewSendDisabledHint: "Select exactly one endpoint to send a request",
+    previewSendShortcutHint: "Send request (Ctrl/Cmd + Enter)",
+    previewCancel: "Cancel",
+    previewResend: "Resend last request",
 
     // Response panel
     responseTitle: "Response",
@@ -87,6 +90,23 @@ export const translations = {
     responseBody: "Body",
     responseEmptyBody: "(empty body)",
     responseClose: "Close response",
+    responseCancelled: "Request cancelled.",
+    responseCorsHintTitle: "Likely a CORS error",
+    responseCorsHintBody:
+      "The browser blocked this cross-origin request. The target API must return appropriate Access-Control-Allow-* headers, or you need to call it from a server / proxy.",
+
+    // Variables panel
+    varsTitle: "Variables",
+    varsOverrideShort: "overridden",
+    varsEnvironment: "Environment",
+    varsAddEnvironment: "Add environment",
+    varsRemoveEnvironment: "Remove this environment",
+    varsNewEnvironmentPlaceholder: "Environment name",
+    varsAdd: "Add",
+    varsNoVariables: "No variables declared in the file.",
+    varsPlaceholderEmpty: "(empty)",
+    varsResetToDefault: "Reset to file default",
+    varsClearAll: "Clear all overrides",
 
     // Spec viewer panel
     specViewerTitle: "Specification",
@@ -210,6 +230,9 @@ export const translations = {
     previewCopied: "Copié !",
     previewSend: "Envoyer",
     previewSendDisabledHint: "Sélectionnez un seul endpoint pour envoyer une requête",
+    previewSendShortcutHint: "Envoyer la requête (Ctrl/Cmd + Entrée)",
+    previewCancel: "Annuler",
+    previewResend: "Renvoyer la dernière requête",
 
     // Response panel
     responseTitle: "Réponse",
@@ -218,6 +241,23 @@ export const translations = {
     responseBody: "Corps",
     responseEmptyBody: "(corps vide)",
     responseClose: "Fermer la réponse",
+    responseCancelled: "Requête annulée.",
+    responseCorsHintTitle: "Probable erreur CORS",
+    responseCorsHintBody:
+      "Le navigateur a bloqué cette requête cross-origin. L'API cible doit renvoyer les en-têtes Access-Control-Allow-* appropriés, ou vous devez l'appeler depuis un serveur / proxy.",
+
+    // Variables panel
+    varsTitle: "Variables",
+    varsOverrideShort: "remplacée(s)",
+    varsEnvironment: "Environnement",
+    varsAddEnvironment: "Ajouter un environnement",
+    varsRemoveEnvironment: "Supprimer cet environnement",
+    varsNewEnvironmentPlaceholder: "Nom de l'environnement",
+    varsAdd: "Ajouter",
+    varsNoVariables: "Aucune variable déclarée dans le fichier.",
+    varsPlaceholderEmpty: "(vide)",
+    varsResetToDefault: "Restaurer la valeur par défaut",
+    varsClearAll: "Effacer toutes les valeurs",
 
     // Spec viewer panel
     specViewerTitle: "Spécification",

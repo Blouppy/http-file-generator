@@ -1,4 +1,4 @@
-import { sendHttpRequest } from "@/services/http-request.service";
+import { isAbortError, isLikelyCorsError, sendHttpRequest } from "@/services/http-request.service";
 import type { ParsedHttpRequest } from "@/lib/parse-http-content";
 
 const originalFetch = global.fetch;
@@ -98,5 +98,45 @@ describe("sendHttpRequest", () => {
     global.fetch = jest.fn().mockRejectedValue(new TypeError("Failed to fetch"));
 
     await expect(sendHttpRequest(makeRequest())).rejects.toThrow("Failed to fetch");
+  });
+
+  it("forwards an AbortSignal to fetch", async () => {
+    const fetchMock = jest.fn().mockResolvedValue(mockResponse(""));
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const controller = new AbortController();
+    await sendHttpRequest(makeRequest(), { signal: controller.signal });
+
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(init.signal).toBe(controller.signal);
+  });
+});
+
+describe("isLikelyCorsError", () => {
+  it("matches a TypeError with the canonical 'Failed to fetch' message", () => {
+    expect(isLikelyCorsError(new TypeError("Failed to fetch"))).toBe(true);
+  });
+
+  it("matches Firefox's NetworkError variant", () => {
+    expect(isLikelyCorsError(new TypeError("NetworkError when attempting to fetch"))).toBe(true);
+  });
+
+  it("returns false for non-TypeError errors", () => {
+    expect(isLikelyCorsError(new Error("Failed to fetch"))).toBe(false);
+    expect(isLikelyCorsError(null)).toBe(false);
+    expect(isLikelyCorsError("oops")).toBe(false);
+  });
+});
+
+describe("isAbortError", () => {
+  it("returns true for a DOMException named AbortError", () => {
+    const err = new DOMException("aborted", "AbortError");
+
+    expect(isAbortError(err)).toBe(true);
+  });
+
+  it("returns false for other errors", () => {
+    expect(isAbortError(new Error("nope"))).toBe(false);
+    expect(isAbortError(null)).toBe(false);
   });
 });

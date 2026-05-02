@@ -1,14 +1,21 @@
 "use client";
 
-import { Fragment, useMemo, useState, useCallback } from "react";
-import { Copy, Check, Send, Loader2 } from "lucide-react";
+import { Fragment, useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { Copy, Check, Send, RotateCw, X as XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { generateHttpFileContent } from "@/lib/generate-http";
-import { parseHttpContent } from "@/lib/parse-http-content";
-import { sendHttpRequest, type HttpResponseResult } from "@/services/http-request.service";
+import { extractDeclaredVariables, parseHttpContent } from "@/lib/parse-http-content";
+import {
+  isAbortError,
+  isLikelyCorsError,
+  sendHttpRequest,
+  type HttpResponseResult,
+} from "@/services/http-request.service";
 import { ResponsePanel } from "@/components/response-panel";
+import { HttpVarsPanel } from "@/components/http-vars-panel";
+import { useHttpVars } from "@/contexts/http-vars-context";
 import { useLanguage } from "@/contexts/language-context";
 import type { ParsedSpec, ParsedEndpoint } from "@/types/openapi";
 
@@ -117,11 +124,19 @@ interface HttpPreviewProps {
 
 export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
   const { t } = useLanguage();
+  const { overrides } = useHttpVars();
   const [copied, setCopied] = useState(false);
   const [sending, setSending] = useState(false);
   const [response, setResponse] = useState<HttpResponseResult | null>(null);
   const [responseError, setResponseError] = useState<string | null>(null);
+  const [responseErrorIsCors, setResponseErrorIsCors] = useState(false);
   const [responseOpen, setResponseOpen] = useState(false);
+  const [varsOpen, setVarsOpen] = useState(false);
+  // Tracks whether at least one Send has succeeded (or failed) — controls Resend visibility.
+  const [hasSent, setHasSent] = useState(false);
+
+  // Holds the AbortController for the in-flight fetch, so the user can cancel it.
+  const abortRef = useRef<AbortController | null>(null);
 
   const hasEndpoints = endpoints.length > 0;
   // Sending is only meaningful when exactly one endpoint is selected — otherwise
@@ -138,6 +153,10 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
   }, [spec, endpoints]);
 
   const lines = useMemo(() => (content ? content.split("\n") : []), [content]);
+
+  // Variables declared in the current preview content (including the auto-emitted
+  // `@baseUrl` / `@token`). The Variables panel uses this to show editable rows.
+  const declaredVars = useMemo(() => (content ? extractDeclaredVariables(content) : {}), [content]);
 
   const handleCopy = useCallback(() => {
     if (!content) {
@@ -160,33 +179,82 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
       return;
     }
 
-    const { requests } = parseHttpContent(content);
+    const { requests } = parseHttpContent(content, { overrides });
 
     if (requests.length === 0) {
       return;
     }
 
+    // Cancel any in-flight request before starting a new one.
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setSending(true);
     setResponseOpen(true);
     setResponse(null);
     setResponseError(null);
+    setResponseErrorIsCors(false);
+    setHasSent(true);
 
     try {
-      const result = await sendHttpRequest(requests[0]);
+      const result = await sendHttpRequest(requests[0], { signal: controller.signal });
       setResponse(result);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      setResponseError(message);
+      // Aborts are user-initiated cancellations — don't render them as errors.
+      if (isAbortError(err)) {
+        setResponseError(t.responseCancelled);
+        setResponseErrorIsCors(false);
+      } else {
+        const message = err instanceof Error ? err.message : String(err);
+        setResponseError(message);
+        setResponseErrorIsCors(isLikelyCorsError(err));
+      }
     } finally {
+      // Only clear the controller if it's still the active one (a follow-up
+      // Send may have already replaced it).
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+      }
+
       setSending(false);
     }
-  }, [content, canSend]);
+  }, [content, canSend, overrides, t.responseCancelled]);
+
+  const handleCancel = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
 
   const handleCloseResponse = useCallback(() => {
+    abortRef.current?.abort();
     setResponseOpen(false);
     setResponse(null);
     setResponseError(null);
+    setResponseErrorIsCors(false);
   }, []);
+
+  // Cancel any in-flight request on unmount to avoid setting state after unmount.
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
+
+  // Keyboard shortcut: Ctrl/Cmd+Enter sends the current request.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        if (canSend && !sending) {
+          e.preventDefault();
+          handleSend();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [canSend, sending, handleSend]);
 
   return (
     <Card className="flex h-full flex-col overflow-hidden">
@@ -194,20 +262,41 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
         <CardTitle className="truncate text-base">{t.previewTitle}</CardTitle>
         {hasEndpoints && (
           <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleSend}
-              disabled={!canSend || sending}
-              title={!canSend ? t.previewSendDisabledHint : undefined}
-            >
-              {sending ? (
-                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-              ) : (
+            {sending ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleCancel}
+                title={t.previewCancel}
+                className="text-destructive hover:text-destructive"
+              >
+                <XIcon className="mr-1.5 h-3.5 w-3.5" />
+                {t.previewCancel}
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleSend}
+                disabled={!canSend}
+                title={!canSend ? t.previewSendDisabledHint : t.previewSendShortcutHint}
+              >
                 <Send className="mr-1.5 h-3.5 w-3.5" />
-              )}
-              {t.previewSend}
-            </Button>
+                {t.previewSend}
+              </Button>
+            )}
+            {hasSent && !sending && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleSend}
+                disabled={!canSend}
+                title={t.previewResend}
+                aria-label={t.previewResend}
+              >
+                <RotateCw className="h-3.5 w-3.5" />
+              </Button>
+            )}
             <Button size="sm" variant="outline" onClick={handleCopy}>
               {copied ? (
                 <Check className="mr-1.5 h-3.5 w-3.5 text-green-500" />
@@ -225,22 +314,30 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
             {t.previewSelectEndpoint}
           </div>
         ) : (
-          <pre className="bg-muted/30 flex-1 overflow-auto px-6 py-4 font-mono text-xs leading-relaxed">
-            <code>
-              {lines.map((line, i) => (
-                <Fragment key={i}>
-                  <SyntaxLine line={line} />
-                  {i < lines.length - 1 && "\n"}
-                </Fragment>
-              ))}
-            </code>
-          </pre>
+          <>
+            <HttpVarsPanel
+              declared={declaredVars}
+              open={varsOpen}
+              onToggle={() => setVarsOpen((prev) => !prev)}
+            />
+            <pre className="bg-muted/30 flex-1 overflow-auto px-6 py-4 font-mono text-xs leading-relaxed">
+              <code>
+                {lines.map((line, i) => (
+                  <Fragment key={i}>
+                    <SyntaxLine line={line} />
+                    {i < lines.length - 1 && "\n"}
+                  </Fragment>
+                ))}
+              </code>
+            </pre>
+          </>
         )}
 
         {responseOpen && (
           <ResponsePanel
             loading={sending}
             error={responseError}
+            errorIsCors={responseErrorIsCors}
             response={response}
             onClose={handleCloseResponse}
           />
