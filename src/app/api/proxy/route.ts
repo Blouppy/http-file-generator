@@ -18,6 +18,8 @@
  */
 
 import { NextResponse } from "next/server";
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
 
 export const runtime = "nodejs";
 // Avoid any caching of proxied responses.
@@ -63,9 +65,9 @@ const FORBIDDEN_RESPONSE_HEADERS = new Set([
 ]);
 
 /**
- * Returns true when the given hostname resolves to (or is literally) a
- * loopback / link-local / private / reserved address. Best-effort check on
- * the literal hostname only; no DNS resolution is performed.
+ * Returns true when the given hostname literal is an obviously private /
+ * loopback / link-local address. Best-effort string-based check — used as
+ * a fast pre-filter before DNS resolution.
  */
 function isPrivateHost(hostname: string): boolean {
   const host = hostname.toLowerCase();
@@ -74,49 +76,123 @@ function isPrivateHost(hostname: string): boolean {
     return true;
   }
 
-  // IPv6 loopback / unspecified.
-  if (host === "::1" || host === "::" || host === "[::1]" || host === "[::]") {
-    return true;
+  // IPv6 literals may arrive bracketed (`[::1]`) or unbracketed.
+  const stripped = host.startsWith("[") && host.endsWith("]") ? host.slice(1, -1) : host;
+
+  if (isIP(stripped) > 0) {
+    return isPrivateIp(stripped);
   }
 
-  // IPv6 link-local (fe80::/10) and unique-local (fc00::/7).
-  if (
-    host.startsWith("[fe8") ||
-    host.startsWith("[fe9") ||
-    host.startsWith("[fea") ||
-    host.startsWith("[feb")
-  ) {
-    return true;
-  }
+  return false;
+}
 
-  if (host.startsWith("[fc") || host.startsWith("[fd")) {
-    return true;
-  }
+/**
+ * Returns true when the given literal IP address (v4 or v6) belongs to a
+ * range that should not be reachable from the proxy: loopback, link-local,
+ * private, unspecified, multicast, or reserved.
+ */
+function isPrivateIp(ip: string): boolean {
+  const family = isIP(ip);
 
-  // IPv4 dotted-quad checks.
-  const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (family === 4) {
+    const octets = ip.split(".").map((n) => Number(n));
 
-  if (ipv4) {
-    const [, a, b] = ipv4.map((n) => Number(n));
-
-    if (a === 10 || a === 127 || a === 0) {
+    if (octets.length !== 4 || octets.some((n) => Number.isNaN(n))) {
       return true;
     }
 
+    const [a, b] = octets;
+
+    // 0.0.0.0/8 (unspecified), 10.0.0.0/8, 127.0.0.0/8 (loopback).
+    if (a === 0 || a === 10 || a === 127) {
+      return true;
+    }
+
+    // 169.254.0.0/16 (link-local — includes cloud metadata 169.254.169.254).
     if (a === 169 && b === 254) {
       return true;
     }
 
+    // 172.16.0.0/12.
     if (a === 172 && b >= 16 && b <= 31) {
       return true;
     }
 
+    // 192.168.0.0/16.
     if (a === 192 && b === 168) {
       return true;
     }
+
+    // 224.0.0.0/4 (multicast), 240.0.0.0/4 (reserved).
+    if (a >= 224) {
+      return true;
+    }
+
+    return false;
   }
 
-  return false;
+  if (family === 6) {
+    const lower = ip.toLowerCase();
+
+    if (lower === "::" || lower === "::1") {
+      return true;
+    }
+
+    // IPv4-mapped IPv6 address (::ffff:a.b.c.d) — recurse on the v4 part.
+    const mapped = lower.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+
+    if (mapped) {
+      return isPrivateIp(mapped[1]);
+    }
+
+    // Link-local (fe80::/10), unique-local (fc00::/7), site-local
+    // (fec0::/10, deprecated), multicast (ff00::/8).
+    if (
+      lower.startsWith("fe8") ||
+      lower.startsWith("fe9") ||
+      lower.startsWith("fea") ||
+      lower.startsWith("feb") ||
+      lower.startsWith("fc") ||
+      lower.startsWith("fd") ||
+      lower.startsWith("fec") ||
+      lower.startsWith("fed") ||
+      lower.startsWith("fee") ||
+      lower.startsWith("fef") ||
+      lower.startsWith("ff")
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  // Unknown / malformed — refuse.
+  return true;
+}
+
+/**
+ * Resolves the hostname and returns true when ANY of the resolved
+ * addresses is a private / loopback / link-local IP. This defeats trivial
+ * DNS-rebinding attacks where a public-looking hostname resolves to an
+ * internal address (e.g. cloud metadata at 169.254.169.254).
+ */
+async function resolvesToPrivateIp(hostname: string): Promise<boolean> {
+  const stripped =
+    hostname.startsWith("[") && hostname.endsWith("]") ? hostname.slice(1, -1) : hostname;
+
+  if (isIP(stripped) > 0) {
+    return isPrivateIp(stripped);
+  }
+
+  try {
+    const addresses = await lookup(hostname, { all: true });
+
+    return addresses.some((addr) => isPrivateIp(addr.address));
+  } catch {
+    // DNS lookup failed — refuse to be safe (the upstream call would
+    // also fail; this just gives a clearer error).
+    return true;
+  }
 }
 
 function badRequest(message: string): NextResponse {
@@ -148,7 +224,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     return badRequest("Only http and https protocols are supported.");
   }
 
-  if (isPrivateHost(target.hostname)) {
+  // Fast literal check first, then a DNS-resolved check to defeat trivial
+  // DNS-rebinding attacks (a public-looking name pointing at 127.0.0.1 etc).
+  if (isPrivateHost(target.hostname) || (await resolvesToPrivateIp(target.hostname))) {
     return badRequest("Refusing to proxy to a private / loopback host.");
   }
 
