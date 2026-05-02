@@ -14,6 +14,7 @@ import {
 } from "@/services/http-request.service";
 import { ResponsePanel } from "@/components/response-panel";
 import { HttpVarsPanel } from "@/components/http-vars-panel";
+import { HighlightedHttpEditor } from "@/components/highlighted-http-editor";
 import { useHttpVars } from "@/contexts/http-vars-context";
 import { useLanguage } from "@/contexts/language-context";
 import type { ParsedSpec, ParsedEndpoint } from "@/types/openapi";
@@ -253,15 +254,10 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
               open={varsOpen}
               onToggle={() => setVarsOpen((prev) => !prev)}
             />
-            <textarea
+            <HighlightedHttpEditor
               value={content ?? ""}
-              onChange={(e) => setEditedContent(e.target.value)}
-              spellCheck={false}
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              aria-label={t.previewTitle}
-              className="bg-muted/30 text-foreground caret-foreground flex-1 resize-none overflow-auto border-0 px-6 py-4 font-mono text-xs leading-relaxed whitespace-pre focus:outline-none focus-visible:ring-0"
+              onChange={setEditedContent}
+              ariaLabel={t.previewTitle}
             />
           </>
         )}
