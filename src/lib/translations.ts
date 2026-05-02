@@ -100,7 +100,7 @@ export const translations = {
     homeTitle: "HTTP File Generator",
     homeSubtitle: "Transform your OpenAPI specifications into ready-to-use .http files in seconds",
     homeGetStarted: "Get Started",
-    homeCompatibleWith: "Compatible with VS Code REST Client & JetBrains HTTP Client",
+    homeCompatibleWith: "Compatible with VS Code REST Client",
     homePreviewTitle: "See it in action",
     homePreviewDesc:
       "Browse your endpoints, select exactly what you need, and instantly preview the generated .http file.",
@@ -222,7 +222,7 @@ export const translations = {
     homeSubtitle:
       "Transformez vos spécifications OpenAPI en fichiers .http prêts à l'emploi en quelques secondes",
     homeGetStarted: "Commencer",
-    homeCompatibleWith: "Compatible avec VS Code REST Client & JetBrains HTTP Client",
+    homeCompatibleWith: "Compatible avec VS Code REST Client",
     homePreviewTitle: "Voyez-le en action",
     homePreviewDesc:
       "Parcourez vos endpoints, sélectionnez exactement ce dont vous avez besoin, et prévisualisez instantanément le fichier .http généré.",
