@@ -82,6 +82,7 @@ export const translations = {
     previewSendShortcutHint: "Send request (Ctrl/Cmd + Enter)",
     previewCancel: "Cancel",
     previewResend: "Resend last request",
+    previewResetEdits: "Discard your edits and restore the generated preview",
 
     // Response panel
     responseTitle: "Response",
@@ -233,6 +234,7 @@ export const translations = {
     previewSendShortcutHint: "Envoyer la requête (Ctrl/Cmd + Entrée)",
     previewCancel: "Annuler",
     previewResend: "Renvoyer la dernière requête",
+    previewResetEdits: "Annuler vos modifications et restaurer l'aperçu généré",
 
     // Response panel
     responseTitle: "Réponse",

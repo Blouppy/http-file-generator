@@ -1,10 +1,9 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Copy, Check, Send, RotateCw, X as XIcon } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { Copy, Check, Send, RotateCw, RotateCcw, X as XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 import { generateHttpFileContent } from "@/lib/generate-http";
 import { extractDeclaredVariables, parseHttpContent } from "@/lib/parse-http-content";
 import {
@@ -18,104 +17,6 @@ import { HttpVarsPanel } from "@/components/http-vars-panel";
 import { useHttpVars } from "@/contexts/http-vars-context";
 import { useLanguage } from "@/contexts/language-context";
 import type { ParsedSpec, ParsedEndpoint } from "@/types/openapi";
-
-// Text colours that mirror the MethodBadge background palette, adapted for dark mode
-const METHOD_TEXT_COLORS: Record<string, string> = {
-  GET: "text-blue-600 dark:text-blue-400",
-  POST: "text-green-600 dark:text-green-400",
-  PUT: "text-yellow-600 dark:text-yellow-400",
-  PATCH: "text-orange-600 dark:text-orange-400",
-  DELETE: "text-red-600 dark:text-red-400",
-  HEAD: "text-purple-600 dark:text-purple-400",
-  OPTIONS: "text-gray-600 dark:text-gray-400",
-};
-
-type LineType = "section" | "comment" | "variable" | "method" | "header" | "body";
-
-function classifyLine(line: string): LineType {
-  if (line.startsWith("###")) {
-    return "section";
-  }
-
-  if (line.startsWith("#")) {
-    return "comment";
-  }
-
-  if (line.startsWith("@")) {
-    return "variable";
-  }
-
-  if (/^(GET|POST|PUT|DELETE|PATCH|OPTIONS|HEAD|TRACE)\s/.test(line)) {
-    return "method";
-  }
-
-  if (/^[A-Za-z][\w-]*:\s*/.test(line)) {
-    return "header";
-  }
-
-  return "body";
-}
-
-/** Renders one line with inline syntax colouring (no block layout — used inside a <pre>). */
-function SyntaxLine({ line }: { line: string }) {
-  if (line === "") {
-    return null;
-  }
-
-  const type = classifyLine(line);
-
-  switch (type) {
-    case "section":
-      return <span className="font-semibold text-yellow-500 dark:text-yellow-400">{line}</span>;
-
-    case "comment":
-      return <span className="text-muted-foreground">{line}</span>;
-
-    case "variable": {
-      const eqIdx = line.indexOf("=");
-
-      if (eqIdx > 0) {
-        return (
-          <>
-            <span className="text-cyan-600 dark:text-cyan-400">{line.slice(0, eqIdx)}</span>
-            <span className="text-muted-foreground">{"=" + line.slice(eqIdx + 1)}</span>
-          </>
-        );
-      }
-
-      return <span className="text-cyan-600 dark:text-cyan-400">{line}</span>;
-    }
-
-    case "method": {
-      const spaceIdx = line.indexOf(" ");
-      const method = line.slice(0, spaceIdx);
-      const url = line.slice(spaceIdx);
-      const methodColor = METHOD_TEXT_COLORS[method] ?? "text-foreground";
-
-      return (
-        <>
-          <span className={cn("font-bold", methodColor)}>{method}</span>
-          <span className="text-foreground">{url}</span>
-        </>
-      );
-    }
-
-    case "header": {
-      const colonIdx = line.indexOf(":");
-
-      return (
-        <>
-          <span className="text-blue-600 dark:text-blue-400">{line.slice(0, colonIdx)}</span>
-          <span className="text-muted-foreground">{line.slice(colonIdx)}</span>
-        </>
-      );
-    }
-
-    default:
-      // body / JSON
-      return <span className="text-green-700 dark:text-green-400">{line}</span>;
-  }
-}
 
 interface HttpPreviewProps {
   spec: ParsedSpec;
@@ -144,7 +45,8 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
   const canSend = endpoints.length === 1;
 
   // Generate the full file content for all selected endpoints in selection order.
-  const content = useMemo(() => {
+  // This is the "baseline" — what the file would look like if the user hadn't edited it.
+  const generatedContent = useMemo(() => {
     if (endpoints.length === 0) {
       return null;
     }
@@ -152,10 +54,26 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
     return generateHttpFileContent(spec, endpoints);
   }, [spec, endpoints]);
 
-  const lines = useMemo(() => (content ? content.split("\n") : []), [content]);
+  // User-edited content. `null` means "unmodified — use generatedContent as-is".
+  // Tracking edits separately means typing in the textarea doesn't disrupt the
+  // selection-driven regeneration: when the user changes selection we know to
+  // reset the edit, otherwise the edit persists across re-renders.
+  const [editedContent, setEditedContent] = useState<string | null>(null);
 
-  // Variables declared in the current preview content (including the auto-emitted
-  // `@baseUrl` / `@token`). The Variables panel uses this to show editable rows.
+  // Whenever the generated baseline changes (selection / spec change), drop any
+  // user edits — they almost certainly no longer make sense for the new content.
+  useEffect(() => {
+    setEditedContent(null);
+  }, [generatedContent]);
+
+  // The effective content used by Send / Copy / variable extraction. Falls back
+  // to the generated baseline when the user hasn't edited anything.
+  const content = editedContent ?? generatedContent;
+  const isEdited = editedContent !== null && editedContent !== generatedContent;
+
+  // Variables declared in the (possibly edited) preview content. The Variables
+  // panel uses this to know which fields to render — so adding `@myVar = …` in
+  // the textarea makes a row appear, just like with file-declared variables.
   const declaredVars = useMemo(() => (content ? extractDeclaredVariables(content) : {}), [content]);
 
   const handleCopy = useCallback(() => {
@@ -233,6 +151,10 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
     setResponseErrorIsCors(false);
   }, []);
 
+  const handleResetEdits = useCallback(() => {
+    setEditedContent(null);
+  }, []);
+
   // Cancel any in-flight request on unmount to avoid setting state after unmount.
   useEffect(() => {
     return () => {
@@ -297,6 +219,17 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
                 <RotateCw className="h-3.5 w-3.5" />
               </Button>
             )}
+            {isEdited && !sending && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleResetEdits}
+                title={t.previewResetEdits}
+                aria-label={t.previewResetEdits}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </Button>
+            )}
             <Button size="sm" variant="outline" onClick={handleCopy}>
               {copied ? (
                 <Check className="mr-1.5 h-3.5 w-3.5 text-green-500" />
@@ -320,16 +253,16 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
               open={varsOpen}
               onToggle={() => setVarsOpen((prev) => !prev)}
             />
-            <pre className="bg-muted/30 flex-1 overflow-auto px-6 py-4 font-mono text-xs leading-relaxed">
-              <code>
-                {lines.map((line, i) => (
-                  <Fragment key={i}>
-                    <SyntaxLine line={line} />
-                    {i < lines.length - 1 && "\n"}
-                  </Fragment>
-                ))}
-              </code>
-            </pre>
+            <textarea
+              value={content ?? ""}
+              onChange={(e) => setEditedContent(e.target.value)}
+              spellCheck={false}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              aria-label={t.previewTitle}
+              className="bg-muted/30 text-foreground caret-foreground flex-1 resize-none overflow-auto border-0 px-6 py-4 font-mono text-xs leading-relaxed whitespace-pre focus:outline-none focus-visible:ring-0"
+            />
           </>
         )}
 
