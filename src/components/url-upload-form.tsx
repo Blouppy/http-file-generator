@@ -32,11 +32,6 @@ export function UrlUploadForm({
     [url, onUrl],
   );
 
-  const handleClear = useCallback(() => {
-    setUrl("");
-    onClear?.();
-  }, [onClear]);
-
   return (
     <Card>
       <CardContent className="pt-6">
@@ -48,7 +43,10 @@ export function UrlUploadForm({
                 type="text"
                 placeholder={t.urlInputPlaceholder}
                 value={url}
-                onChange={(e) => setUrl(e.target.value)}
+                onChange={(e) => {
+                  setUrl(e.target.value);
+                  onClear?.();
+                }}
                 className="pl-9"
                 disabled={isLoading}
                 aria-label={t.urlInputPlaceholder}
@@ -63,12 +61,6 @@ export function UrlUploadForm({
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
             </Alert>
-          )}
-
-          {error && (
-            <Button variant="outline" size="sm" onClick={handleClear}>
-              {t.dropzoneTryAgain}
-            </Button>
           )}
 
           {!error && <p className="text-muted-foreground text-sm">{t.urlInputDescription}</p>}
