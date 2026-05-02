@@ -27,15 +27,30 @@ export interface SendHttpRequestOptions {
    * `"AbortError"` (the standard `fetch` behaviour).
    */
   signal?: AbortSignal;
+  /**
+   * When true, the request is forwarded through the app's own
+   * `/api/proxy` endpoint, which performs the actual call server-side.
+   * This bypasses browser CORS restrictions — most public APIs do not
+   * advertise the necessary `Access-Control-Allow-*` headers and are
+   * therefore unreachable directly from the browser.
+   */
+  useProxy?: boolean;
 }
 
 /** Methods for which a body is never sent (per the fetch / HTTP spec). */
 const METHODS_WITHOUT_BODY = new Set(["GET", "HEAD"]);
 
+/** Path of the in-app server proxy (relative to the current origin). */
+const PROXY_ENDPOINT = "/api/proxy";
+
 export async function sendHttpRequest(
   request: ParsedHttpRequest,
   options: SendHttpRequestOptions = {},
 ): Promise<HttpResponseResult> {
+  if (options.useProxy) {
+    return sendHttpRequestViaProxy(request, options.signal);
+  }
+
   const headers = new Headers();
 
   for (const { name, value } of request.headers) {
@@ -70,6 +85,60 @@ export async function sendHttpRequest(
     contentType: response.headers.get("content-type"),
     durationMs,
     size: new Blob([text]).size,
+  };
+}
+
+/**
+ * Forwards the request through the app's `/api/proxy` route. The proxy
+ * runs server-side (no CORS) and returns the upstream response in a JSON
+ * envelope: `{ status, statusText, headers, body, contentType }`.
+ */
+async function sendHttpRequestViaProxy(
+  request: ParsedHttpRequest,
+  signal: AbortSignal | undefined,
+): Promise<HttpResponseResult> {
+  const payload = {
+    url: request.url,
+    method: request.method,
+    headers: request.headers,
+    body:
+      request.body !== undefined && !METHODS_WITHOUT_BODY.has(request.method)
+        ? request.body
+        : undefined,
+  };
+
+  const start = performance.now();
+  const proxyResponse = await fetch(PROXY_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    signal,
+  });
+  const data = (await proxyResponse.json()) as {
+    status?: number;
+    statusText?: string;
+    headers?: Array<{ name: string; value: string }>;
+    body?: string;
+    contentType?: string | null;
+    error?: string;
+  };
+  const durationMs = Math.round(performance.now() - start);
+
+  // The proxy itself failed (bad URL, blocked host, upstream timeout, …).
+  if (!proxyResponse.ok || typeof data.status !== "number") {
+    throw new Error(data.error ?? `Proxy request failed (${proxyResponse.status})`);
+  }
+
+  const body = data.body ?? "";
+
+  return {
+    status: data.status,
+    statusText: data.statusText ?? "",
+    headers: data.headers ?? [],
+    body,
+    contentType: data.contentType ?? null,
+    durationMs,
+    size: new Blob([body]).size,
   };
 }
 

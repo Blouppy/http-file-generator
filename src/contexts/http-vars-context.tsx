@@ -21,11 +21,19 @@ interface HttpVarsState {
   activeEnv: string;
   /** Variable overrides per environment: `{ [envName]: { [varName]: value } }`. */
   envs: Record<string, Record<string, string>>;
+  /**
+   * When true, requests are sent through the in-app `/api/proxy` route to
+   * bypass browser CORS restrictions. Defaults to true because most public
+   * APIs do not advertise `Access-Control-Allow-*` headers and would
+   * otherwise be unreachable from the browser.
+   */
+  useProxy: boolean;
 }
 
 const INITIAL_STATE: HttpVarsState = {
   activeEnv: DEFAULT_ENVIRONMENT,
   envs: Object.fromEntries(STARTER_ENVIRONMENTS.map((e) => [e, {}])),
+  useProxy: true,
 };
 
 interface HttpVarsContextValue {
@@ -45,6 +53,10 @@ interface HttpVarsContextValue {
   removeEnvironment: (name: string) => void;
   /** Clears all overrides for the active environment. */
   clearActiveEnv: () => void;
+  /** Whether to forward requests through the server proxy (CORS bypass). */
+  useProxy: boolean;
+  /** Toggle whether to use the server proxy. */
+  setUseProxy: (value: boolean) => void;
 }
 
 const HttpVarsContext = createContext<HttpVarsContextValue | null>(null);
@@ -69,7 +81,11 @@ function loadInitialState(): HttpVarsState {
     envs[DEFAULT_ENVIRONMENT] = {};
   }
 
-  return { activeEnv: stored.activeEnv ?? DEFAULT_ENVIRONMENT, envs };
+  return {
+    activeEnv: stored.activeEnv ?? DEFAULT_ENVIRONMENT,
+    envs,
+    useProxy: typeof stored.useProxy === "boolean" ? stored.useProxy : true,
+  };
 }
 
 export function HttpVarsProvider({ children }: { children: React.ReactNode }) {
@@ -130,6 +146,7 @@ export function HttpVarsProvider({ children }: { children: React.ReactNode }) {
       }
 
       return {
+        ...prev,
         activeEnv: trimmed,
         envs: { ...prev.envs, [trimmed]: {} },
       };
@@ -150,6 +167,7 @@ export function HttpVarsProvider({ children }: { children: React.ReactNode }) {
       delete envs[name];
 
       return {
+        ...prev,
         activeEnv: prev.activeEnv === name ? DEFAULT_ENVIRONMENT : prev.activeEnv,
         envs,
       };
@@ -163,6 +181,10 @@ export function HttpVarsProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
+  const setUseProxy = useCallback((value: boolean) => {
+    setState((prev) => ({ ...prev, useProxy: value }));
+  }, []);
+
   const value = useMemo<HttpVarsContextValue>(
     () => ({
       activeEnv: state.activeEnv,
@@ -173,8 +195,18 @@ export function HttpVarsProvider({ children }: { children: React.ReactNode }) {
       addEnvironment,
       removeEnvironment,
       clearActiveEnv,
+      useProxy: state.useProxy,
+      setUseProxy,
     }),
-    [state, setActiveEnv, setOverride, addEnvironment, removeEnvironment, clearActiveEnv],
+    [
+      state,
+      setActiveEnv,
+      setOverride,
+      addEnvironment,
+      removeEnvironment,
+      clearActiveEnv,
+      setUseProxy,
+    ],
   );
 
   return <HttpVarsContext value={value}>{children}</HttpVarsContext>;

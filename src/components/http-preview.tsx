@@ -1,21 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { Copy, Check, Send, RotateCw, RotateCcw, X as XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { generateHttpFileContent } from "@/lib/generate-http";
-import { extractDeclaredVariables, parseHttpContent } from "@/lib/parse-http-content";
-import {
-  isAbortError,
-  isLikelyCorsError,
-  sendHttpRequest,
-  type HttpResponseResult,
-} from "@/services/http-request.service";
+import { extractDeclaredVariables } from "@/lib/parse-http-content";
 import { ResponsePanel } from "@/components/response-panel";
 import { HttpVarsPanel } from "@/components/http-vars-panel";
 import { HighlightedHttpEditor } from "@/components/highlighted-http-editor";
-import { useHttpVars } from "@/contexts/http-vars-context";
+import { useHttpSender } from "@/contexts/http-sender-context";
 import { useLanguage } from "@/contexts/language-context";
 import type { ParsedSpec, ParsedEndpoint } from "@/types/openapi";
 
@@ -26,19 +20,9 @@ interface HttpPreviewProps {
 
 export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
   const { t } = useLanguage();
-  const { overrides } = useHttpVars();
+  const sender = useHttpSender();
   const [copied, setCopied] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [response, setResponse] = useState<HttpResponseResult | null>(null);
-  const [responseError, setResponseError] = useState<string | null>(null);
-  const [responseErrorIsCors, setResponseErrorIsCors] = useState(false);
-  const [responseOpen, setResponseOpen] = useState(false);
   const [varsOpen, setVarsOpen] = useState(false);
-  // Tracks whether at least one Send has succeeded (or failed) — controls Resend visibility.
-  const [hasSent, setHasSent] = useState(false);
-
-  // Holds the AbortController for the in-flight fetch, so the user can cancel it.
-  const abortRef = useRef<AbortController | null>(null);
 
   const hasEndpoints = endpoints.length > 0;
   // Sending is only meaningful when exactly one endpoint is selected — otherwise
@@ -72,9 +56,7 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
   const content = editedContent ?? generatedContent;
   const isEdited = editedContent !== null && editedContent !== generatedContent;
 
-  // Variables declared in the (possibly edited) preview content. The Variables
-  // panel uses this to know which fields to render — so adding `@myVar = …` in
-  // the textarea makes a row appear, just like with file-declared variables.
+  // Variables declared in the (possibly edited) preview content.
   const declaredVars = useMemo(() => (content ? extractDeclaredVariables(content) : {}), [content]);
 
   const handleCopy = useCallback(() => {
@@ -93,81 +75,19 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
       });
   }, [content]);
 
-  const handleSend = useCallback(async () => {
+  const handleSend = useCallback(() => {
     if (!content || !canSend) {
       return;
     }
 
-    const { requests } = parseHttpContent(content, { overrides });
-
-    if (requests.length === 0) {
-      return;
-    }
-
-    // Cancel any in-flight request before starting a new one.
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    setSending(true);
-    setResponseOpen(true);
-    setResponse(null);
-    setResponseError(null);
-    setResponseErrorIsCors(false);
-    setHasSent(true);
-
-    try {
-      const result = await sendHttpRequest(requests[0], { signal: controller.signal });
-      setResponse(result);
-    } catch (err) {
-      // Aborts are user-initiated cancellations — don't render them as errors.
-      if (isAbortError(err)) {
-        setResponseError(t.responseCancelled);
-        setResponseErrorIsCors(false);
-      } else {
-        const message = err instanceof Error ? err.message : String(err);
-        setResponseError(message);
-        setResponseErrorIsCors(isLikelyCorsError(err));
-      }
-    } finally {
-      // Only clear the controller if it's still the active one (a follow-up
-      // Send may have already replaced it).
-      if (abortRef.current === controller) {
-        abortRef.current = null;
-      }
-
-      setSending(false);
-    }
-  }, [content, canSend, overrides, t.responseCancelled]);
-
-  const handleCancel = useCallback(() => {
-    abortRef.current?.abort();
-  }, []);
-
-  const handleCloseResponse = useCallback(() => {
-    abortRef.current?.abort();
-    setResponseOpen(false);
-    setResponse(null);
-    setResponseError(null);
-    setResponseErrorIsCors(false);
-  }, []);
-
-  const handleResetEdits = useCallback(() => {
-    setEditedContent(null);
-  }, []);
-
-  // Cancel any in-flight request on unmount to avoid setting state after unmount.
-  useEffect(() => {
-    return () => {
-      abortRef.current?.abort();
-    };
-  }, []);
+    sender.sendContent(content);
+  }, [content, canSend, sender]);
 
   // Keyboard shortcut: Ctrl/Cmd+Enter sends the current request.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-        if (canSend && !sending) {
+        if (canSend && !sender.loading) {
           e.preventDefault();
           handleSend();
         }
@@ -177,7 +97,7 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
     window.addEventListener("keydown", handleKeyDown);
 
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [canSend, sending, handleSend]);
+  }, [canSend, sender.loading, handleSend]);
 
   return (
     <Card className="flex h-full flex-col overflow-hidden">
@@ -185,11 +105,11 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
         <CardTitle className="truncate text-base">{t.previewTitle}</CardTitle>
         {hasEndpoints && (
           <div className="flex flex-wrap items-center gap-2">
-            {sending ? (
+            {sender.loading ? (
               <Button
                 size="sm"
                 variant="outline"
-                onClick={handleCancel}
+                onClick={sender.cancel}
                 title={t.previewCancel}
                 className="text-destructive hover:text-destructive"
               >
@@ -208,7 +128,7 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
                 {t.previewSend}
               </Button>
             )}
-            {hasSent && !sending && (
+            {sender.hasSent && !sender.loading && (
               <Button
                 size="sm"
                 variant="outline"
@@ -220,11 +140,11 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
                 <RotateCw className="h-3.5 w-3.5" />
               </Button>
             )}
-            {isEdited && !sending && (
+            {isEdited && !sender.loading && (
               <Button
                 size="sm"
                 variant="outline"
-                onClick={handleResetEdits}
+                onClick={() => setEditedContent(null)}
                 title={t.previewResetEdits}
                 aria-label={t.previewResetEdits}
               >
@@ -262,13 +182,13 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
           </>
         )}
 
-        {responseOpen && (
+        {sender.isOpen && (
           <ResponsePanel
-            loading={sending}
-            error={responseError}
-            errorIsCors={responseErrorIsCors}
-            response={response}
-            onClose={handleCloseResponse}
+            loading={sender.loading}
+            error={sender.error}
+            errorIsCors={sender.errorIsCors}
+            response={sender.response}
+            onClose={sender.close}
           />
         )}
       </CardContent>

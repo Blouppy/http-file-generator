@@ -52,6 +52,7 @@ export const translations = {
     endpointsTitle: "Endpoints",
     groupAll: "All",
     groupNone: "None",
+    endpointSend: "Send this request",
 
     // Endpoint filters
     filterSearchPlaceholder: "Search endpoints...",
@@ -108,6 +109,8 @@ export const translations = {
     varsPlaceholderEmpty: "(empty)",
     varsResetToDefault: "Reset to file default",
     varsClearAll: "Clear all overrides",
+    varsUseProxy: "Send via server proxy",
+    varsUseProxyHint: "(bypasses browser CORS)",
 
     // Spec viewer panel
     specViewerTitle: "Specification",
@@ -204,6 +207,7 @@ export const translations = {
     endpointsTitle: "Endpoints",
     groupAll: "Tous",
     groupNone: "Aucun",
+    endpointSend: "Envoyer cette requête",
 
     // Endpoint filters
     filterSearchPlaceholder: "Rechercher des endpoints...",
@@ -260,6 +264,8 @@ export const translations = {
     varsPlaceholderEmpty: "(vide)",
     varsResetToDefault: "Restaurer la valeur par défaut",
     varsClearAll: "Effacer toutes les valeurs",
+    varsUseProxy: "Envoyer via le proxy serveur",
+    varsUseProxyHint: "(contourne CORS du navigateur)",
 
     // Spec viewer panel
     specViewerTitle: "Spécification",

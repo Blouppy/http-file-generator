@@ -57,6 +57,8 @@ export function HttpVarsPanel({ declared, open, onToggle }: HttpVarsPanelProps) 
     addEnvironment,
     removeEnvironment,
     clearActiveEnv,
+    useProxy,
+    setUseProxy,
   } = useHttpVars();
 
   const [adding, setAdding] = useState(false);
@@ -173,6 +175,18 @@ export function HttpVarsPanel({ declared, open, onToggle }: HttpVarsPanelProps) 
               </Button>
             </div>
           )}
+
+          {/* Server proxy toggle — bypass CORS by routing through /api/proxy */}
+          <label className="text-muted-foreground flex cursor-pointer items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={useProxy}
+              onChange={(e) => setUseProxy(e.target.checked)}
+              className="border-input h-3.5 w-3.5 cursor-pointer rounded border"
+            />
+            <span className="text-foreground">{t.varsUseProxy}</span>
+            <span className="text-muted-foreground">{t.varsUseProxyHint}</span>
+          </label>
 
           {/* Variable rows */}
           {allNames.length === 0 ? (
