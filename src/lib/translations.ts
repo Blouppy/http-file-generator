@@ -77,6 +77,16 @@ export const translations = {
     previewSelectEndpoint: "Check endpoints to preview their .http file",
     previewCopy: "Copy",
     previewCopied: "Copied!",
+    previewSend: "Send",
+    previewSendDisabledHint: "Select exactly one endpoint to send a request",
+
+    // Response panel
+    responseTitle: "Response",
+    responseSending: "Sending…",
+    responseHeaders: "Headers",
+    responseBody: "Body",
+    responseEmptyBody: "(empty body)",
+    responseClose: "Close response",
 
     // Spec viewer panel
     specViewerTitle: "Specification",
@@ -198,6 +208,16 @@ export const translations = {
     previewSelectEndpoint: "Cochez des endpoints pour prévisualiser leur fichier .http",
     previewCopy: "Copier",
     previewCopied: "Copié !",
+    previewSend: "Envoyer",
+    previewSendDisabledHint: "Sélectionnez un seul endpoint pour envoyer une requête",
+
+    // Response panel
+    responseTitle: "Réponse",
+    responseSending: "Envoi…",
+    responseHeaders: "En-têtes",
+    responseBody: "Corps",
+    responseEmptyBody: "(corps vide)",
+    responseClose: "Fermer la réponse",
 
     // Spec viewer panel
     specViewerTitle: "Spécification",
