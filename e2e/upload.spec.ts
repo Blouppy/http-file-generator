@@ -11,7 +11,7 @@ test.describe("Upload page", () => {
   test("displays the page heading and description", async ({ page }) => {
     await expect(page.getByRole("heading", { name: "Upload your OpenAPI spec" })).toBeVisible();
     await expect(
-      page.getByText("Drop or browse to upload a .json, .yaml, or .yml file."),
+      page.getByText("Drop, browse, or load from URL to use a .json, .yaml, or .yml spec."),
     ).toBeVisible();
   });
 

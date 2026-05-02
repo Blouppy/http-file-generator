@@ -18,7 +18,9 @@ export const translations = {
 
     // Upload page
     uploadTitle: "Upload your OpenAPI spec",
-    uploadDescription: "Drop or browse to upload a .json, .yaml, or .yml file.",
+    uploadDescription: "Drop, browse, or load from URL to use a .json, .yaml, or .yml spec.",
+    uploadTabFile: "File",
+    uploadTabUrl: "URL",
 
     // File upload zone
     dropzone: "Drop your OpenAPI spec here",
@@ -27,6 +29,15 @@ export const translations = {
     dropzoneBrowse: "Browse files",
     dropzoneTryAgain: "Try again",
     dropzoneParseError: "Failed to parse OpenAPI spec",
+
+    // URL upload form
+    urlInputPlaceholder: "https://api.example.com/openapi.json",
+    urlInputButton: "Load spec",
+    urlInputLoading: "Loading...",
+    urlInputDescription: "Enter the URL of a publicly accessible OpenAPI JSON or YAML spec.",
+    urlInputInvalidUrl: "Please enter a valid HTTP or HTTPS URL.",
+    urlInputFetchError:
+      "Failed to fetch the spec. Make sure the URL is accessible and allows cross-origin requests.",
 
     // Spec info
     specVersion: "Version",
@@ -127,7 +138,10 @@ export const translations = {
 
     // Upload page
     uploadTitle: "Importez votre spec OpenAPI",
-    uploadDescription: "Glissez ou parcourez pour importer un fichier .json, .yaml ou .yml.",
+    uploadDescription:
+      "Glissez, parcourez ou chargez depuis une URL pour utiliser un fichier .json, .yaml ou .yml.",
+    uploadTabFile: "Fichier",
+    uploadTabUrl: "URL",
 
     // File upload zone
     dropzone: "Glissez votre spec OpenAPI ici",
@@ -136,6 +150,15 @@ export const translations = {
     dropzoneBrowse: "Parcourir les fichiers",
     dropzoneTryAgain: "Réessayer",
     dropzoneParseError: "Échec de l'analyse de la spec OpenAPI",
+
+    // URL upload form
+    urlInputPlaceholder: "https://api.example.com/openapi.json",
+    urlInputButton: "Charger la spec",
+    urlInputLoading: "Chargement...",
+    urlInputDescription: "Entrez l'URL d'une spec OpenAPI JSON ou YAML publiquement accessible.",
+    urlInputInvalidUrl: "Veuillez entrer une URL HTTP ou HTTPS valide.",
+    urlInputFetchError:
+      "Impossible de récupérer la spec. Vérifiez que l'URL est accessible et autorise les requêtes inter-origines.",
 
     // Spec info
     specVersion: "Version",

@@ -81,10 +81,7 @@ function collectSchemaRefs(obj: unknown, refs: Set<string> = new Set()): Set<str
  * Expands a set of directly referenced schema names to include all transitively
  * referenced schemas by walking the raw (pre-deref) component schemas.
  */
-function expandTransitiveRefs(
-  directRefs: string[],
-  rawSchemas: Record<string, unknown>,
-): string[] {
+function expandTransitiveRefs(directRefs: string[], rawSchemas: Record<string, unknown>): string[] {
   const all = new Set(directRefs);
   const queue = [...directRefs];
 
@@ -278,7 +275,9 @@ function extractEndpoints(
         const schemaRefs = rawRefsByKey.get(key);
         const requestBodySchemaRef = rawBodyRefByKey.get(key);
         const primaryResponse = rawResponseByKey.get(key);
-        endpoints.push(buildEndpoint(path, method, operation, schemaRefs, requestBodySchemaRef, primaryResponse));
+        endpoints.push(
+          buildEndpoint(path, method, operation, schemaRefs, requestBodySchemaRef, primaryResponse),
+        );
       }
     }
   }
@@ -412,10 +411,18 @@ function annotateSchemaNamesAfterDeref(
           const referencedSchema = schemas[directRef];
 
           if (referencedSchema) {
-            if (referencedSchema.type !== undefined)       { prop.type = referencedSchema.type; }
-            if (referencedSchema.properties !== undefined) { prop.properties = referencedSchema.properties; }
-            if (referencedSchema.required !== undefined)   { prop.required = referencedSchema.required; }
-            if (referencedSchema.enum !== undefined)       { prop.enum = referencedSchema.enum; }
+            if (referencedSchema.type !== undefined) {
+              prop.type = referencedSchema.type;
+            }
+            if (referencedSchema.properties !== undefined) {
+              prop.properties = referencedSchema.properties;
+            }
+            if (referencedSchema.required !== undefined) {
+              prop.required = referencedSchema.required;
+            }
+            if (referencedSchema.enum !== undefined) {
+              prop.enum = referencedSchema.enum;
+            }
           }
         }
 
@@ -435,10 +442,18 @@ function annotateSchemaNamesAfterDeref(
           const referencedSchema = schemas[itemsRef];
 
           if (referencedSchema) {
-            if (referencedSchema.type !== undefined)       { prop.items.type = referencedSchema.type; }
-            if (referencedSchema.properties !== undefined) { prop.items.properties = referencedSchema.properties; }
-            if (referencedSchema.required !== undefined)   { prop.items.required = referencedSchema.required; }
-            if (referencedSchema.enum !== undefined)       { prop.items.enum = referencedSchema.enum; }
+            if (referencedSchema.type !== undefined) {
+              prop.items.type = referencedSchema.type;
+            }
+            if (referencedSchema.properties !== undefined) {
+              prop.items.properties = referencedSchema.properties;
+            }
+            if (referencedSchema.required !== undefined) {
+              prop.items.required = referencedSchema.required;
+            }
+            if (referencedSchema.enum !== undefined) {
+              prop.items.enum = referencedSchema.enum;
+            }
           }
         }
       }
@@ -493,7 +508,12 @@ export async function parseOpenAPISpec(content: string, filename: string): Promi
   const spec = api as RawSpec;
 
   const { title, version, baseUrl } = extractSpecMetadata(spec);
-  const endpoints = extractEndpoints(spec.paths ?? {}, rawRefsByKey, rawBodyRefByKey, rawResponseByKey);
+  const endpoints = extractEndpoints(
+    spec.paths ?? {},
+    rawRefsByKey,
+    rawBodyRefByKey,
+    rawResponseByKey,
+  );
   const schemas = (spec.components?.schemas ?? {}) as Record<string, SchemaObject>;
 
   // Annotate schema properties with their original $ref names.

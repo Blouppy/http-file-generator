@@ -3,9 +3,16 @@
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FileUploadZone } from "@/components/file-upload-zone";
+import { UrlUploadForm } from "@/components/url-upload-form";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSpec } from "@/contexts/spec-context";
 import { useLanguage } from "@/contexts/language-context";
-import { parseSpec } from "@/services/openapi.service";
+import {
+  parseSpec,
+  parseSpecFromUrl,
+  URL_VALIDATION_ERROR,
+  URL_FETCH_ERROR,
+} from "@/services/openapi.service";
 
 export default function UploadPage() {
   const router = useRouter();
@@ -35,6 +42,36 @@ export default function UploadPage() {
     [setSpec, router, parseErrorMsg],
   );
 
+  const handleUrl = useCallback(
+    async (url: string) => {
+      setError(null);
+      setIsLoading(true);
+
+      try {
+        const parsed = await parseSpecFromUrl(url);
+
+        setSpec(parsed);
+
+        router.push("/select");
+      } catch (err) {
+        if (err instanceof Error) {
+          if (err.message === URL_VALIDATION_ERROR) {
+            setError(t.urlInputInvalidUrl);
+          } else if (err.message === URL_FETCH_ERROR) {
+            setError(t.urlInputFetchError);
+          } else {
+            setError(err.message);
+          }
+        } else {
+          setError(parseErrorMsg);
+        }
+
+        setIsLoading(false);
+      }
+    },
+    [setSpec, router, t, parseErrorMsg],
+  );
+
   return (
     <div className="bg-background h-[calc(100vh-3.75rem)] overflow-y-auto">
       <div className="mx-auto max-w-3xl px-4 py-12">
@@ -42,12 +79,28 @@ export default function UploadPage() {
           <h1 className="mb-2 text-3xl font-bold tracking-tight">{t.uploadTitle}</h1>
           <p className="text-muted-foreground">{t.uploadDescription}</p>
         </div>
-        <FileUploadZone
-          onFile={handleFile}
-          isLoading={isLoading}
-          error={error}
-          onClear={() => setError(null)}
-        />
+        <Tabs defaultValue="file" onValueChange={() => setError(null)}>
+          <TabsList className="mb-4">
+            <TabsTrigger value="file">{t.uploadTabFile}</TabsTrigger>
+            <TabsTrigger value="url">{t.uploadTabUrl}</TabsTrigger>
+          </TabsList>
+          <TabsContent value="file">
+            <FileUploadZone
+              onFile={handleFile}
+              isLoading={isLoading}
+              error={error}
+              onClear={() => setError(null)}
+            />
+          </TabsContent>
+          <TabsContent value="url">
+            <UrlUploadForm
+              onUrl={handleUrl}
+              isLoading={isLoading}
+              error={error}
+              onClear={() => setError(null)}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
