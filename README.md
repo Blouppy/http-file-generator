@@ -6,7 +6,9 @@ Upload your spec, select the endpoints you need, preview the output, and downloa
 ## Features
 
 - 📂 **Drag-and-drop upload** — supports `.json`, `.yaml`, and `.yml` OpenAPI 3.x spec files
+- 🔗 **URL upload** — load a spec directly from any publicly accessible URL
 - 🔍 **Endpoint browser** — filter by HTTP method or tag with a real-time search
+- 🔎 **Endpoint spec viewer** — expand any endpoint to inspect its parameters, request body, response info, and referenced schemas
 - 👁 **Live HTTP preview** — instantly preview the generated `.http` content as you select endpoints
 - 📥 **ZIP download** — download a ZIP archive with `.http` files organized by tag/path
 - 🌐 **Internationalization** — English and French UI
@@ -72,8 +74,8 @@ npm run test:e2e   # Playwright end-to-end tests (requires a production build)
 ```
 src/
   app/                  # Next.js App Router pages
-    page.tsx            # redirects to /upload
-    upload/             # step 1 – upload an OpenAPI spec
+    page.tsx            # landing page (hero, feature overview, CTA)
+    upload/             # step 1 – upload an OpenAPI spec (file or URL)
     select/             # step 2 – select endpoints & download
     generate/           # legacy redirect → /select
   components/           # shared React components
@@ -98,9 +100,9 @@ e2e/                    # Playwright end-to-end tests
 
 ## How It Works
 
-1. **Upload** — drop a `.json` or `.yaml` OpenAPI 3.x spec. The file is parsed entirely in the browser using `@apidevtools/swagger-parser`.
-2. **Select** — browse the endpoint tree, filter by method or tag, and check the ones you want. A live preview panel shows the generated `.http` content.
-3. **Download** — the live preview panel shows the generated `.http` content for your selection; click **Copy** to copy it to the clipboard, or click **Download** to get a ZIP archive with one `.http` file per tag/path group.
+1. **Upload** — drop a `.json` or `.yaml` OpenAPI 3.x spec, or paste a URL to load it directly from the web. The file is parsed entirely in the browser using `@apidevtools/swagger-parser`.
+2. **Select** — browse the endpoint tree, filter by method or tag, and check the ones you want. Expand any endpoint with the chevron button to inspect its parameters, request body, and referenced schemas. A live preview panel shows the generated `.http` content.
+3. **Download** — click **Copy** to copy the preview to the clipboard, or click **Download** to get a ZIP archive with one `.http` file per tag/path group.
 
 ## Documentation
 

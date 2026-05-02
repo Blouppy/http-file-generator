@@ -57,16 +57,16 @@ The label (`### …`) uses the first available value from:
 
 Path parameters default based on their schema type:
 
-| Schema type          | Default value             |
-| -------------------- | ------------------------- |
-| `integer` / `number` | `1`                       |
-| `boolean`            | `true`                    |
-| `string`             | `text`                    |
-| `array`              | `value1%2Cvalue2`         |
-| `object`             | `{}`                      |
-| enum                 | first declared enum value |
-| (path, unknown)      | `1`                       |
-| (query, unknown)     | `text`                    |
+| Schema type          | Default value                                                 |
+| -------------------- | ------------------------------------------------------------- |
+| `integer` / `number` | `1`                                                           |
+| `boolean`            | `true`                                                        |
+| `string`             | `<paramName>` (the parameter name itself, e.g. `@sort = sort`) |
+| `array`              | `<paramName>1%2C<paramName>2` (URL-encoded comma-separated)   |
+| `object`             | `{}`                                                          |
+| enum                 | first declared enum value                                     |
+| (path, unknown)      | `1`                                                           |
+| (query, unknown)     | `<paramName>` (the parameter name itself)                     |
 
 Parameter names are normalized to **camelCase** before becoming variable names (e.g. `UserId` → `userId`). `snake_case` and `kebab-case` names are left unchanged.
 
@@ -169,7 +169,7 @@ The generated file would look like:
 
 ### Get a pet
 @petId = 1
-@fields = text
+@fields = fields
 GET {{baseUrl}}/pets/{{petId}}?fields={{fields}}
 Authorization: Bearer {{token}}
 
@@ -179,8 +179,8 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "name": "",
-  "age": 0,
+  "name": "name",
+  "age": 1,
   "status": "available"
 }
 

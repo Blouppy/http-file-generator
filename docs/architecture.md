@@ -24,10 +24,10 @@ This document describes the high-level architecture of **http-file-generator**, 
 ```
 src/
 ├── app/                       # Next.js App Router
-│   ├── page.tsx               # Redirects to /upload
+│   ├── page.tsx               # Landing page (hero, feature overview, CTA)
 │   ├── layout.tsx             # Root layout (providers, toolbar)
 │   ├── upload/
-│   │   ├── page.tsx           # Step 1 — upload OpenAPI spec
+│   │   ├── page.tsx           # Step 1 — upload OpenAPI spec (file or URL)
 │   │   └── loading.tsx        # Streaming loading UI
 │   ├── select/
 │   │   └── page.tsx           # Step 2 — select endpoints & download
@@ -39,15 +39,19 @@ src/
 │   ├── ui/                    # shadcn/ui primitives (button, card, …)
 │   ├── endpoint-filters.tsx   # Method/tag filter bar
 │   ├── endpoint-group.tsx     # Collapsible endpoint list grouped by tag
-│   ├── endpoint-item.tsx      # Single endpoint row with checkbox
+│   ├── endpoint-item.tsx      # Single endpoint row with checkbox + spec toggle
+│   ├── endpoint-spec-panel.tsx # Inline accordion showing endpoint details (params, body, schemas)
 │   ├── file-upload-zone.tsx   # Drag-and-drop upload area
+│   ├── github-link.tsx        # Link to the GitHub repository
 │   ├── http-preview.tsx       # Live preview panel (right column)
+│   ├── multi-select-combobox.tsx # Reusable multi-select dropdown for filters
 │   ├── select-page-header.tsx # Spec info + download action bar
 │   ├── method-badge.tsx       # Coloured HTTP method badge
 │   ├── language-toggle.tsx    # EN / FR switcher
 │   ├── theme-toggle.tsx       # Light / dark / system switcher
 │   ├── theme-provider.tsx     # next-themes provider
-│   └── toolbar.tsx            # Top navigation bar
+│   ├── toolbar.tsx            # Top navigation bar
+│   └── url-upload-form.tsx    # URL input form for loading a spec from a remote URL
 │
 ├── contexts/
 │   ├── language-context.tsx   # i18n (EN / FR) via React Context
@@ -75,12 +79,13 @@ src/
 
 ## Application Flow
 
-The application follows a two-step wizard:
+The application follows a two-step wizard reached from a landing page:
 
 ```mermaid
 flowchart LR
-    A(["/"]):::route -->|redirect| B(["/upload"]):::route
+    A(["/"]):::route -->|Get Started| B(["/upload"]):::route
     B -->|file selected| C{Parse OpenAPI spec\nswagger-parser}
+    B -->|URL submitted| C
     C -->|error| B
     C -->|ParsedSpec| D(["/select"]):::route
     D -->|Copy button| E[copy to clipboard]:::output
@@ -91,12 +96,17 @@ flowchart LR
     classDef output fill:#059669,color:#fff,stroke:none
 ```
 
+### Landing Page (`/`)
+
+The root route renders a landing page with a hero section, a mockup preview of the select screen, a feature overview, and a call-to-action button that navigates to `/upload`.
+
 ### Step 1 — Upload (`/upload`)
 
-1. The user drops or selects a file in `<FileUploadZone>`.
-2. `openapi.service.parseSpec()` reads the file as text and calls `parseOpenAPISpec()` from `lib/parse-openapi.ts`.
-3. `parseOpenAPISpec()` uses `@apidevtools/swagger-parser` to dereference `$ref` pointers, then extracts a `ParsedSpec` (title, version, baseUrl, endpoints).
-4. The resulting `ParsedSpec` is stored in `SpecContext` and the user is redirected to `/select`.
+1. The user selects an input method via tabs: **File** (drag-and-drop or browse) or **URL** (remote spec URL).
+2. For file uploads, `openapi.service.parseSpec()` reads the file as text and calls `parseOpenAPISpec()` from `lib/parse-openapi.ts`.
+3. For URL uploads, `openapi.service.parseSpecFromUrl()` fetches the spec via the browser's `fetch` API, then calls `parseSpec()`. The content-type header and URL extension are used to detect YAML vs JSON.
+4. `parseOpenAPISpec()` uses `@apidevtools/swagger-parser` to dereference `$ref` pointers, then extracts a `ParsedSpec` (title, version, baseUrl, endpoints, schemas).
+5. The resulting `ParsedSpec` is stored in `SpecContext` and the user is redirected to `/select`.
 
 ### Step 2 — Select (`/select`)
 
@@ -104,6 +114,7 @@ flowchart LR
 2. No endpoints are selected by default. The user can:
    - Search/filter via `useEndpointFilters` hook.
    - Toggle individual endpoints or whole tags.
+   - Expand any endpoint row with the chevron button to view its parameters, request body, response info, and referenced schemas via `<EndpointSpecPanel>`.
 3. The right panel (`<HttpPreview>`) calls `generateHttpFileContent()` on every render to display live `.http` output. The **Copy** button copies the content to the clipboard.
 4. **Download** (ZIP): `buildZipFromEndpoints()` groups endpoints by tag with `groupEndpointsByTag()`, then calls `splitEndpointsByParentPath()` to produce one file per tag/parent-path combination, and packages them with `jszip`.
 
@@ -118,6 +129,7 @@ classDiagram
         +string version
         +string baseUrl
         +ParsedEndpoint[] endpoints
+        +Record~string,SchemaObject~? schemas
     }
 
     class ParsedEndpoint {
@@ -129,6 +141,10 @@ classDiagram
         +string[]? tags
         +Parameter[]? parameters
         +RequestBody? requestBody
+        +Record~string,unknown~? responses
+        +string[]? schemaRefs
+        +string? requestBodySchemaRef
+        +ParsedResponseInfo? primaryResponse
     }
 
     class Parameter {
@@ -152,9 +168,17 @@ classDiagram
         +Record~string,unknown~? examples
     }
 
+    class ParsedResponseInfo {
+        +string statusCode
+        +string? description
+        +string? schemaRef
+        +string? itemSchemaRef
+    }
+
     ParsedSpec "1" --> "0..*" ParsedEndpoint : endpoints
     ParsedEndpoint "1" --> "0..*" Parameter : parameters
     ParsedEndpoint "1" --> "0..1" RequestBody : requestBody
+    ParsedEndpoint "1" --> "0..1" ParsedResponseInfo : primaryResponse
     RequestBody "1" --> "0..*" MediaType : content
 ```
 
@@ -166,6 +190,8 @@ interface ParsedSpec {
   version: string;
   baseUrl: string;
   endpoints: ParsedEndpoint[];
+  /** All schemas from `components/schemas`, keyed by schema name. */
+  schemas?: Record<string, SchemaObject>;
 }
 ```
 
@@ -181,6 +207,26 @@ interface ParsedEndpoint {
   tags?: string[];
   parameters?: Parameter[];
   requestBody?: RequestBody;
+  responses?: Record<string, unknown>;
+  /** Schema names from components/schemas referenced by this endpoint. */
+  schemaRefs?: string[];
+  /** Schema name for the request body (extracted before dereferencing). */
+  requestBodySchemaRef?: string;
+  /** First 2xx response with schema information. */
+  primaryResponse?: ParsedResponseInfo;
+}
+```
+
+### `ParsedResponseInfo`
+
+```ts
+interface ParsedResponseInfo {
+  statusCode: string;
+  description?: string;
+  /** Schema name for a direct object response (`$ref → SchemaName`). */
+  schemaRef?: string;
+  /** Schema name for the item type in an array response (`array[SchemaName]`). */
+  itemSchemaRef?: string;
 }
 ```
 
@@ -191,7 +237,7 @@ interface Parameter {
   name: string;
   in: "query" | "path" | "header" | "cookie";
   required?: boolean;
-  schema?: { type?: string; example?: unknown; default?: unknown };
+  schema?: { type?: string | string[]; example?: unknown; default?: unknown };
 }
 ```
 
