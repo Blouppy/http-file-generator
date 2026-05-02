@@ -57,16 +57,16 @@ The label (`### …`) uses the first available value from:
 
 Path parameters default based on their schema type:
 
-| Schema type          | Default value                                                  |
-| -------------------- | -------------------------------------------------------------- |
-| `integer` / `number` | `1`                                                            |
-| `boolean`            | `true`                                                         |
+| Schema type          | Default value                                                 |
+| -------------------- | ------------------------------------------------------------- |
+| `integer` / `number` | `1`                                                           |
+| `boolean`            | `true`                                                        |
 | `string`             | `<paramName>` (the parameter name itself, e.g. `@sort = sort`) |
-| `array`              | `<paramName>1%2C<paramName>2` (URL-encoded comma-separated)    |
-| `object`             | `{}`                                                           |
-| enum                 | first declared enum value                                      |
-| (path, unknown)      | `1`                                                            |
-| (query, unknown)     | `<paramName>` (the parameter name itself)                      |
+| `array`              | `<paramName>1%2C<paramName>2` (URL-encoded comma-separated)   |
+| `object`             | `{}`                                                          |
+| enum                 | first declared enum value                                     |
+| (path, unknown)      | `1`                                                           |
+| (query, unknown)     | `<paramName>` (the parameter name itself)                     |
 
 Parameter names are normalized to **camelCase** before becoming variable names (e.g. `UserId` → `userId`). `snake_case` and `kebab-case` names are left unchanged.
 
