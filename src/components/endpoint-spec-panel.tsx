@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/contexts/language-context";
@@ -310,10 +310,11 @@ function SectionHeading({ title }: { title: string }) {
 
 /**
  * Stringifies a response example for display. Objects and arrays are
- * pretty-printed as JSON; primitives are coerced via `String`. Falls back to
- * `String(value)` if `JSON.stringify` throws (e.g. for circular references).
+ * pretty-printed as JSON; primitives are coerced via `String`. Returns
+ * `undefined` if `JSON.stringify` throws (e.g. for circular references) so that
+ * the caller can fall back to `String(value)`.
  */
-function formatExample(value: unknown): string {
+function formatExample(value: unknown): string | undefined {
   if (value === null || typeof value !== "object") {
     return String(value);
   }
@@ -321,8 +322,98 @@ function formatExample(value: unknown): string {
   try {
     return JSON.stringify(value, null, 2);
   } catch {
-    return String(value);
+    return undefined;
   }
+}
+
+type JsonTokenType = "key" | "string" | "number" | "boolean" | "null" | "punctuation";
+
+interface JsonToken {
+  type: JsonTokenType;
+  text: string;
+}
+
+// Matches one JSON token at a time: a string (with escapes), a number, a literal,
+// or any single punctuation character. Whitespace is captured separately by the caller.
+const JSON_TOKEN_RE = /"(?:\\.|[^"\\])*"|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|true|false|null|[{}[\],:]/g;
+
+/**
+ * Tokenises a single line of pretty-printed JSON for syntax highlighting. Strings
+ * immediately followed by a `:` are classified as keys; other recognised tokens
+ * keep their JSON type. Whitespace and unrecognised characters are emitted as
+ * punctuation so the original spacing is preserved.
+ */
+function tokenizeJsonLine(line: string): JsonToken[] {
+  const tokens: JsonToken[] = [];
+  let lastIndex = 0;
+
+  JSON_TOKEN_RE.lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = JSON_TOKEN_RE.exec(line)) !== null) {
+    if (match.index > lastIndex) {
+      tokens.push({ type: "punctuation", text: line.slice(lastIndex, match.index) });
+    }
+
+    const text = match[0];
+    let type: JsonTokenType;
+
+    if (text[0] === '"') {
+      // Look ahead past whitespace for a colon to detect object keys.
+      const after = line.slice(JSON_TOKEN_RE.lastIndex);
+      type = /^\s*:/.test(after) ? "key" : "string";
+    } else if (text === "true" || text === "false") {
+      type = "boolean";
+    } else if (text === "null") {
+      type = "null";
+    } else if (/^-?\d/.test(text)) {
+      type = "number";
+    } else {
+      type = "punctuation";
+    }
+
+    tokens.push({ type, text });
+    lastIndex = JSON_TOKEN_RE.lastIndex;
+  }
+
+  if (lastIndex < line.length) {
+    tokens.push({ type: "punctuation", text: line.slice(lastIndex) });
+  }
+
+  return tokens;
+}
+
+const JSON_TOKEN_CLASSES: Record<JsonTokenType, string> = {
+  key: "text-blue-600 dark:text-blue-400",
+  string: "text-green-700 dark:text-green-400",
+  number: "text-amber-600 dark:text-amber-400",
+  boolean: "text-purple-600 dark:text-purple-400",
+  null: "text-purple-600 dark:text-purple-400",
+  punctuation: "text-muted-foreground",
+};
+
+/**
+ * Renders pretty-printed JSON with inline syntax colouring. Mirrors the
+ * lightweight Tailwind-based approach used by `HttpPreview`'s `SyntaxLine`
+ * (no external highlighter dependency).
+ */
+function JsonHighlighted({ json }: { json: string }) {
+  const lines = json.split("\n");
+
+  return (
+    <>
+      {lines.map((line, lineIdx) => (
+        <Fragment key={lineIdx}>
+          {tokenizeJsonLine(line).map((tok, tokIdx) => (
+            <span key={tokIdx} className={JSON_TOKEN_CLASSES[tok.type]}>
+              {tok.text}
+            </span>
+          ))}
+          {lineIdx < lines.length - 1 && "\n"}
+        </Fragment>
+      ))}
+    </>
+  );
 }
 
 // ── Inline spec panel ─────────────────────────────────────────────────────────
@@ -565,21 +656,33 @@ export function EndpointSpecPanel({ endpoint }: EndpointSpecPanelProps) {
               />
             ) : null}
 
-            {endpoint.primaryResponse.example !== undefined && (
-              <div
-                className={cn(
-                  (endpoint.primaryResponse.schemaRef || endpoint.primaryResponse.itemSchemaRef) &&
-                    "mt-2",
-                )}
-              >
-                <p className="mb-1 text-[10px] font-semibold tracking-wide uppercase">
-                  {t.specViewerResponseExampleTitle}
-                </p>
-                <pre className="bg-muted/40 max-h-72 overflow-auto rounded-md border p-3 text-xs whitespace-pre-wrap break-words">
-                  <code>{formatExample(endpoint.primaryResponse.example)}</code>
-                </pre>
-              </div>
-            )}
+            {endpoint.primaryResponse.example !== undefined &&
+              (() => {
+                const formatted = formatExample(endpoint.primaryResponse.example);
+
+                if (formatted === undefined) {
+                  return null;
+                }
+
+                return (
+                  <div
+                    className={cn(
+                      (endpoint.primaryResponse.schemaRef ||
+                        endpoint.primaryResponse.itemSchemaRef) &&
+                        "mt-2",
+                    )}
+                  >
+                    <p className="mb-1 text-[10px] font-semibold tracking-wide uppercase">
+                      {t.specViewerResponseExampleTitle}
+                    </p>
+                    <pre className="bg-muted/40 max-h-72 overflow-auto rounded-md border p-3 text-xs whitespace-pre-wrap break-words">
+                      <code>
+                        <JsonHighlighted json={formatted} />
+                      </code>
+                    </pre>
+                  </div>
+                );
+              })()}
           </div>
         )}
       </div>
