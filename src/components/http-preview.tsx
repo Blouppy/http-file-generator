@@ -5,13 +5,8 @@ import { Copy, Check, Send, RotateCw, RotateCcw, X as XIcon, Loader2 } from "luc
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { generateHttpFileContent } from "@/lib/generate-http";
-import {
-  extractDeclaredVariables,
-  extractRequestBlock,
-  findRequestBlockLines,
-} from "@/lib/parse-http-content";
+import { extractRequestBlock, findRequestBlockLines } from "@/lib/parse-http-content";
 import { ResponsePanel } from "@/components/response-panel";
-import { HttpVarsPanel } from "@/components/http-vars-panel";
 import { HighlightedHttpEditor } from "@/components/highlighted-http-editor";
 import { useHttpSender } from "@/contexts/http-sender-context";
 import { useLanguage } from "@/contexts/language-context";
@@ -26,11 +21,12 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
   const { t } = useLanguage();
   const sender = useHttpSender();
   const [copied, setCopied] = useState(false);
-  const [varsOpen, setVarsOpen] = useState(false);
 
   const hasEndpoints = endpoints.length > 0;
-  // Sending is only meaningful when exactly one endpoint is selected — otherwise
-  // it's ambiguous which request the user wants to execute.
+  // Sending the whole previewed file (toolbar Send) is only meaningful when
+  // exactly one endpoint is selected — otherwise it's ambiguous which
+  // request the user wants to execute. Per-block Send Request links work
+  // regardless of how many endpoints are selected.
   const canSend = endpoints.length === 1;
 
   // Generate the full file content for all selected endpoints in selection order.
@@ -44,9 +40,6 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
   }, [spec, endpoints]);
 
   // User-edited content. `null` means "unmodified — use generatedContent as-is".
-  // Tracking edits separately means typing in the textarea doesn't disrupt the
-  // selection-driven regeneration: when the user changes selection we know to
-  // reset the edit, otherwise the edit persists across re-renders.
   const [editedContent, setEditedContent] = useState<string | null>(null);
 
   // Whenever the generated baseline changes (selection / spec change), drop any
@@ -55,13 +48,10 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
     setEditedContent(null);
   }, [generatedContent]);
 
-  // The effective content used by Send / Copy / variable extraction. Falls back
-  // to the generated baseline when the user hasn't edited anything.
+  // The effective content used by Send / Copy. Falls back to the generated
+  // baseline when the user hasn't edited anything.
   const content = editedContent ?? generatedContent;
   const isEdited = editedContent !== null && editedContent !== generatedContent;
-
-  // Variables declared in the (possibly edited) preview content.
-  const declaredVars = useMemo(() => (content ? extractDeclaredVariables(content) : {}), [content]);
 
   // Track which block (if any) is currently being sent so we can show a spinner
   // on the matching per-block Send button. `null` means no per-block send is in flight.
@@ -116,9 +106,9 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
     [content, sender],
   );
 
-  // Build per-line decorations for the editor: a "Send Request" button next to
-  // every `### …` separator. Mirrors VSCode REST Client's CodeLens so users can
-  // run any single request from the right pane regardless of selection.
+  // Build per-line decorations for the editor: a "Send Request" link rendered
+  // ABOVE every `### …` separator (left-aligned, like VSCode REST Client's
+  // CodeLens). Each link sends only its own block regardless of selection.
   const decorations = useMemo(() => {
     if (!content) {
       return [];
@@ -233,26 +223,20 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
             {t.previewSelectEndpoint}
           </div>
         ) : (
-          <>
-            <HttpVarsPanel
-              declared={declaredVars}
-              open={varsOpen}
-              onToggle={() => setVarsOpen((prev) => !prev)}
-            />
+          <div className="flex min-h-0 flex-1 flex-col">
             <HighlightedHttpEditor
               value={content ?? ""}
               onChange={setEditedContent}
               ariaLabel={t.previewTitle}
               decorations={decorations}
             />
-          </>
+          </div>
         )}
 
         {sender.isOpen && (
           <ResponsePanel
             loading={sender.loading}
             error={sender.error}
-            errorIsCors={sender.errorIsCors}
             response={sender.response}
             onClose={sender.close}
           />

@@ -9,7 +9,6 @@ import { EndpointFilters } from "@/components/endpoint-filters";
 import { HttpPreview } from "@/components/http-preview";
 import { SelectPageHeader } from "@/components/select-page-header";
 import { useSpec } from "@/contexts/spec-context";
-import { HttpVarsProvider } from "@/contexts/http-vars-context";
 import { HttpSenderProvider } from "@/contexts/http-sender-context";
 import { useLanguage } from "@/contexts/language-context";
 import { useEndpointFilters } from "@/hooks/use-endpoint-filters";
@@ -159,8 +158,8 @@ export default function SelectPage() {
   };
 
   return (
-    <div className="bg-background flex min-h-[calc(100vh-3.75rem)] flex-col lg:h-[calc(100vh-3.75rem)] lg:overflow-hidden">
-      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 px-4 py-4 lg:overflow-hidden">
+    <div className="bg-background flex flex-col overflow-y-auto lg:h-[calc(100vh-3.75rem)] lg:overflow-hidden">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-4 lg:h-full lg:overflow-hidden">
         <SelectPageHeader
           spec={spec}
           selectedCount={selectedEndpoints.length}
@@ -168,81 +167,75 @@ export default function SelectPage() {
           onDownload={handleDownloadZip}
         />
 
-        {/* Variables / environment overrides + send state are shared between the
-            endpoint tree (per-row Send buttons) and the HTTP preview pane. */}
-        <HttpVarsProvider>
-          <HttpSenderProvider>
-            {/* Two-column grid on lg+ (fills remaining viewport height, no body scroll).
-                On smaller screens, columns stack and each pane gets a usable height
-                (~70vh) while the page scrolls naturally. */}
-            <div className="grid flex-1 grid-cols-1 gap-6 lg:min-h-0 lg:grid-cols-2">
-              {/* Left panel — endpoint tree with filters */}
-              <Card className="flex h-[70vh] flex-col overflow-hidden lg:h-auto">
-                <CardHeader className="shrink-0 flex-row flex-wrap items-center justify-between gap-2 space-y-0 pb-3">
-                  <CardTitle className="text-base">{t.endpointsTitle}</CardTitle>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-2 text-xs"
-                      onClick={handleGlobalSelectAll}
-                    >
-                      {t.specSelectAll}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-2 text-xs"
-                      onClick={handleGlobalDeselectAll}
-                    >
-                      {t.specDeselectAll}
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex flex-1 flex-col overflow-hidden p-0">
-                  <div className="shrink-0 border-b px-6 py-4">
-                    <EndpointFilters
-                      searchText={searchText}
-                      onSearchChange={setSearchText}
-                      availableMethods={availableMethods}
-                      selectedMethods={selectedMethods}
-                      onMethodToggle={handleMethodToggle}
-                      availableTags={availableTags}
-                      selectedTags={selectedTags}
-                      onTagToggle={handleTagToggle}
-                      onClearFilters={handleClearFilters}
-                    />
-                  </div>
-                  <div className="flex-1 overflow-y-auto scroll-smooth">
-                    {Object.keys(filteredEndpointsByTag).length === 0 ? (
-                      <p className="text-muted-foreground px-6 py-8 text-center text-sm">
-                        {t.filterNoMatches}
-                      </p>
-                    ) : (
-                      Object.entries(filteredEndpointsByTag).map(([tag, endpoints], idx) => (
-                        <EndpointGroup
-                          key={tag}
-                          tag={tag}
-                          endpoints={endpoints}
-                          selectedIds={selectedIds}
-                          onToggleEndpoint={handleToggle}
-                          onSelectAll={() => handleSelectAllInTag(endpoints)}
-                          onDeselectAll={() => handleDeselectAllInTag(endpoints)}
-                          isFirst={idx === 0}
-                        />
-                      ))
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+        {/* Two-column grid — fills remaining viewport height on desktop, stacks on mobile.
+            Wrapped in HttpSenderProvider so the HTTP preview's Send button and response
+            panel share state across re-renders. */}
+        <HttpSenderProvider>
+          <div className="grid grid-cols-1 gap-6 lg:min-h-0 lg:flex-1 lg:grid-cols-2">
+            {/* Left panel — endpoint tree with filters */}
+            <Card className="flex min-h-[50vh] flex-col overflow-hidden lg:min-h-0">
+              <CardHeader className="shrink-0 flex-row items-center justify-between gap-2 space-y-0 pb-3">
+                <CardTitle className="text-base">{t.endpointsTitle}</CardTitle>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={handleGlobalSelectAll}
+                  >
+                    {t.specSelectAll}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={handleGlobalDeselectAll}
+                  >
+                    {t.specDeselectAll}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="flex flex-1 flex-col overflow-hidden p-0">
+                <div className="shrink-0 border-b px-6 py-4">
+                  <EndpointFilters
+                    searchText={searchText}
+                    onSearchChange={setSearchText}
+                    availableMethods={availableMethods}
+                    selectedMethods={selectedMethods}
+                    onMethodToggle={handleMethodToggle}
+                    availableTags={availableTags}
+                    selectedTags={selectedTags}
+                    onTagToggle={handleTagToggle}
+                    onClearFilters={handleClearFilters}
+                  />
+                </div>
+                <div className="flex-1 overflow-y-auto scroll-smooth">
+                  {Object.keys(filteredEndpointsByTag).length === 0 ? (
+                    <p className="text-muted-foreground px-6 py-8 text-center text-sm">
+                      {t.filterNoMatches}
+                    </p>
+                  ) : (
+                    Object.entries(filteredEndpointsByTag).map(([tag, endpoints], idx) => (
+                      <EndpointGroup
+                        key={tag}
+                        tag={tag}
+                        endpoints={endpoints}
+                        selectedIds={selectedIds}
+                        onToggleEndpoint={handleToggle}
+                        onSelectAll={() => handleSelectAllInTag(endpoints)}
+                        onDeselectAll={() => handleDeselectAllInTag(endpoints)}
+                        isFirst={idx === 0}
+                      />
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
-              {/* Right panel — HTTP file preview */}
-              <div className="h-[70vh] lg:h-auto">
-                <HttpPreview spec={spec} endpoints={orderedPreviewEndpoints} />
-              </div>
-            </div>
-          </HttpSenderProvider>
-        </HttpVarsProvider>
+            {/* Right panel — HTTP file preview */}
+            <HttpPreview spec={spec} endpoints={orderedPreviewEndpoints} />
+          </div>
+        </HttpSenderProvider>
       </div>
     </div>
   );

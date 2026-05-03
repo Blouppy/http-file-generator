@@ -7,18 +7,9 @@
  *   - A request line `METHOD URL`, optional header lines `Name: value`, and
  *     an optional body (separated from the headers by a blank line).
  *   - `{{var}}` placeholder substitution in the URL, header values and body.
- *   - User-provided variable overrides (passed via `ParseOptions.overrides`),
- *     which take precedence over `@var` declarations — used by the Variables
- *     panel so the user can change e.g. `baseUrl` without editing the
- *     read-only preview.
- *   - System variables: `{{$guid}}`, `{{$timestamp}}`, `{{$datetime …}}`,
- *     `{{$randomInt min max}}`. Resolved AFTER user variables so a user
- *     can still bind `@id = {{$guid}}` if they wish.
  *
  * Lines starting with `#` (other than `###`) are treated as comments and skipped.
  */
-
-import { resolveSystemVariables } from "@/lib/system-variables";
 
 const METHOD_LINE_REGEX = /^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS|TRACE)\s+(\S.*)$/i;
 const VAR_DECLARATION_REGEX = /^@([A-Za-z_][\w-]*)\s*=\s*(.*)$/;
@@ -39,15 +30,6 @@ export interface ParseHttpContentResult {
   /** Variables declared at the top of the file (before the first `###`). */
   globalVariables: Record<string, string>;
   requests: ParsedHttpRequest[];
-}
-
-export interface ParseHttpContentOptions {
-  /**
-   * User-provided variable values that override `@var` declarations from
-   * the file. Used by the Variables panel — e.g. to point `baseUrl` at
-   * a different environment without editing the read-only preview.
-   */
-  overrides?: Record<string, string>;
 }
 
 /**
@@ -130,9 +112,6 @@ function parseRequestBlock(
   globalVariables: Record<string, string>,
 ): ParsedHttpRequest | null {
   const localVariables = collectVariables(lines);
-  // Note: `globalVariables` is already merged with user overrides by the
-  // caller, so local declarations win over both global declarations and
-  // user overrides — matching REST Client's precedence.
   const variables = { ...globalVariables, ...localVariables };
 
   let methodLineIdx = -1;
@@ -160,9 +139,7 @@ function parseRequestBlock(
 
   const unresolved = new Set<string>();
   const method = methodMatch[1].toUpperCase();
-  const url = resolveSystemVariables(
-    substituteVariables(methodMatch[2].trim(), variables, unresolved),
-  );
+  const url = substituteVariables(methodMatch[2].trim(), variables, unresolved);
 
   const headers: Array<{ name: string; value: string }> = [];
   let bodyStartIdx = -1;
@@ -184,9 +161,7 @@ function parseRequestBlock(
 
     if (colonIdx > 0) {
       const name = raw.slice(0, colonIdx).trim();
-      const value = resolveSystemVariables(
-        substituteVariables(raw.slice(colonIdx + 1).trim(), variables, unresolved),
-      );
+      const value = substituteVariables(raw.slice(colonIdx + 1).trim(), variables, unresolved);
       headers.push({ name, value });
     }
   }
@@ -201,9 +176,7 @@ function parseRequestBlock(
     }
 
     if (bodyLines.length > 0) {
-      body = resolveSystemVariables(
-        substituteVariables(bodyLines.join("\n"), variables, unresolved),
-      );
+      body = substituteVariables(bodyLines.join("\n"), variables, unresolved);
     }
   }
 
@@ -217,22 +190,10 @@ function parseRequestBlock(
   };
 }
 
-/**
- * Parses a `.http` file content string into a list of executable requests.
- *
- * `options.overrides` are user-provided values that take precedence over
- * `@var` declarations in the file. They are applied at the global-variable
- * level so per-request `@var` declarations still win (matching REST Client's
- * scope rules).
- */
-export function parseHttpContent(
-  content: string,
-  options: ParseHttpContentOptions = {},
-): ParseHttpContentResult {
+/** Parses a `.http` file content string into a list of executable requests. */
+export function parseHttpContent(content: string): ParseHttpContentResult {
   const { preamble, blocks } = splitIntoBlocks(content);
-  const declaredGlobals = collectVariables(preamble);
-  // User overrides win over file-level declarations but lose to per-block declarations.
-  const globalVariables = { ...declaredGlobals, ...(options.overrides ?? {}) };
+  const globalVariables = collectVariables(preamble);
 
   const requests: ParsedHttpRequest[] = [];
 
@@ -244,27 +205,7 @@ export function parseHttpContent(
     }
   }
 
-  return { globalVariables: declaredGlobals, requests };
-}
-
-/**
- * Extracts the *declared* `@var = value` entries from the file (file-level
- * and per-block), without resolving placeholders or running requests. Used
- * by the Variables panel to know which fields to render and what default
- * values to suggest.
- *
- * The map is keyed by variable name; later declarations win over earlier
- * ones, mirroring the runtime precedence used by `parseHttpContent`.
- */
-export function extractDeclaredVariables(content: string): Record<string, string> {
-  const { preamble, blocks } = splitIntoBlocks(content);
-  const declared: Record<string, string> = { ...collectVariables(preamble) };
-
-  for (const block of blocks) {
-    Object.assign(declared, collectVariables(block.lines));
-  }
-
-  return declared;
+  return { globalVariables, requests };
 }
 
 /**

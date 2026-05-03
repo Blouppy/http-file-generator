@@ -94,24 +94,6 @@ export const translations = {
     responseEmptyBody: "(empty body)",
     responseClose: "Close response",
     responseCancelled: "Request cancelled.",
-    responseCorsHintTitle: "Likely a CORS error",
-    responseCorsHintBody:
-      "The browser blocked this cross-origin request. The target API must return appropriate Access-Control-Allow-* headers, or you need to call it from a server / proxy.",
-
-    // Variables panel
-    varsTitle: "Variables",
-    varsOverrideShort: "overridden",
-    varsEnvironment: "Environment",
-    varsAddEnvironment: "Add environment",
-    varsRemoveEnvironment: "Remove this environment",
-    varsNewEnvironmentPlaceholder: "Environment name",
-    varsAdd: "Add",
-    varsNoVariables: "No variables declared in the file.",
-    varsPlaceholderEmpty: "(empty)",
-    varsResetToDefault: "Reset to file default",
-    varsClearAll: "Clear all overrides",
-    varsUseProxy: "Send via server proxy",
-    varsUseProxyHint: "(bypasses browser CORS)",
 
     // Spec viewer panel
     specViewerTitle: "Specification",
@@ -250,24 +232,6 @@ export const translations = {
     responseEmptyBody: "(corps vide)",
     responseClose: "Fermer la réponse",
     responseCancelled: "Requête annulée.",
-    responseCorsHintTitle: "Probable erreur CORS",
-    responseCorsHintBody:
-      "Le navigateur a bloqué cette requête cross-origin. L'API cible doit renvoyer les en-têtes Access-Control-Allow-* appropriés, ou vous devez l'appeler depuis un serveur / proxy.",
-
-    // Variables panel
-    varsTitle: "Variables",
-    varsOverrideShort: "remplacée(s)",
-    varsEnvironment: "Environnement",
-    varsAddEnvironment: "Ajouter un environnement",
-    varsRemoveEnvironment: "Supprimer cet environnement",
-    varsNewEnvironmentPlaceholder: "Nom de l'environnement",
-    varsAdd: "Ajouter",
-    varsNoVariables: "Aucune variable déclarée dans le fichier.",
-    varsPlaceholderEmpty: "(vide)",
-    varsResetToDefault: "Restaurer la valeur par défaut",
-    varsClearAll: "Effacer toutes les valeurs",
-    varsUseProxy: "Envoyer via le proxy serveur",
-    varsUseProxyHint: "(contourne CORS du navigateur)",
 
     // Spec viewer panel
     specViewerTitle: "Spécification",

@@ -245,8 +245,11 @@ export function HighlightedHttpEditor({
                 key={i}
                 className="pointer-events-auto absolute"
                 style={{
-                  top: PAD_Y_PX + d.line * LINE_HEIGHT_PX,
-                  right: PAD_X_PX,
+                  // Sit on the blank line directly ABOVE the `### …` separator,
+                  // mirroring VSCode REST Client's CodeLens placement. Falls
+                  // back to the same line when there is no row above.
+                  top: PAD_Y_PX + Math.max(0, d.line - 1) * LINE_HEIGHT_PX,
+                  left: PAD_X_PX,
                   height: LINE_HEIGHT_PX,
                 }}
               >

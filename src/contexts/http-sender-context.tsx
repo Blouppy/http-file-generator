@@ -2,14 +2,9 @@
 
 /**
  * Shared state for the in-app HTTP request runner. Lifting send / response
- * state into a context lets both the HTTP preview pane (which renders the
- * Response panel) and individual `EndpointItem`s (which expose a per-row
- * Send button) trigger requests against the same response surface.
- *
- * Concretely: clicking Send on a row in the endpoint tree generates the
- * `.http` content for that single endpoint, parses it, and runs the
- * resulting request — populating the same Response panel that the right-
- * hand preview uses.
+ * state into a context lets the HTTP preview pane (which renders the
+ * Response panel) and the per-block "Send Request" buttons trigger requests
+ * against the same response surface.
  */
 
 import { createContext, use, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -17,12 +12,10 @@ import { generateHttpFileContent } from "@/lib/generate-http";
 import { parseHttpContent } from "@/lib/parse-http-content";
 import {
   isAbortError,
-  isLikelyCorsError,
   sendHttpRequest,
   type HttpResponseResult,
 } from "@/services/http-request.service";
 import type { ParsedEndpoint, ParsedSpec } from "@/types/openapi";
-import { useHttpVars } from "@/contexts/http-vars-context";
 import { useLanguage } from "@/contexts/language-context";
 
 interface HttpSenderContextValue {
@@ -32,8 +25,6 @@ interface HttpSenderContextValue {
   response: HttpResponseResult | null;
   /** Last error message (failure / cancellation). `null` when none. */
   error: string | null;
-  /** Whether the last error is consistent with a browser CORS rejection. */
-  errorIsCors: boolean;
   /** Whether the response panel is open / visible. */
   isOpen: boolean;
   /** True after at least one send (success or failure). Controls Resend visibility. */
@@ -51,13 +42,11 @@ interface HttpSenderContextValue {
 const HttpSenderContext = createContext<HttpSenderContextValue | null>(null);
 
 export function HttpSenderProvider({ children }: { children: React.ReactNode }) {
-  const { overrides, useProxy } = useHttpVars();
   const { t } = useLanguage();
 
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<HttpResponseResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [errorIsCors, setErrorIsCors] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [hasSent, setHasSent] = useState(false);
 
@@ -65,7 +54,7 @@ export function HttpSenderProvider({ children }: { children: React.ReactNode }) 
 
   const sendContent = useCallback(
     (content: string) => {
-      const { requests } = parseHttpContent(content, { overrides });
+      const { requests } = parseHttpContent(content);
 
       if (requests.length === 0) {
         return;
@@ -80,26 +69,22 @@ export function HttpSenderProvider({ children }: { children: React.ReactNode }) 
       setIsOpen(true);
       setResponse(null);
       setError(null);
-      setErrorIsCors(false);
       setHasSent(true);
 
       void (async () => {
         try {
           const result = await sendHttpRequest(requests[0], {
             signal: controller.signal,
-            useProxy,
           });
 
           setResponse(result);
         } catch (err) {
           if (isAbortError(err)) {
             setError(t.responseCancelled);
-            setErrorIsCors(false);
           } else {
             const message = err instanceof Error ? err.message : String(err);
 
             setError(message);
-            setErrorIsCors(isLikelyCorsError(err));
           }
         } finally {
           if (abortRef.current === controller) {
@@ -110,7 +95,7 @@ export function HttpSenderProvider({ children }: { children: React.ReactNode }) 
         }
       })();
     },
-    [overrides, useProxy, t.responseCancelled],
+    [t.responseCancelled],
   );
 
   const sendEndpoint = useCallback(
@@ -131,7 +116,6 @@ export function HttpSenderProvider({ children }: { children: React.ReactNode }) 
     setIsOpen(false);
     setResponse(null);
     setError(null);
-    setErrorIsCors(false);
   }, []);
 
   // Cancel any in-flight request on unmount.
@@ -146,7 +130,6 @@ export function HttpSenderProvider({ children }: { children: React.ReactNode }) 
       loading,
       response,
       error,
-      errorIsCors,
       isOpen,
       hasSent,
       sendContent,
@@ -154,18 +137,7 @@ export function HttpSenderProvider({ children }: { children: React.ReactNode }) 
       cancel,
       close,
     }),
-    [
-      loading,
-      response,
-      error,
-      errorIsCors,
-      isOpen,
-      hasSent,
-      sendContent,
-      sendEndpoint,
-      cancel,
-      close,
-    ],
+    [loading, response, error, isOpen, hasSent, sendContent, sendEndpoint, cancel, close],
   );
 
   return <HttpSenderContext value={value}>{children}</HttpSenderContext>;

@@ -10,8 +10,6 @@ import type { HttpResponseResult } from "@/services/http-request.service";
 interface ResponsePanelProps {
   loading: boolean;
   error?: string | null;
-  /** When true, shows a CORS-specific hint alongside the error message. */
-  errorIsCors?: boolean;
   response?: HttpResponseResult | null;
   onClose: () => void;
 }
@@ -66,13 +64,7 @@ function formatSize(bytes: number): string {
   return `${(bytes / 1024).toFixed(1)} KB`;
 }
 
-export function ResponsePanel({
-  loading,
-  error,
-  errorIsCors,
-  response,
-  onClose,
-}: ResponsePanelProps) {
+export function ResponsePanel({ loading, error, response, onClose }: ResponsePanelProps) {
   const { t } = useLanguage();
   const [headersOpen, setHeadersOpen] = useState(false);
 
@@ -82,7 +74,7 @@ export function ResponsePanel({
   );
 
   return (
-    <div className="bg-background flex max-h-[50%] shrink-0 flex-col overflow-hidden border-t">
+    <div className="bg-background flex min-h-[180px] flex-1 flex-col overflow-hidden border-t">
       <div className="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-2">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <span className="text-sm font-semibold">{t.responseTitle}</span>
@@ -126,12 +118,6 @@ export function ResponsePanel({
         {error && !loading && (
           <div className="flex flex-col gap-2 px-4 py-3">
             <div className="text-destructive font-mono text-xs whitespace-pre-wrap">{error}</div>
-            {errorIsCors && (
-              <div className="bg-muted/50 text-muted-foreground rounded-md border px-3 py-2 text-xs">
-                <p className="text-foreground mb-1 font-semibold">{t.responseCorsHintTitle}</p>
-                <p>{t.responseCorsHintBody}</p>
-              </div>
-            )}
           </div>
         )}
 
