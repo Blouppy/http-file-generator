@@ -333,8 +333,11 @@ interface JsonToken {
   text: string;
 }
 
-// Matches one JSON token at a time: a string (with escapes), a number, a literal,
-// or any single punctuation character. Whitespace is captured separately by the caller.
+// Matches one JSON token at a time:
+//   - string with escapes:   "(?:\\.|[^"\\])*"
+//   - number (incl. exp):    -?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?
+//   - literals:              true | false | null
+//   - punctuation:           any of { } [ ] , :
 const JSON_TOKEN_RE = /"(?:\\.|[^"\\])*"|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|true|false|null|[{}[\],:]/g;
 
 /**
@@ -347,33 +350,40 @@ function tokenizeJsonLine(line: string): JsonToken[] {
   const tokens: JsonToken[] = [];
   let lastIndex = 0;
 
-  JSON_TOKEN_RE.lastIndex = 0;
-  let match: RegExpExecArray | null;
+  // `matchAll` returns a fresh iterator and avoids relying on the regex's
+  // mutable `lastIndex` state across calls.
+  for (const match of line.matchAll(JSON_TOKEN_RE)) {
+    const start = match.index ?? 0;
+    const text = match[0];
+    const end = start + text.length;
 
-  while ((match = JSON_TOKEN_RE.exec(line)) !== null) {
-    if (match.index > lastIndex) {
-      tokens.push({ type: "punctuation", text: line.slice(lastIndex, match.index) });
+    if (start > lastIndex) {
+      tokens.push({ type: "punctuation", text: line.slice(lastIndex, start) });
     }
 
-    const text = match[0];
     let type: JsonTokenType;
 
     if (text[0] === '"') {
       // Look ahead past whitespace for a colon to detect object keys.
-      const after = line.slice(JSON_TOKEN_RE.lastIndex);
-      type = /^\s*:/.test(after) ? "key" : "string";
+      let i = end;
+
+      while (i < line.length && (line[i] === " " || line[i] === "\t")) {
+        i++;
+      }
+
+      type = line[i] === ":" ? "key" : "string";
     } else if (text === "true" || text === "false") {
       type = "boolean";
     } else if (text === "null") {
       type = "null";
-    } else if (/^-?\d/.test(text)) {
+    } else if (text[0] === "-" || (text[0] >= "0" && text[0] <= "9")) {
       type = "number";
     } else {
       type = "punctuation";
     }
 
     tokens.push({ type, text });
-    lastIndex = JSON_TOKEN_RE.lastIndex;
+    lastIndex = end;
   }
 
   if (lastIndex < line.length) {
