@@ -568,8 +568,7 @@ export function EndpointSpecPanel({ endpoint }: EndpointSpecPanelProps) {
             {endpoint.primaryResponse.example !== undefined && (
               <div
                 className={cn(
-                  (!!endpoint.primaryResponse.schemaRef ||
-                    !!endpoint.primaryResponse.itemSchemaRef) &&
+                  (endpoint.primaryResponse.schemaRef || endpoint.primaryResponse.itemSchemaRef) &&
                     "mt-2",
                 )}
               >
