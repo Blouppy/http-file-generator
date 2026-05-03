@@ -266,3 +266,52 @@ export function extractDeclaredVariables(content: string): Record<string, string
 
   return declared;
 }
+
+/**
+ * Returns the line indices (0-based, in `content`) of every `### …` separator.
+ * Used by the HTTP preview to render a per-request "Send Request" affordance
+ * directly above each request block in the right pane (mirroring VSCode REST
+ * Client's CodeLens).
+ */
+export function findRequestBlockLines(content: string): number[] {
+  const lines = content.split(/\r?\n/);
+  const indices: number[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].startsWith("###")) {
+      indices.push(i);
+    }
+  }
+
+  return indices;
+}
+
+/**
+ * Returns a self-contained `.http` document containing only the request block
+ * at `blockIndex`, with the file-level preamble (comments + `@var` declarations
+ * before the first `###`) preserved so variables still resolve.
+ *
+ * `blockIndex` is the index of the block in document order (0-based). Returns
+ * `null` when `blockIndex` is out of range.
+ */
+export function extractRequestBlock(content: string, blockIndex: number): string | null {
+  const lines = content.split(/\r?\n/);
+  const blockStarts: number[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].startsWith("###")) {
+      blockStarts.push(i);
+    }
+  }
+
+  if (blockIndex < 0 || blockIndex >= blockStarts.length) {
+    return null;
+  }
+
+  const start = blockStarts[blockIndex];
+  const end = blockIndex + 1 < blockStarts.length ? blockStarts[blockIndex + 1] : lines.length;
+  const preamble = lines.slice(0, blockStarts[0]);
+  const block = lines.slice(start, end);
+
+  return [...preamble, ...block].join("\n");
+}

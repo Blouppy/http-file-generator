@@ -1,11 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { Copy, Check, Send, RotateCw, RotateCcw, X as XIcon } from "lucide-react";
+import { Copy, Check, Send, RotateCw, RotateCcw, X as XIcon, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { generateHttpFileContent } from "@/lib/generate-http";
-import { extractDeclaredVariables } from "@/lib/parse-http-content";
+import {
+  extractDeclaredVariables,
+  extractRequestBlock,
+  findRequestBlockLines,
+} from "@/lib/parse-http-content";
 import { ResponsePanel } from "@/components/response-panel";
 import { HttpVarsPanel } from "@/components/http-vars-panel";
 import { HighlightedHttpEditor } from "@/components/highlighted-http-editor";
@@ -59,6 +63,17 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
   // Variables declared in the (possibly edited) preview content.
   const declaredVars = useMemo(() => (content ? extractDeclaredVariables(content) : {}), [content]);
 
+  // Track which block (if any) is currently being sent so we can show a spinner
+  // on the matching per-block Send button. `null` means no per-block send is in flight.
+  const [pendingBlockIdx, setPendingBlockIdx] = useState<number | null>(null);
+
+  // Reset the per-block "in flight" indicator once the sender finishes.
+  useEffect(() => {
+    if (!sender.loading) {
+      setPendingBlockIdx(null);
+    }
+  }, [sender.loading]);
+
   const handleCopy = useCallback(() => {
     if (!content) {
       return;
@@ -82,6 +97,56 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
 
     sender.sendContent(content);
   }, [content, canSend, sender]);
+
+  const handleSendBlock = useCallback(
+    (blockIdx: number) => {
+      if (!content || sender.loading) {
+        return;
+      }
+
+      const blockContent = extractRequestBlock(content, blockIdx);
+
+      if (!blockContent) {
+        return;
+      }
+
+      setPendingBlockIdx(blockIdx);
+      sender.sendContent(blockContent);
+    },
+    [content, sender],
+  );
+
+  // Build per-line decorations for the editor: a "Send Request" button next to
+  // every `### …` separator. Mirrors VSCode REST Client's CodeLens so users can
+  // run any single request from the right pane regardless of selection.
+  const decorations = useMemo(() => {
+    if (!content) {
+      return [];
+    }
+
+    const blockLines = findRequestBlockLines(content);
+
+    return blockLines.map((line, blockIdx) => ({
+      line,
+      node: (
+        <button
+          type="button"
+          onClick={() => handleSendBlock(blockIdx)}
+          disabled={sender.loading}
+          title={t.previewSendRequest}
+          aria-label={t.previewSendRequest}
+          className="text-primary hover:bg-primary/10 inline-flex h-5 cursor-pointer items-center gap-1 rounded px-1.5 text-[11px] font-medium disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {sender.loading && pendingBlockIdx === blockIdx ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <Send className="h-3 w-3" />
+          )}
+          <span>{t.previewSendRequest}</span>
+        </button>
+      ),
+    }));
+  }, [content, sender.loading, pendingBlockIdx, handleSendBlock, t.previewSendRequest]);
 
   // Keyboard shortcut: Ctrl/Cmd+Enter sends the current request.
   useEffect(() => {
@@ -178,6 +243,7 @@ export function HttpPreview({ spec, endpoints }: HttpPreviewProps) {
               value={content ?? ""}
               onChange={setEditedContent}
               ariaLabel={t.previewTitle}
+              decorations={decorations}
             />
           </>
         )}

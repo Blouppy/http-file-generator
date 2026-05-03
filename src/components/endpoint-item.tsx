@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Loader2, Send } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MethodBadge } from "@/components/method-badge";
 import { EndpointSpecPanel } from "@/components/endpoint-spec-panel";
 import { useLanguage } from "@/contexts/language-context";
 import { useSpec } from "@/contexts/spec-context";
-import { useHttpSender } from "@/contexts/http-sender-context";
 import { cn } from "@/lib/utils";
 import type { ParsedEndpoint } from "@/types/openapi";
 
@@ -21,7 +20,6 @@ export function EndpointItem({ endpoint, isSelected, onToggle }: EndpointItemPro
   const [specOpen, setSpecOpen] = useState(false);
   const { spec } = useSpec();
   const { t } = useLanguage();
-  const sender = useHttpSender();
 
   const hasParameters = !!(endpoint.parameters && endpoint.parameters.length > 0);
   const hasRequestBody = !!(
@@ -33,16 +31,6 @@ export function EndpointItem({ endpoint, isSelected, onToggle }: EndpointItemPro
     endpoint.schemaRefs.some((name) => spec.schemas![name] !== undefined)
   );
   const hasDetails = hasParameters || hasRequestBody || hasSchemas || !!endpoint.description;
-
-  const handleSendClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-
-    if (!spec || sender.loading) {
-      return;
-    }
-
-    sender.sendEndpoint(spec, endpoint);
-  };
 
   return (
     <div className={cn("border-l-2", isSelected ? "border-primary" : "border-transparent")}>
@@ -68,20 +56,6 @@ export function EndpointItem({ endpoint, isSelected, onToggle }: EndpointItemPro
             )}
           </div>
         </div>
-
-        <button
-          className="text-muted-foreground hover:text-primary mt-0.5 shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
-          aria-label={t.endpointSend}
-          title={t.endpointSend}
-          onClick={handleSendClick}
-          disabled={sender.loading}
-        >
-          {sender.loading ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Send className="size-4" />
-          )}
-        </button>
 
         {hasDetails && (
           <button

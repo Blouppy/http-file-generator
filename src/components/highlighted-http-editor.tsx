@@ -1,7 +1,22 @@
 "use client";
 
-import { Fragment, useCallback, useRef, type ChangeEvent, type UIEvent } from "react";
+import {
+  Fragment,
+  useCallback,
+  useRef,
+  type ChangeEvent,
+  type ReactNode,
+  type UIEvent,
+} from "react";
 import { cn } from "@/lib/utils";
+
+// Fixed typography metrics so per-line decorations can be positioned exactly
+// over the corresponding text row. Both the <pre> and the <textarea> use these
+// inline styles instead of Tailwind shorthands so the values are deterministic.
+const FONT_SIZE_PX = 12;
+const LINE_HEIGHT_PX = 20;
+const PAD_X_PX = 24;
+const PAD_Y_PX = 16;
 
 // Text colours that mirror the MethodBadge background palette, adapted for dark mode.
 const METHOD_TEXT_COLORS: Record<string, string> = {
@@ -103,11 +118,24 @@ function SyntaxLine({ line }: { line: string }) {
   }
 }
 
+interface LineDecoration {
+  /** 0-based line index the decoration should sit on. */
+  line: number;
+  /** Rendered content (typically a button). Will be `pointer-events-auto`. */
+  node: ReactNode;
+}
+
 interface HighlightedHttpEditorProps {
   value: string;
   onChange: (value: string) => void;
   ariaLabel?: string;
   className?: string;
+  /**
+   * Per-line decorations rendered in a scroll-synced overlay above the textarea.
+   * Used to put a "Send Request" button next to each `### …` separator
+   * (mirroring VSCode REST Client's CodeLens links).
+   */
+  decorations?: LineDecoration[];
 }
 
 /**
@@ -118,24 +146,35 @@ interface HighlightedHttpEditorProps {
  * each glyph in the textarea lines up exactly with the corresponding coloured
  * glyph in the <pre>. The textarea owns scroll; we mirror its scrollLeft /
  * scrollTop onto the <pre> so the colours stay in sync while the user scrolls.
+ *
+ * A third (decorations) layer scrolls vertically with the textarea but stays
+ * pinned to the right edge horizontally, so per-block "Send Request" buttons
+ * remain visible regardless of horizontal scroll.
  */
 export function HighlightedHttpEditor({
   value,
   onChange,
   ariaLabel,
   className,
+  decorations,
 }: HighlightedHttpEditorProps) {
   const preRef = useRef<HTMLPreElement | null>(null);
+  const overlayRef = useRef<HTMLDivElement | null>(null);
 
   const handleScroll = useCallback((e: UIEvent<HTMLTextAreaElement>) => {
     const pre = preRef.current;
+    const overlay = overlayRef.current;
+    const scrollTop = e.currentTarget.scrollTop;
+    const scrollLeft = e.currentTarget.scrollLeft;
 
-    if (!pre) {
-      return;
+    if (pre) {
+      pre.scrollTop = scrollTop;
+      pre.scrollLeft = scrollLeft;
     }
 
-    pre.scrollTop = e.currentTarget.scrollTop;
-    pre.scrollLeft = e.currentTarget.scrollLeft;
+    if (overlay) {
+      overlay.scrollTop = scrollTop;
+    }
   }, []);
 
   const handleChange = useCallback(
@@ -147,21 +186,30 @@ export function HighlightedHttpEditor({
 
   const lines = value.split("\n");
 
-  // Shared layout classes — must stay identical between the <pre> and the
-  // <textarea> so glyphs align perfectly. Any change here MUST be applied to
-  // both elements.
-  const sharedTypography =
-    "font-mono text-xs leading-relaxed whitespace-pre px-6 py-4 m-0 border-0";
+  // Inline typography styles must stay identical between the <pre> and the
+  // <textarea> so glyphs align perfectly.
+  const sharedTypographyStyle = {
+    fontFamily:
+      'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+    fontSize: `${FONT_SIZE_PX}px`,
+    lineHeight: `${LINE_HEIGHT_PX}px`,
+    padding: `${PAD_Y_PX}px ${PAD_X_PX}px`,
+    margin: 0,
+    border: 0,
+    whiteSpace: "pre" as const,
+  };
+
+  // Total scrollable content height — keeps the overlay's inner sizer in sync
+  // with the textarea so vertical scroll positions match.
+  const contentHeight = lines.length * LINE_HEIGHT_PX + PAD_Y_PX * 2;
 
   return (
     <div className={cn("bg-muted/30 relative flex-1 overflow-hidden", className)}>
       <pre
         ref={preRef}
         aria-hidden="true"
-        className={cn(
-          sharedTypography,
-          "pointer-events-none absolute inset-0 overflow-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-        )}
+        style={sharedTypographyStyle}
+        className="pointer-events-none absolute inset-0 overflow-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         <code>
           {lines.map((line, i) => (
@@ -181,11 +229,33 @@ export function HighlightedHttpEditor({
         autoCorrect="off"
         autoCapitalize="off"
         aria-label={ariaLabel}
-        className={cn(
-          sharedTypography,
-          "caret-foreground absolute inset-0 h-full w-full resize-none overflow-auto bg-transparent text-transparent focus:outline-none focus-visible:ring-0",
-        )}
+        style={sharedTypographyStyle}
+        className="caret-foreground absolute inset-0 h-full w-full resize-none overflow-auto bg-transparent text-transparent focus:outline-none focus-visible:ring-0"
       />
+      {decorations && decorations.length > 0 && (
+        <div
+          ref={overlayRef}
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 overflow-hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          style={{ overflowY: "scroll" }}
+        >
+          <div style={{ position: "relative", height: contentHeight }}>
+            {decorations.map((d, i) => (
+              <div
+                key={i}
+                className="pointer-events-auto absolute"
+                style={{
+                  top: PAD_Y_PX + d.line * LINE_HEIGHT_PX,
+                  right: PAD_X_PX,
+                  height: LINE_HEIGHT_PX,
+                }}
+              >
+                {d.node}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
