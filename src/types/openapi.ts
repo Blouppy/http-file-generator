@@ -5,6 +5,12 @@ export interface ParsedResponseInfo {
   schemaRef?: string;
   /** Schema name for the item type in an array response (`array[SchemaName]`). */
   itemSchemaRef?: string;
+  /**
+   * First example value extracted from the JSON-typed response media. Sourced from
+   * `media.example` or the first entry of `media.examples` (per OpenAPI 3 the entries
+   * are wrapped as `{ value: ... }`).
+   */
+  example?: unknown;
 }
 
 export interface ParsedEndpoint {

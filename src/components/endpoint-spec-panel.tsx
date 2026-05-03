@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/contexts/language-context";
@@ -306,6 +306,126 @@ function SectionHeading({ title }: { title: string }) {
   );
 }
 
+// ── Example formatting ────────────────────────────────────────────────────────
+
+/**
+ * Stringifies a response example for display. Objects and arrays are
+ * pretty-printed as JSON; primitives are coerced via `String`. Returns
+ * `undefined` if `JSON.stringify` throws (e.g. for circular references) so that
+ * the caller can fall back to `String(value)`.
+ */
+function formatExample(value: unknown): string | undefined {
+  if (value === null || typeof value !== "object") {
+    return String(value);
+  }
+
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return undefined;
+  }
+}
+
+type JsonTokenType = "key" | "string" | "number" | "boolean" | "null" | "punctuation";
+
+interface JsonToken {
+  type: JsonTokenType;
+  text: string;
+}
+
+// Matches one JSON token at a time:
+//   - string with escapes:   "(?:\\.|[^"\\])*"
+//   - number (incl. exp):    -?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?
+//   - literals:              true | false | null
+//   - punctuation:           any of { } [ ] , :
+const JSON_TOKEN_RE = /"(?:\\.|[^"\\])*"|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|true|false|null|[{}[\],:]/g;
+
+/**
+ * Tokenises a single line of pretty-printed JSON for syntax highlighting. Strings
+ * immediately followed by a `:` are classified as keys; other recognised tokens
+ * keep their JSON type. Whitespace and unrecognised characters are emitted as
+ * punctuation so the original spacing is preserved.
+ */
+function tokenizeJsonLine(line: string): JsonToken[] {
+  const tokens: JsonToken[] = [];
+  let lastIndex = 0;
+
+  // `matchAll` returns a fresh iterator and avoids relying on the regex's
+  // mutable `lastIndex` state across calls.
+  for (const match of line.matchAll(JSON_TOKEN_RE)) {
+    const start = match.index ?? 0;
+    const text = match[0];
+    const end = start + text.length;
+
+    if (start > lastIndex) {
+      tokens.push({ type: "punctuation", text: line.slice(lastIndex, start) });
+    }
+
+    let type: JsonTokenType;
+
+    if (text[0] === '"') {
+      // Look ahead past whitespace for a colon to detect object keys.
+      let i = end;
+
+      while (i < line.length && (line[i] === " " || line[i] === "\t")) {
+        i++;
+      }
+
+      type = line[i] === ":" ? "key" : "string";
+    } else if (text === "true" || text === "false") {
+      type = "boolean";
+    } else if (text === "null") {
+      type = "null";
+    } else if (text[0] === "-" || (text[0] >= "0" && text[0] <= "9")) {
+      type = "number";
+    } else {
+      type = "punctuation";
+    }
+
+    tokens.push({ type, text });
+    lastIndex = end;
+  }
+
+  if (lastIndex < line.length) {
+    tokens.push({ type: "punctuation", text: line.slice(lastIndex) });
+  }
+
+  return tokens;
+}
+
+const JSON_TOKEN_CLASSES: Record<JsonTokenType, string> = {
+  key: "text-blue-600 dark:text-blue-400",
+  string: "text-green-700 dark:text-green-400",
+  number: "text-amber-600 dark:text-amber-400",
+  boolean: "text-purple-600 dark:text-purple-400",
+  null: "text-purple-600 dark:text-purple-400",
+  punctuation: "text-muted-foreground",
+};
+
+/**
+ * Renders pretty-printed JSON with inline syntax colouring. Mirrors the
+ * lightweight Tailwind-based approach used by `HttpPreview`'s `SyntaxLine`
+ * (no external highlighter dependency).
+ */
+function JsonHighlighted({ json }: { json: string }) {
+  const lines = json.split("\n");
+
+  return (
+    <>
+      {lines.map((line, lineIdx) => (
+        <Fragment key={lineIdx}>
+          {tokenizeJsonLine(line).map((tok, tokIdx) => (
+            <span key={tokIdx} className={JSON_TOKEN_CLASSES[tok.type]}>
+              {tok.text}
+            </span>
+          ))}
+          {lineIdx < lines.length - 1 && "\n"}
+        </Fragment>
+      ))}
+    </>
+  );
+}
+
 // ── Inline spec panel ─────────────────────────────────────────────────────────
 
 interface EndpointSpecPanelProps {
@@ -545,6 +665,34 @@ export function EndpointSpecPanel({ endpoint }: EndpointSpecPanelProps) {
                 schema={spec.schemas![endpoint.primaryResponse.itemSchemaRef]}
               />
             ) : null}
+
+            {endpoint.primaryResponse.example !== undefined &&
+              (() => {
+                const formatted = formatExample(endpoint.primaryResponse.example);
+
+                if (formatted === undefined) {
+                  return null;
+                }
+
+                return (
+                  <div
+                    className={cn(
+                      (endpoint.primaryResponse.schemaRef ||
+                        endpoint.primaryResponse.itemSchemaRef) &&
+                        "mt-2",
+                    )}
+                  >
+                    <p className="mb-1 text-[10px] font-semibold tracking-wide uppercase">
+                      {t.specViewerResponseExampleTitle}
+                    </p>
+                    <pre className="bg-muted/40 max-h-72 overflow-auto rounded-md border p-3 text-xs whitespace-pre-wrap break-words">
+                      <code>
+                        <JsonHighlighted json={formatted} />
+                      </code>
+                    </pre>
+                  </div>
+                );
+              })()}
           </div>
         )}
       </div>
