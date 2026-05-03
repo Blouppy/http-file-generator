@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -141,9 +141,9 @@ function HighlightedJson({ source }: { source: string }) {
   return (
     <>
       {tokens.map((tok, i) => (
-        <Fragment key={i}>
-          <span className={JSON_TOKEN_CLASS[tok.type]}>{tok.value}</span>
-        </Fragment>
+        <span key={i} className={JSON_TOKEN_CLASS[tok.type]}>
+          {tok.value}
+        </span>
       ))}
     </>
   );
