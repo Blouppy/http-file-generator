@@ -504,7 +504,10 @@ export function generateHttpFile(spec: ParsedSpec, endpoint: ParsedEndpoint): st
 
 export function generateHttpFileContent(spec: ParsedSpec, endpoints: ParsedEndpoint[]): string {
   const header = `# ${spec.title} v${spec.version}\n# Base URL: ${spec.baseUrl}\n\n@baseUrl = ${spec.baseUrl}\n@token = your_token_here\n\n`;
-  const body = endpoints.map((e) => generateHttpFile(spec, e)).join("\n");
+  // Separate blocks with an extra blank line so the per-block "Send Request"
+  // link in the preview has a visible gap above it (visually separating each
+  // endpoint from the previous one).
+  const body = endpoints.map((e) => generateHttpFile(spec, e)).join("\n\n");
 
   return header + body;
 }

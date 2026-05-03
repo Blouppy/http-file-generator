@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -62,6 +62,101 @@ function formatSize(bytes: number): string {
   }
 
   return `${(bytes / 1024).toFixed(1)} KB`;
+}
+
+// JSON token types used for syntax highlighting.
+type JsonToken =
+  | { type: "key"; value: string }
+  | { type: "string"; value: string }
+  | { type: "number"; value: string }
+  | { type: "boolean"; value: string }
+  | { type: "null"; value: string }
+  | { type: "punctuation"; value: string }
+  | { type: "whitespace"; value: string };
+
+/**
+ * Tokenises a (pretty-printed) JSON string into coloured spans.
+ *
+ * The regex captures, in order: strings (with optional `:` lookahead → key),
+ * numbers, booleans/null, structural punctuation, and whitespace. Anything not
+ * matched falls through as raw text so malformed JSON still renders.
+ */
+function tokenizeJson(source: string): JsonToken[] {
+  const tokens: JsonToken[] = [];
+  const re =
+    /("(?:\\.|[^"\\])*")(\s*:)?|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|\b(true|false)\b|\b(null)\b|([{}[\],:])|(\s+)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = re.exec(source)) !== null) {
+    if (match.index > lastIndex) {
+      tokens.push({ type: "string", value: source.slice(lastIndex, match.index) });
+    }
+
+    const [, str, colonAfter, num, bool, nul, punct, ws] = match;
+
+    if (str !== undefined) {
+      if (colonAfter !== undefined) {
+        tokens.push({ type: "key", value: str });
+        tokens.push({ type: "punctuation", value: colonAfter });
+      } else {
+        tokens.push({ type: "string", value: str });
+      }
+    } else if (num !== undefined) {
+      tokens.push({ type: "number", value: num });
+    } else if (bool !== undefined) {
+      tokens.push({ type: "boolean", value: bool });
+    } else if (nul !== undefined) {
+      tokens.push({ type: "null", value: nul });
+    } else if (punct !== undefined) {
+      tokens.push({ type: "punctuation", value: punct });
+    } else if (ws !== undefined) {
+      tokens.push({ type: "whitespace", value: ws });
+    }
+
+    lastIndex = re.lastIndex;
+  }
+
+  if (lastIndex < source.length) {
+    tokens.push({ type: "string", value: source.slice(lastIndex) });
+  }
+
+  return tokens;
+}
+
+const JSON_TOKEN_CLASS: Record<JsonToken["type"], string> = {
+  key: "text-blue-600 dark:text-blue-400",
+  string: "text-green-700 dark:text-green-400",
+  number: "text-orange-600 dark:text-orange-400",
+  boolean: "text-purple-600 dark:text-purple-400",
+  null: "text-purple-600 dark:text-purple-400",
+  punctuation: "text-muted-foreground",
+  whitespace: "",
+};
+
+/** Renders a JSON string with token-level colouring. */
+function HighlightedJson({ source }: { source: string }) {
+  const tokens = useMemo(() => tokenizeJson(source), [source]);
+
+  return (
+    <>
+      {tokens.map((tok, i) => (
+        <Fragment key={i}>
+          <span className={JSON_TOKEN_CLASS[tok.type]}>{tok.value}</span>
+        </Fragment>
+      ))}
+    </>
+  );
+}
+
+/** Returns true when the response content type indicates JSON. */
+function isJsonContentType(contentType: string | null): boolean {
+  if (!contentType) {
+    return false;
+  }
+
+  const lower = contentType.toLowerCase();
+  return lower.includes("json");
 }
 
 export function ResponsePanel({ loading, error, response, onClose }: ResponsePanelProps) {
@@ -146,7 +241,17 @@ export function ResponsePanel({ loading, error, response, onClose }: ResponsePan
               {t.responseBody}
             </div>
             <pre className="bg-muted/30 flex-1 overflow-x-auto px-4 py-2 font-mono text-xs leading-relaxed">
-              <code>{formattedBody || <span className="italic">{t.responseEmptyBody}</span>}</code>
+              <code>
+                {formattedBody ? (
+                  isJsonContentType(response.contentType) ? (
+                    <HighlightedJson source={formattedBody} />
+                  ) : (
+                    formattedBody
+                  )
+                ) : (
+                  <span className="italic">{t.responseEmptyBody}</span>
+                )}
+              </code>
             </pre>
           </div>
         )}
