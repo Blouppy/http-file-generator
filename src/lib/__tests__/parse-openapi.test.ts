@@ -399,5 +399,105 @@ paths: {}
       expect(endpoint.primaryResponse?.schemaRef).toBeUndefined();
       expect(endpoint.primaryResponse?.itemSchemaRef).toBeUndefined();
     });
+
+    it("extracts primaryResponse example from media `examples` map (OpenAPI 3 wrapped value)", async () => {
+      const spec = makeSpec({
+        paths: {
+          "/breeds": {
+            get: {
+              responses: {
+                "200": {
+                  description: "successful",
+                  content: {
+                    "application/json": {
+                      examples: {
+                        example: {
+                          value: {
+                            data: [{ id: "abc", type: "breed" }],
+                            meta: { pagination: { current: 1, records: 9 } },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+      const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
+      const endpoint = result.endpoints[0];
+
+      expect(endpoint.primaryResponse).toMatchObject({
+        statusCode: "200",
+        description: "successful",
+        example: {
+          data: [{ id: "abc", type: "breed" }],
+          meta: { pagination: { current: 1, records: 9 } },
+        },
+      });
+      expect(endpoint.primaryResponse?.schemaRef).toBeUndefined();
+    });
+
+    it("extracts primaryResponse example from media `example` (singular) field", async () => {
+      const spec = makeSpec({
+        paths: {
+          "/items/{id}": {
+            get: {
+              responses: {
+                "200": {
+                  description: "OK",
+                  content: {
+                    "application/json": {
+                      example: { id: 1, name: "thing" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+      const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
+      const endpoint = result.endpoints[0];
+
+      expect(endpoint.primaryResponse?.example).toEqual({ id: 1, name: "thing" });
+    });
+
+    it("extracts primaryResponse example alongside schemaRef when both are present", async () => {
+      const spec = makeSpec({
+        paths: {
+          "/items/{id}": {
+            get: {
+              responses: {
+                "200": {
+                  description: "OK",
+                  content: {
+                    "application/json": {
+                      schema: { $ref: "#/components/schemas/ItemDto" },
+                      example: { id: 1, name: "thing" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        components: {
+          schemas: {
+            ItemDto: { type: "object", properties: { name: { type: "string" } } },
+          },
+        },
+      });
+      const result = await parseOpenAPISpec(JSON.stringify(spec), "spec.json");
+      const endpoint = result.endpoints[0];
+
+      expect(endpoint.primaryResponse).toMatchObject({
+        statusCode: "200",
+        schemaRef: "ItemDto",
+        example: { id: 1, name: "thing" },
+      });
+    });
   });
 });

@@ -153,8 +153,39 @@ function extractRequestBodySchemaRef(rawOperation: unknown): string | undefined 
 }
 
 /**
+ * Returns the first example value from an OpenAPI `examples` map, if any. Per the
+ * OpenAPI 3 spec, map values are wrapped as `{ value: ... }`; raw values are accepted
+ * defensively as a fall-through.
+ */
+function firstExampleValueFromMap(examples: unknown): unknown {
+  if (!examples || typeof examples !== "object") {
+    return undefined;
+  }
+
+  const values = Object.values(examples as Record<string, unknown>);
+
+  if (values.length === 0) {
+    return undefined;
+  }
+
+  const first = values[0];
+
+  if (
+    first !== null &&
+    typeof first === "object" &&
+    !Array.isArray(first) &&
+    "value" in (first as Record<string, unknown>)
+  ) {
+    return (first as Record<string, unknown>).value;
+  }
+
+  return first;
+}
+
+/**
  * Returns the first 2xx response info from a raw operation's `responses`, including the
- * schema name when the response body is a direct `$ref` or an `array` of a `$ref`.
+ * schema name when the response body is a direct `$ref` or an `array` of a `$ref`, and
+ * the first example value from the JSON-typed media (`example` or `examples` map).
  */
 function extractPrimaryResponse(rawOperation: unknown): ParsedResponseInfo | undefined {
   if (!rawOperation || typeof rawOperation !== "object") {
@@ -188,6 +219,9 @@ function extractPrimaryResponse(rawOperation: unknown): ParsedResponseInfo | und
   }
 
   const prefix = "#/components/schemas/";
+  let schemaRef: string | undefined;
+  let itemSchemaRef: string | undefined;
+  let example: unknown;
 
   for (const [ct, media] of Object.entries(content)) {
     if (
@@ -201,30 +235,42 @@ function extractPrimaryResponse(rawOperation: unknown): ParsedResponseInfo | und
       continue;
     }
 
-    const schema = (media as Record<string, unknown>)["schema"] as
-      | Record<string, unknown>
-      | undefined;
+    const mediaRecord = media as Record<string, unknown>;
+    const schema = mediaRecord["schema"] as Record<string, unknown> | undefined;
 
-    if (!schema) {
-      continue;
-    }
+    if (schema) {
+      // Direct $ref — object response.
+      if (typeof schema["$ref"] === "string" && schema["$ref"].startsWith(prefix)) {
+        schemaRef = schema["$ref"].slice(prefix.length);
+      } else if (
+        schema["type"] === "array" &&
+        schema["items"] &&
+        typeof schema["items"] === "object"
+      ) {
+        // Array response whose items are a $ref.
+        const items = schema["items"] as Record<string, unknown>;
 
-    // Direct $ref — object response.
-    if (typeof schema["$ref"] === "string" && schema["$ref"].startsWith(prefix)) {
-      return { statusCode, description, schemaRef: schema["$ref"].slice(prefix.length) };
-    }
-
-    // Array response whose items are a $ref.
-    if (schema["type"] === "array" && schema["items"] && typeof schema["items"] === "object") {
-      const items = schema["items"] as Record<string, unknown>;
-
-      if (typeof items["$ref"] === "string" && items["$ref"].startsWith(prefix)) {
-        return { statusCode, description, itemSchemaRef: items["$ref"].slice(prefix.length) };
+        if (typeof items["$ref"] === "string" && items["$ref"].startsWith(prefix)) {
+          itemSchemaRef = items["$ref"].slice(prefix.length);
+        }
       }
     }
+
+    // Pick up an example from `example` (singular) or the first entry of `examples` (plural).
+    const exampleCandidate =
+      mediaRecord["example"] !== undefined
+        ? mediaRecord["example"]
+        : firstExampleValueFromMap(mediaRecord["examples"]);
+
+    if (exampleCandidate !== undefined) {
+      example = exampleCandidate;
+    }
+
+    // First matching JSON media wins.
+    break;
   }
 
-  return { statusCode, description };
+  return { statusCode, description, schemaRef, itemSchemaRef, example };
 }
 
 /** Builds a single {@link ParsedEndpoint} from a path, HTTP method and operation object. */

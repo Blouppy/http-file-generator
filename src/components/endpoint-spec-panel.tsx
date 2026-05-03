@@ -306,6 +306,25 @@ function SectionHeading({ title }: { title: string }) {
   );
 }
 
+// ── Example formatting ────────────────────────────────────────────────────────
+
+/**
+ * Stringifies a response example for display. Objects and arrays are
+ * pretty-printed as JSON; primitives are coerced via `String`. Falls back to
+ * `String(value)` if `JSON.stringify` throws (e.g. for circular references).
+ */
+function formatExample(value: unknown): string {
+  if (value === null || typeof value !== "object") {
+    return String(value);
+  }
+
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
 // ── Inline spec panel ─────────────────────────────────────────────────────────
 
 interface EndpointSpecPanelProps {
@@ -545,6 +564,23 @@ export function EndpointSpecPanel({ endpoint }: EndpointSpecPanelProps) {
                 schema={spec.schemas![endpoint.primaryResponse.itemSchemaRef]}
               />
             ) : null}
+
+            {endpoint.primaryResponse.example !== undefined && (
+              <div
+                className={cn(
+                  (!!endpoint.primaryResponse.schemaRef ||
+                    !!endpoint.primaryResponse.itemSchemaRef) &&
+                    "mt-2",
+                )}
+              >
+                <p className="mb-1 text-[10px] font-semibold tracking-wide uppercase">
+                  {t.specViewerResponseExampleTitle}
+                </p>
+                <pre className="bg-muted/40 max-h-72 overflow-auto rounded-md border p-3 text-xs whitespace-pre-wrap break-words">
+                  <code>{formatExample(endpoint.primaryResponse.example)}</code>
+                </pre>
+              </div>
+            )}
           </div>
         )}
       </div>
