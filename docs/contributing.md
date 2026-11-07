@@ -9,8 +9,8 @@ This guide covers local setup, development workflow, testing, and code style.
 
 | Tool    | Minimum version |
 | ------- | --------------- |
-| Node.js | 18              |
-| npm     | 9               |
+| Node.js | 20.9            |
+| npm     | 10              |
 
 ---
 

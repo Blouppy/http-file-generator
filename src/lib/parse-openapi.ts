@@ -141,8 +141,7 @@ function extractRequestBodySchemaRef(rawOperation: unknown): string | undefined 
     }
 
     const schema = (media as Record<string, unknown>)["schema"] as
-      | Record<string, unknown>
-      | undefined;
+      Record<string, unknown> | undefined;
 
     if (typeof schema?.["$ref"] === "string" && schema["$ref"].startsWith(prefix)) {
       return schema["$ref"].slice(prefix.length);
@@ -313,8 +312,7 @@ function extractEndpoints(
 
     for (const method of HTTP_METHODS) {
       const operation = (pathItem as Record<string, unknown>)[method] as
-        | Record<string, unknown>
-        | undefined;
+        Record<string, unknown> | undefined;
 
       if (operation) {
         const key = `${method}:${path}`;

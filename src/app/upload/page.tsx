@@ -35,7 +35,7 @@ export default function UploadPage() {
 
         router.push("/select");
       } catch (err) {
-        setError(err instanceof Error ? err.message : parseErrorMsg);
+        setError(err instanceof Error ? `${parseErrorMsg}: ${err.message}` : parseErrorMsg);
         setIsLoading(false);
       }
     },
@@ -60,7 +60,7 @@ export default function UploadPage() {
           } else if (err.message === URL_FETCH_ERROR) {
             setError(t.urlInputFetchError);
           } else {
-            setError(err.message);
+            setError(`${parseErrorMsg}: ${err.message}`);
           }
         } else {
           setError(parseErrorMsg);

@@ -338,7 +338,8 @@ interface JsonToken {
 //   - number (incl. exp):    -?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?
 //   - literals:              true | false | null
 //   - punctuation:           any of { } [ ] , :
-const JSON_TOKEN_RE = /"(?:\\.|[^"\\])*"|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|true|false|null|[{}[\],:]/g;
+const JSON_TOKEN_RE =
+  /"(?:\\.|[^"\\])*"|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|true|false|null|[{}[\],:]/g;
 
 /**
  * Tokenises a single line of pretty-printed JSON for syntax highlighting. Strings
@@ -685,7 +686,7 @@ export function EndpointSpecPanel({ endpoint }: EndpointSpecPanelProps) {
                     <p className="mb-1 text-[10px] font-semibold tracking-wide uppercase">
                       {t.specViewerResponseExampleTitle}
                     </p>
-                    <pre className="bg-muted/40 max-h-72 overflow-auto rounded-md border p-3 text-xs whitespace-pre-wrap break-words">
+                    <pre className="bg-muted/40 max-h-72 overflow-auto rounded-md border p-3 text-xs break-words whitespace-pre-wrap">
                       <code>
                         <JsonHighlighted json={formatted} />
                       </code>
