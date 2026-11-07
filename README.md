@@ -19,7 +19,7 @@ Upload your spec, select the endpoints you need, preview the output, and downloa
 
 | Layer           | Technology                                                    |
 | --------------- | ------------------------------------------------------------- |
-| Framework       | Next.js 14 (App Router, React Server Components)              |
+| Framework       | Next.js 16 (App Router, React 19)                             |
 | Language        | TypeScript (strict)                                           |
 | Styling         | Tailwind CSS v4, `tailwind-merge`, `class-variance-authority` |
 | UI components   | shadcn/ui (in `src/components/ui/`)                           |
@@ -35,8 +35,8 @@ Upload your spec, select the endpoints you need, preview the output, and downloa
 
 ### Prerequisites
 
-- Node.js 18+
-- npm 9+
+- Node.js 20.9+ (the minimum Next.js 16 supports)
+- npm 10+
 
 ### Installation
 
@@ -66,7 +66,8 @@ npm run format:check   # Prettier (check only)
 
 ```bash
 npm test           # Jest unit tests
-npm run test:e2e   # Playwright end-to-end tests (requires a production build)
+npx playwright install chromium   # once: download the browser the end-to-end tests drive
+npm run test:e2e   # Playwright end-to-end tests (builds and starts the app itself)
 ```
 
 ## Project Structure

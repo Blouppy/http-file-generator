@@ -8,7 +8,7 @@ This document describes the high-level architecture of **http-file-generator**, 
 
 | Concern           | Choice                                 | Notes                                                                                    |
 | ----------------- | -------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Framework         | Next.js 14 (App Router)                | Uses React Server Components where possible; client components are marked `"use client"` |
+| Framework         | Next.js 16 (App Router)                | Uses React Server Components where possible; client components are marked `"use client"` |
 | Language          | TypeScript (strict)                    | All source files are `.ts` / `.tsx`                                                      |
 | Styling           | Tailwind CSS v4                        | `cn()` utility from `src/lib/utils.ts` merges class names with `tailwind-merge`          |
 | UI primitives     | shadcn/ui                              | Components live in `src/components/ui/`                                                  |
