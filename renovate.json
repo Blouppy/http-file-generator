@@ -1,20 +1,64 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", "local>Blouppy/http-file-generator//.github/renovate/default"],
-  "assignees": ["@jboinembalome"],
+  "description": "Weekly updates; minor and patch ones are grouped in one pull request that merges itself once CI is green, majors come one by one for review.",
+  "extends": [
+    "config:recommended",
+    "local>Blouppy/http-file-generator//.github/renovate/default"
+  ],
+  "assignees": [
+    "@jboinembalome"
+  ],
   "commitMessagePrefix": "chore(deps):",
-  "baseBranches": ["master"],
+  "baseBranchPatterns": [
+    "master"
+  ],
   "branchPrefix": "renovate/",
-  "schedule": ["after 9pm every weekday", "before 9am every weekday", "every weekend"],
-  "major": {
-    "automerge": false
-  },
-  "minor": {
-    "automerge": false
-  },
-  "patch": {
-    "automerge": true
-  },
+  "timezone": "Europe/Paris",
+  "schedule": [
+    "before 9am on monday"
+  ],
+  "minimumReleaseAge": "3 days",
+  "prHourlyLimit": 0,
+  "prConcurrentLimit": 5,
   "dependencyDashboard": true,
-  "timezone": "Europe/Paris"
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": true,
+    "schedule": [
+      "before 9am on the first day of the month"
+    ]
+  },
+  "packageRules": [
+    {
+      "description": "Minor and patch updates in one pull request, merged once CI passes.",
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "matchCurrentVersion": "!/^0/",
+      "groupName": "minor and patch updates",
+      "automerge": true
+    },
+    {
+      "description": "GitHub Actions together, merged once CI passes.",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "groupName": "GitHub Actions",
+      "automerge": true
+    },
+    {
+      "description": "Major updates one by one, never merged automatically.",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "automerge": false
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "labels": [
+      "security"
+    ],
+    "automerge": false
+  }
 }
